@@ -139,14 +139,15 @@ export default function LoginForm() {
                 Masuk
             </Button>
 
-            <Text fontSize="sm" mt={2}>
+            {/* Register belum diperlukan untuk saat ini */}
+            {/* <Text fontSize="sm" mt={2}>
                 Belum punya akun?{" "}
                 <NextLink href="/register" passHref>
                     <Box as="span" color="blue.500" textDecoration="underline" cursor="pointer">
                     Daftar disini
                     </Box>
                 </NextLink>
-            </Text>
+            </Text> */}
             </VStack>
         </form>
         </Box>

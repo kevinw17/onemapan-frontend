@@ -127,24 +127,34 @@ export default function UmatPage() {
         const domicileLoc = formData.domicile_location;
 
         try {
-            if (idCardLoc?.location_id) {
-            await updateLocationMutation.mutateAsync({
-                locationId: idCardLoc.location_id,
-                payload: idCardLoc,
-            });
-            }
+            if (idCardLoc?.location_id && domicileLoc?.location_id) {
+                const sameLocation = idCardLoc.location_id === domicileLoc.location_id;
 
-            if (domicileLoc?.location_id) {
-            await updateLocationMutation.mutateAsync({
-                locationId: domicileLoc.location_id,
-                payload: domicileLoc,
-            });
+                if (sameLocation) {
+                    await updateLocationMutation.mutateAsync({
+                    locationId: idCardLoc.location_id,
+                    payload: {
+                        ...idCardLoc,
+                        ...domicileLoc,
+                    },
+                    });
+                } else {
+                    await updateLocationMutation.mutateAsync({
+                    locationId: idCardLoc.location_id,
+                    payload: idCardLoc,
+                    });
+                    
+                    await updateLocationMutation.mutateAsync({
+                    locationId: domicileLoc.location_id,
+                    payload: domicileLoc,
+                    });
+                }
             }
 
             await updateUserMutation.mutateAsync({
-                userId: formData.user_info_id,
-                payload,
-            });
+        userId: formData.user_info_id,
+        payload,
+    });
 
             toast({
                 title: "Berhasil disimpan",

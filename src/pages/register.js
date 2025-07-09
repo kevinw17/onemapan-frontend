@@ -11,6 +11,7 @@ import { axiosInstance } from "@/lib/axios";
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "", confirmPassword: "" });
+  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -35,10 +36,10 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!validatePassword(form.password)) {
-      setError("Password harus minimal 8 karakter dan mengandung huruf besar, huruf kecil, angka, dan simbol");
-      return;
-    }
+    // if (!validatePassword(form.password)) {
+    //   setError("Password harus minimal 8 karakter dan mengandung huruf besar, huruf kecil, angka, dan simbol");
+    //   return;
+    // }
 
     try {
       await axiosInstance.post("/register", {

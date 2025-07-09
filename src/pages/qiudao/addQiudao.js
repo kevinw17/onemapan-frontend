@@ -144,7 +144,7 @@ const AddQiudaoPage = () => {
                                     </FormControl>
 
                                     <FormControl isRequired>
-                                        <FormLabel>Korda Wilayah</FormLabel>
+                                        <FormLabel>Wilayah</FormLabel>
                                         <Select name="area" placeholder="Pilih Korda Wilayah" value={values.area} onChange={handleChange}>
                                             {Array.from({ length: 6 }, (_, i) => (
                                                 <option key={i + 1} value={`Korwil_${i + 1}`}>{i + 1}</option>

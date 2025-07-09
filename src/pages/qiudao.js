@@ -139,7 +139,7 @@ export default function QiudaoPage() {
         lunar_shi_chen_time,
       };
 
-      await updateQiudaoMutation.mutateAsync({ qiu_dao_id, qiudaoPayload });
+      await updateQiudaoMutation.mutateAsync({ qiu_dao_id, payload: qiudaoPayload });
 
       toast({ title: "Berhasil disimpan", status: "success", duration: 3000, isClosable: true });
       setSelectedQiudao({ ...selectedQiudao, ...qiudaoPayload, qiu_dao_location });
