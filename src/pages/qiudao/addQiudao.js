@@ -10,7 +10,7 @@ import {
     VStack,
     useToast,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout";
 import { axiosInstance } from "@/lib/axios";
@@ -21,6 +21,36 @@ const AddQiudaoPage = () => {
     const [step, setStep] = useState(1);
     const [qiudaoFormKey, setQiudaoFormKey] = useState(0);
     const [locationId, setLocationId] = useState(null);
+    const [provinces, setProvinces] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [localities, setLocalities] = useState([]);
+    const [dianChuanShis, setDianChuanShis] = useState([]);
+
+    useEffect(() => {
+        const fetchProvinces = async () => {
+            try {
+                const res = await axiosInstance.get("/profile/location/provinces");
+                console.log("Provinces fetched:", res.data);
+                setProvinces(res.data);
+            } catch (err) {
+                console.error("Gagal fetch provinces:", err);
+            }
+        };
+        fetchProvinces();
+    }, []);
+
+    useEffect(() => {
+        const fetchDianChuanShis = async () => {
+            try {
+                const res = await axiosInstance.get("/dianchuanshi");
+                setDianChuanShis(res.data);
+            } catch (err) {
+                console.error("Gagal fetch Dian Chuan Shi:", err);
+            }
+        };
+        fetchDianChuanShis();
+    }, []);
 
     const locationSchema = Yup.object().shape({
         location_name: Yup.string().required("Nama Vihara wajib diisi"),
@@ -49,8 +79,13 @@ const AddQiudaoPage = () => {
     const router = useRouter();
 
     const handleSubmitLocation = async (values) => {
+        const payload = {
+            ...values,
+            localityId: Number(values.locality),
+        };
+        
         try {
-            const res = await axiosInstance.post("/profile/location/qiudao", values);
+            const res = await axiosInstance.post("/profile/location/qiudao", payload);
             const locationId = res.data?.qiu_dao_location_id;
             setLocationId(locationId);
             setQiudaoFormKey(prev => prev + 1);
@@ -97,6 +132,67 @@ const AddQiudaoPage = () => {
         }
     };
 
+    const handleProvinceChange = async (e, setFieldValue) => {
+        const provinceId = e.target.value;
+        console.log("Selected province ID:", provinceId);
+
+        setFieldValue("province", provinceId);
+        setFieldValue("city", "");
+        setFieldValue("district", "");
+        setFieldValue("locality", "");
+        setCities([]);
+        setDistricts([]);
+        setLocalities([]);
+
+        if (!provinceId) return;
+
+        try {
+            console.log("Calling /profile/location/cities?provinceId=" + provinceId);
+            const res = await axiosInstance.get(`/profile/location/cities?provinceId=${provinceId}`);
+            console.log("Cities response:", res.data); // 🧪 Tambahkan ini
+        setCities(res.data);
+        } catch (error) {
+            console.error("Gagal fetch cities:", error); // sudah ada
+            console.error("Detail response:", error?.response?.data); // 🆕 tambahkan ini
+        }
+
+    };
+
+
+    const handleCityChange = async (e, setFieldValue) => {
+        const cityId = e.target.value;
+        console.log("📍 Selected city ID:", cityId);
+        setFieldValue("city", cityId);
+        setFieldValue("district", "");
+        setFieldValue("locality", "");
+        setDistricts([]);
+        setLocalities([]);
+
+        if (!cityId) return;
+
+        try {
+            console.log("Calling /profile/location/districts?cityId=" + cityId);
+            const res = await axiosInstance.get(`/profile/location/districts?cityId=${cityId}`);
+            console.log("Districts response:", res.data);
+            setDistricts(res.data);
+        } catch (err) {
+            console.error("Gagal fetch districts:", err);
+            console.error("Detail:", err?.response?.data);
+        }
+    };
+
+    const handleDistrictChange = async (e, setFieldValue) => {
+        const districtId = e.target.value;
+        setFieldValue("district", districtId);
+        setFieldValue("locality", "");
+        setLocalities([]);
+
+        if (districtId) {
+            const res = await axiosInstance.get(`/profile/location/localities?districtId=${districtId}`);
+            setLocalities(res.data);
+        }
+    };
+
     return (
         <Layout title="Tambah Data QiuDao">
             <Box maxW="xl" ml={0} p={4}>
@@ -122,7 +218,7 @@ const AddQiudaoPage = () => {
                         validationSchema={locationSchema}
                         onSubmit={handleSubmitLocation}
                     >
-                        {({ values, handleChange, handleSubmit, touched, errors }) => (
+                        {({ values, handleChange, handleSubmit, touched, errors, setFieldValue }) => (
                             <Form onSubmit={handleSubmit}>
                                 <VStack spacing={4} align="stretch">
                                     <FormControl display="none">
@@ -169,28 +265,69 @@ const AddQiudaoPage = () => {
 
                                     <FormControl isRequired>
                                         <FormLabel>Provinsi</FormLabel>
-                                        <Input name="province" value={values.province} onChange={handleChange} />
-                                        {touched.province && errors.province && (
-                                            <Text color="red.500" fontSize="sm">{errors.province}</Text>
-                                        )}
+                                        <Select
+                                            name="province"
+                                            placeholder="Pilih Provinsi"
+                                            value={values.province}
+                                            onChange={(e) => handleProvinceChange(e, setFieldValue)}
+                                        >
+                                            {provinces.map((prov) => (
+                                            <option key={prov.id} value={prov.id}>
+                                                {prov.name}
+                                            </option>
+                                            ))}
+                                        </Select>
                                     </FormControl>
 
                                     <FormControl isRequired>
-                                        <FormLabel>Kota</FormLabel>
-                                        <Input name="city" value={values.city} onChange={handleChange} />
-                                        {touched.city && errors.city && (
-                                            <Text color="red.500" fontSize="sm">{errors.city}</Text>
-                                        )}
+                                        <FormLabel>Kota / Kabupaten</FormLabel>
+                                        <Select
+                                            name="city"
+                                            placeholder="Pilih Kota"
+                                            value={values.city}
+                                            onChange={(e) => handleCityChange(e, setFieldValue)}
+                                            isDisabled={!values.province}
+                                        >
+                                            {cities.map((city) => (
+                                            <option key={city.id} value={city.id}>
+                                                {city.name}
+                                            </option>
+                                            ))}
+                                        </Select>
                                     </FormControl>
 
                                     <FormControl>
                                         <FormLabel>Kecamatan</FormLabel>
-                                        <Input name="district" value={values.district} onChange={handleChange} />
+                                        <Select
+                                            name="district"
+                                            placeholder="Pilih Kecamatan"
+                                            value={values.district}
+                                            onChange={(e) => handleDistrictChange(e, setFieldValue)}
+                                            isDisabled={!values.city}
+                                        >
+                                            {districts.map((district) => (
+                                            <option key={district.id} value={district.id}>
+                                                {district.name}
+                                            </option>
+                                            ))}
+                                        </Select>
                                     </FormControl>
 
                                     <FormControl>
                                         <FormLabel>Kelurahan</FormLabel>
-                                        <Input name="locality" value={values.locality} onChange={handleChange} />
+                                        <Select
+                                            name="locality"
+                                            placeholder="Pilih Kelurahan"
+                                            value={values.locality}
+                                            onChange={handleChange}
+                                            isDisabled={!values.district}
+                                        >
+                                            {localities.map((locality) => (
+                                            <option key={locality.id} value={locality.id}>
+                                                {locality.name}
+                                            </option>
+                                            ))}
+                                        </Select>
                                     </FormControl>
 
                                     <FormControl>
@@ -214,8 +351,7 @@ const AddQiudaoPage = () => {
                         initialValues={{
                             qiu_dao_name: "",
                             qiu_dao_mandarin_name: "",
-                            dian_chuan_shi_name: "",
-                            dian_chuan_shi_mandarin_name: "",
+                            dian_chuan_shi_id: "",
                             yin_shi_qd_name: "",
                             yin_shi_qd_mandarin_name: "",
                             bao_shi_qd_name: "",
@@ -242,13 +378,41 @@ const AddQiudaoPage = () => {
                                     </FormControl>
 
                                     <FormControl>
-                                        <FormLabel>Nama Pandita</FormLabel>
-                                        <Input name="dian_chuan_shi_name" value={formik.values.dian_chuan_shi_name} onChange={formik.handleChange} />
-                                    </FormControl>
+                                        <FormLabel>Pilih Pandita</FormLabel>
+                                        <Select
+                                            placeholder="Pilih Pandita"
+                                            onChange={(e) => {
+                                            const selectedId = parseInt(e.target.value);
+                                            const selected = dianChuanShis.find(p => p.id === selectedId);
+                                            formik.setFieldValue("dian_chuan_shi_id", selectedId);
+                                            formik.setFieldValue("dian_chuan_shi_name", selected?.name || "");
+                                            formik.setFieldValue("dian_chuan_shi_mandarin_name", selected?.mandarin_name || "");
+                                            }}
+                                            value={
+                                            dianChuanShis.find(p =>
+                                                p.name === formik.values.dian_chuan_shi_name &&
+                                                p.mandarin_name === formik.values.dian_chuan_shi_mandarin_name
+                                            )?.id || ""
+                                            }
+                                        >
+                                            {dianChuanShis.map((dcs) => {
+                                                const label = (() => {
+                                                    const name = dcs.name?.trim();
+                                                    const mandarin = dcs.mandarin_name?.trim();
+                                                    if (name && mandarin) return `${name} (${mandarin})`;
+                                                    if (name) return name;
+                                                    if (mandarin) return mandarin;
+                                                    return "";
+                                                })();
 
-                                    <FormControl>
-                                        <FormLabel>Nama Mandarin Pandita</FormLabel>
-                                        <Input name="dian_chuan_shi_mandarin_name" value={formik.values.dian_chuan_shi_mandarin_name} onChange={formik.handleChange} />
+                                                return (
+                                                    <option key={dcs.id} value={dcs.id}>
+                                                    {label}
+                                                    </option>
+                                                );
+                                            })}
+
+                                        </Select>
                                     </FormControl>
 
                                     <FormControl>

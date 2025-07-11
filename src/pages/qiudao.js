@@ -25,7 +25,7 @@ import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
 
 export default function QiudaoPage() {
   const tableHeaders = [
-    "ID", "Lokasi Qiudao", "Nama Indonesia", "Nama Mandarin Qiudao",
+    "ID", "Nama Indonesia", "Nama Mandarin Qiudao", "Lokasi Qiudao", 
     "Dian Chuan Shi", "Guru Pengajak", "Guru Penanggung", "Tanggal Qiudao"
   ];
   const [page, setPage] = useState(1);
@@ -273,82 +273,101 @@ export default function QiudaoPage() {
           </Flex>
       </Flex>
 
-      <Box overflowX="auto">
-        <Table minWidth="max-content">
-          <Thead>
-            <Tr>
-              <Th textAlign="center">
-                <Flex align="center" justify="center" gap={2}>
-                  <Checkbox
-                    size="sm" 
-                    isChecked={isAllSelected}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIsAllSelected(checked);
-                      setSelectedIds(checked ? qiudaosList.map(q => q.qiu_dao_id) : []);
-                    }}
-                    sx={{
-                      ".chakra-checkbox__control": {
-                        borderColor: "gray.500",
-                        borderWidth: "1px",
-                      }
-                    }}
-                  />
-                  <Box>ID</Box>
-                </Flex>
-              </Th>
-              {tableHeaders.slice(1).map(h => (
-                <Th key={h} textAlign="center">{h}</Th>
-              ))}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {isLoading ? (
-              <Tr><Td colSpan={tableHeaders.length}><Spinner size="sm" /></Td></Tr>
-            ) : (
-              qiudaosList.map(qiudao => (
-                <Tr 
-                  key={qiudao.qiu_dao_id}
-                  cursor="pointer"
-                  _hover={{ bg: "gray.50" }}
-                  onClick={() => handleRowClick(qiudao)}
-                >
-                  <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
-                    <Flex align="center" justify="center" gap={2}>
-                      <Checkbox
-                        size="sm"
-                        isChecked={selectedIds.includes(qiudao.qiu_dao_id)}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          if (checked) {
-                            setSelectedIds((prev) => [...prev, qiudao.qiu_dao_id]);
-                          } else {
-                            setSelectedIds((prev) => prev.filter(id => id !== qiudao.qiu_dao_id));
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        sx={{
-                          ".chakra-checkbox__control": {
-                            borderColor: "gray.500",
-                            borderWidth: "1px",
-                          }
-                        }}
-                      />
-                      <Box>{qiudao.qiu_dao_id}</Box>
-                    </Flex>
-                  </Td>
-                  <Td textAlign="center">{qiudao.qiu_dao_location?.location_mandarin_name}</Td>
-                  <Td textAlign="center">{qiudao.qiu_dao_name?.trim() || "-"}</Td>
-                  <Td textAlign="center">{qiudao.qiu_dao_mandarin_name}</Td>
-                  <Td textAlign="center">{qiudao.dian_chuan_shi_mandarin_name}</Td>
-                  <Td textAlign="center">{qiudao.yin_shi_qd_mandarin_name}</Td>
-                  <Td textAlign="center">{qiudao.bao_shi_qd_mandarin_name}</Td>
-                  <Td textAlign="center">{dateFormat(qiudao)}</Td>
-                </Tr>
-              ))
-            )}
-          </Tbody>
-        </Table>
+      <Box overflowX="auto" minH="80vh">
+        {isLoading ? (
+          <Flex justify="center" py={10} height="60vh"><Spinner size="sm" /></Flex>
+        ) : qiudaosList.length === 0 ? (
+          <Flex 
+            justify="center"
+            align="center"
+            direction="column"
+            height="60vh"
+            color="gray.500"
+          >
+            Belum ada data
+          </Flex>
+        ) : (
+          <Table minWidth="max-content">
+            <Thead>
+              <Tr>
+                <Th textAlign="center">
+                  <Flex align="center" justify="center" gap={2}>
+                    <Checkbox
+                      size="sm" 
+                      isChecked={isAllSelected}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setIsAllSelected(checked);
+                        setSelectedIds(checked ? qiudaosList.map(q => q.qiu_dao_id) : []);
+                      }}
+                      sx={{
+                        ".chakra-checkbox__control": {
+                          borderColor: "gray.500",
+                          borderWidth: "1px",
+                        }
+                      }}
+                    />
+                    <Box>ID</Box>
+                  </Flex>
+                </Th>
+                {tableHeaders.slice(1).map(h => (
+                  <Th key={h} textAlign="center">{h}</Th>
+                ))}
+              </Tr>
+            </Thead>
+            <Tbody>
+                {qiudaosList.map(qiudao => (
+                  <Tr 
+                    key={qiudao.qiu_dao_id}
+                    cursor="pointer"
+                    _hover={{ bg: "gray.50" }}
+                    onClick={() => handleRowClick(qiudao)}
+                  >
+                    <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
+                      <Flex align="center" justify="center" gap={2}>
+                        <Checkbox
+                          size="sm"
+                          isChecked={selectedIds.includes(qiudao.qiu_dao_id)}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            if (checked) {
+                              setSelectedIds((prev) => [...prev, qiudao.qiu_dao_id]);
+                            } else {
+                              setSelectedIds((prev) => prev.filter(id => id !== qiudao.qiu_dao_id));
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          sx={{
+                            ".chakra-checkbox__control": {
+                              borderColor: "gray.500",
+                              borderWidth: "1px",
+                            }
+                          }}
+                        />
+                        <Box>{qiudao.qiu_dao_id}</Box>
+                      </Flex>
+                    </Td>
+                    <Td textAlign="center">{qiudao.qiu_dao_name?.trim() || "-"}</Td>
+                    <Td textAlign="center">{qiudao.qiu_dao_mandarin_name}</Td>
+                    <Td textAlign="center">{qiudao.qiu_dao_location?.location_mandarin_name}</Td>
+                    <Td textAlign="center">
+                      {qiudao.dian_chuan_shi?.mandarin_name?.trim()
+                        || qiudao.dian_chuan_shi?.name?.trim()
+                        || "-"}
+                    </Td>
+                    <Td textAlign="center">
+                      {qiudao.yin_shi_qd_mandarin_name?.trim() || qiudao.yin_shi_qd_name?.trim() || "-"}
+                    </Td>
+                    <Td textAlign="center">
+                      {qiudao.bao_shi_qd_mandarin_name?.trim() || qiudao.bao_shi_qd_name?.trim() || "-"}
+                    </Td>
+                    <Td textAlign="center">{dateFormat(qiudao)}</Td>
+                  </Tr>
+                )
+              )}
+            </Tbody>
+          </Table>
+        )}
       </Box>
       <QiudaoDetailModal
         isOpen={isOpen}

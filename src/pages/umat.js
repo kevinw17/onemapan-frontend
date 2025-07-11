@@ -303,126 +303,134 @@ export default function UmatPage() {
             </Flex>
         </Flex>
 
-        <Box overflowX="auto">
-            <Table minWidth="max-content">
-            <Thead>
-                <Tr>
-                <Th textAlign="center">
-                    <Flex align="center" justify="center" gap={2}>
-                        <Checkbox
-                            size="sm" 
-                            isChecked={isAllSelected}
-                            onChange={(e) => {
-                                const checked = e.target.checked;
-                                setIsAllSelected(checked);
-                                setSelectedIds(checked ? usersList.map(u => u.user_info_id) : []);
-                            }}
-                            sx={{
-                                ".chakra-checkbox__control": {
-                                borderColor: "gray.500",
-                                borderWidth: "1px",
+        <Box overflowX="auto" minH="80vh">
+            {isLoading ? (
+                <Flex justify="center" py={10} height="60vh"><Spinner size="sm" /></Flex>
+            ) : usersList.length === 0 ? (
+                <Flex 
+                justify="center"
+                align="center"
+                direction="column"
+                height="60vh"
+                color="gray.500"
+                >
+                Belum ada data
+                </Flex>
+            ) : (
+                <Table minWidth="max-content">
+                    <Thead>
+                        <Tr>
+                        <Th textAlign="center">
+                            <Flex align="center" justify="center" gap={2}>
+                                <Checkbox
+                                    size="sm" 
+                                    isChecked={isAllSelected}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setIsAllSelected(checked);
+                                        setSelectedIds(checked ? usersList.map(u => u.user_info_id) : []);
+                                    }}
+                                    sx={{
+                                        ".chakra-checkbox__control": {
+                                        borderColor: "gray.500",
+                                        borderWidth: "1px",
+                                        }
+                                    }}
+                                />
+                                <Box>ID</Box>
+                            </Flex>
+                        </Th>
+                        <Th textAlign="center">Nama Lengkap</Th>
+                        <Th textAlign="center">Nama Mandarin</Th>
+                        <Th textAlign="center">Status Vegetarian</Th>
+                        <Th textAlign="center">Jenis Kelamin</Th>
+                        <Th textAlign="center">Golongan Darah</Th>
+                        <Th textAlign="center">Tempat & Tanggal Lahir</Th>
+                        </Tr>
+                    </Thead>
+                    <Tbody>
+                        {usersList.map(user => (
+                            <Tr
+                            key={user.user_info_id}
+                            cursor="pointer"
+                            _hover={{ bg: "gray.50" }}
+                            onClick={() => handleRowClick(user)}
+                            >
+                            <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
+                                <Flex align="center" justify="center" gap={3}>
+                                    <Checkbox
+                                        size="sm"
+                                        isChecked={selectedIds.includes(user.user_info_id)}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            if (checked) {
+                                            setSelectedIds((prev) => [...prev, user.user_info_id]);
+                                            } else {
+                                            setSelectedIds((prev) => prev.filter(id => id !== user.user_info_id));
+                                            }
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        sx={{
+                                            ".chakra-checkbox__control": {
+                                            borderColor: "gray.500",
+                                            borderWidth: "1px",
+                                            }
+                                        }}
+                                    />
+                                    <Box>{user.user_info_id}</Box>
+                                </Flex>
+                            </Td>
+                            <Td textAlign="center">{user.full_name}</Td>
+                            <Td textAlign="center">{user.mandarin_name}</Td>
+                            <Td textAlign="center">
+                                <Badge
+                                colorScheme={user.is_qing_kou ? "green" : "gray"}
+                                variant="subtle"
+                                borderRadius="full"
+                                px={3}
+                                py={1}
+                                >
+                                {user.is_qing_kou ? "Sudah" : "Belum"}
+                                </Badge>
+                            </Td>
+                            <Td textAlign="center">
+                                <Badge
+                                colorScheme={
+                                    user.gender === "Male" ? "blue" :
+                                    user.gender === "Female" ? "pink" : "gray"
                                 }
-                            }}
-                        />
-                        <Box>ID</Box>
-                    </Flex>
-                </Th>
-                <Th textAlign="center">Nama Lengkap</Th>
-                <Th textAlign="center">Nama Mandarin</Th>
-                <Th textAlign="center">Status Vegetarian</Th>
-                <Th textAlign="center">Jenis Kelamin</Th>
-                <Th textAlign="center">Golongan Darah</Th>
-                <Th textAlign="center">Tempat & Tanggal Lahir</Th>
-                </Tr>
-            </Thead>
-            <Tbody>
-                {isLoading ? (
-                <Tr>
-                    <Td colSpan={10}><Spinner size="sm" /></Td>
-                </Tr>
-                ) : (
-                usersList.map(user => (
-                    <Tr
-                    key={user.user_info_id}
-                    cursor="pointer"
-                    _hover={{ bg: "gray.50" }}
-                    onClick={() => handleRowClick(user)}
-                    >
-                    <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
-                        <Flex align="center" justify="center" gap={3}>
-                            <Checkbox
-                                size="sm"
-                                isChecked={selectedIds.includes(user.user_info_id)}
-                                onChange={(e) => {
-                                    const checked = e.target.checked;
-                                    if (checked) {
-                                    setSelectedIds((prev) => [...prev, user.user_info_id]);
-                                    } else {
-                                    setSelectedIds((prev) => prev.filter(id => id !== user.user_info_id));
-                                    }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                sx={{
-                                    ".chakra-checkbox__control": {
-                                    borderColor: "gray.500",
-                                    borderWidth: "1px",
-                                    }
-                                }}
-                            />
-                            <Box>{user.user_info_id}</Box>
-                        </Flex>
-                    </Td>
-                    <Td textAlign="center">{user.full_name}</Td>
-                    <Td textAlign="center">{user.mandarin_name}</Td>
-                    <Td textAlign="center">
-                        <Badge
-                        colorScheme={user.is_qing_kou ? "green" : "gray"}
-                        variant="subtle"
-                        borderRadius="full"
-                        px={3}
-                        py={1}
-                        >
-                        {user.is_qing_kou ? "Sudah" : "Belum"}
-                        </Badge>
-                    </Td>
-                    <Td textAlign="center">
-                        <Badge
-                        colorScheme={
-                            user.gender === "Male" ? "blue" :
-                            user.gender === "Female" ? "pink" : "gray"
-                        }
-                        variant="subtle"
-                        borderRadius="full"
-                        px={3}
-                        py={1}
-                        >
-                        {genderMap[user.gender] || "-"}
-                        </Badge>
-                    </Td>
-                    <Td textAlign="center">
-                        <Badge
-                        colorScheme={
-                            bloodTypeBadgeColor[user.blood_type] || "gray"
-                        }
-                        variant="subtle"
-                        borderRadius="full"
-                        px={3}
-                        py={1}
-                        >
-                        {user.blood_type || "-"}
-                        </Badge>
-                    </Td>
-                    <Td textAlign="center">
-                        {user.place_of_birth},{" "}
-                        {new Date(user.date_of_birth).toLocaleDateString("id-ID", {
-                        year: "numeric", month: "long", day: "numeric"
-                        })}
-                    </Td>
-                    </Tr>
-                ))
-                )}
-            </Tbody>
-            </Table>
+                                variant="subtle"
+                                borderRadius="full"
+                                px={3}
+                                py={1}
+                                >
+                                {genderMap[user.gender] || "-"}
+                                </Badge>
+                            </Td>
+                            <Td textAlign="center">
+                                <Badge
+                                colorScheme={
+                                    bloodTypeBadgeColor[user.blood_type] || "gray"
+                                }
+                                variant="subtle"
+                                borderRadius="full"
+                                px={3}
+                                py={1}
+                                >
+                                {user.blood_type || "-"}
+                                </Badge>
+                            </Td>
+                            <Td textAlign="center">
+                                {user.place_of_birth},{" "}
+                                {new Date(user.date_of_birth).toLocaleDateString("id-ID", {
+                                year: "numeric", month: "long", day: "numeric"
+                                })}
+                            </Td>
+                            </Tr>
+                        ))}
+                    </Tbody>
+                </Table>
+            )}
         </Box>
 
         <UserDetailModal

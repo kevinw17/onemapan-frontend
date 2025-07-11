@@ -10,7 +10,7 @@ import {
     VStack,
     useToast,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout";
 import { axiosInstance } from "@/lib/axios";
@@ -44,7 +44,6 @@ const userSchema = Yup.object().shape({
     job_name: Yup.string(),
 });
 
-
 export default function AddUmatPage() {
     const [step, setStep] = useState(1);
     const [domicileId, setDomicileId] = useState(null);
@@ -55,8 +54,25 @@ export default function AddUmatPage() {
         search: "",
         searchField: "qiu_dao_mandarin_name"
     });
+    const [provinces, setProvinces] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [localities, setLocalities] = useState([]);
     const toast = useToast();
     const router = useRouter();
+
+    useEffect(() => {
+        const fetchProvinces = async () => {
+            try {
+                const res = await axiosInstance.get("/profile/location/provinces");
+                console.log("Provinces fetched:", res.data);
+                setProvinces(res.data);
+            } catch (err) {
+                console.error("Gagal fetch provinces:", err);
+            }
+        };
+        fetchProvinces();
+    }, []);
 
     const handleSubmitLocation = async (values, label) => {
         const endpoint =
@@ -65,7 +81,12 @@ export default function AddUmatPage() {
             : "/profile/location/id-card";
 
         try {
-            const res = await axiosInstance.post(endpoint, values);
+            const payload = {
+                ...values,
+                localityId: BigInt(values.locality),
+            };
+
+            const res = await axiosInstance.post(endpoint, payload);
 
             if (label === "Domisili") {
                 const domicileId = res.data?.domicile_location_id;
@@ -118,6 +139,67 @@ export default function AddUmatPage() {
         }
     };
 
+    const handleProvinceChange = async (e, setFieldValue) => {
+        const provinceId = e.target.value;
+        console.log("Selected province ID:", provinceId);
+
+        setFieldValue("province", provinceId);
+        setFieldValue("city", "");
+        setFieldValue("district", "");
+        setFieldValue("locality", "");
+        setCities([]);
+        setDistricts([]);
+        setLocalities([]);
+
+        if (!provinceId) return;
+
+        try {
+            console.log("Calling /profile/location/cities?provinceId=" + provinceId);
+            const res = await axiosInstance.get(`/profile/location/cities?provinceId=${provinceId}`);
+            console.log("Cities response:", res.data); // 🧪 Tambahkan ini
+        setCities(res.data);
+        } catch (error) {
+            console.error("Gagal fetch cities:", error); // sudah ada
+            console.error("Detail response:", error?.response?.data); // 🆕 tambahkan ini
+        }
+
+    };
+
+
+    const handleCityChange = async (e, setFieldValue) => {
+        const cityId = e.target.value;
+        console.log("📍 Selected city ID:", cityId);
+        setFieldValue("city", cityId);
+        setFieldValue("district", "");
+        setFieldValue("locality", "");
+        setDistricts([]);
+        setLocalities([]);
+
+        if (!cityId) return;
+
+        try {
+            console.log("Calling /profile/location/districts?cityId=" + cityId);
+            const res = await axiosInstance.get(`/profile/location/districts?cityId=${cityId}`);
+            console.log("Districts response:", res.data);
+            setDistricts(res.data);
+        } catch (err) {
+            console.error("Gagal fetch districts:", err);
+            console.error("Detail:", err?.response?.data);
+        }
+    };
+
+    const handleDistrictChange = async (e, setFieldValue) => {
+        const districtId = e.target.value;
+        setFieldValue("district", districtId);
+        setFieldValue("locality", "");
+        setLocalities([]);
+
+        if (districtId) {
+            const res = await axiosInstance.get(`/profile/location/localities?districtId=${districtId}`);
+            setLocalities(res.data);
+        }
+    };
+
     const renderLocationForm = (type) => (
         <Formik
         initialValues={{
@@ -136,7 +218,7 @@ export default function AddUmatPage() {
         validationSchema={locationSchema}
         onSubmit={(values) => handleSubmitLocation(values, type)}
         >
-        {({ values, handleChange, handleSubmit, touched, errors }) => (
+        {({ values, handleChange, handleSubmit, touched, errors, setFieldValue }) => (
             <Form onSubmit={handleSubmit}>
             <VStack spacing={4} align="stretch">
                 <Heading size="md">Tambah Lokasi {type}</Heading>
@@ -161,29 +243,70 @@ export default function AddUmatPage() {
                 </FormControl>
 
                 <FormControl isRequired>
-                <FormLabel>Provinsi</FormLabel>
-                <Input name="province" value={values.province} onChange={handleChange} />
-                {touched.province && errors.province && (
-                    <Text color="red.500" fontSize="sm">{errors.province}</Text>
-                )}
+                    <FormLabel>Provinsi</FormLabel>
+                    <Select
+                        name="province"
+                        placeholder="Pilih Provinsi"
+                        value={values.province}
+                        onChange={(e) => handleProvinceChange(e, setFieldValue)}
+                    >
+                        {provinces.map((prov) => (
+                        <option key={prov.id} value={prov.id}>
+                            {prov.name}
+                        </option>
+                        ))}
+                    </Select>
                 </FormControl>
 
                 <FormControl isRequired>
-                <FormLabel>Kota / Kabupaten</FormLabel>
-                <Input name="city" value={values.city} onChange={handleChange} />
-                {touched.city && errors.city && (
-                    <Text color="red.500" fontSize="sm">{errors.city}</Text>
-                )}
+                    <FormLabel>Kota / Kabupaten</FormLabel>
+                    <Select
+                        name="city"
+                        placeholder="Pilih Kota"
+                        value={values.city}
+                        onChange={(e) => handleCityChange(e, setFieldValue)}
+                        isDisabled={!values.province}
+                    >
+                        {cities.map((city) => (
+                        <option key={city.id} value={city.id}>
+                            {city.name}
+                        </option>
+                        ))}
+                    </Select>
                 </FormControl>
 
                 <FormControl>
-                <FormLabel>Kecamatan</FormLabel>
-                <Input name="district" value={values.district} onChange={handleChange} />
+                    <FormLabel>Kecamatan</FormLabel>
+                    <Select
+                        name="district"
+                        placeholder="Pilih Kecamatan"
+                        value={values.district}
+                        onChange={(e) => handleDistrictChange(e, setFieldValue)}
+                        isDisabled={!values.city}
+                    >
+                        {districts.map((district) => (
+                        <option key={district.id} value={district.id}>
+                            {district.name}
+                        </option>
+                        ))}
+                    </Select>
                 </FormControl>
 
                 <FormControl>
-                <FormLabel>Kelurahan</FormLabel>
-                <Input name="locality" value={values.locality} onChange={handleChange} />
+                    <FormLabel>Kelurahan</FormLabel>
+                    <Select
+                        name="locality"
+                        placeholder="Pilih Kelurahan"
+                        value={values.locality}
+                        onChange={handleChange}
+                        isDisabled={!values.district}
+                    >
+                        {localities.map((locality) => (
+                        <option key={locality.id} value={locality.id}>
+                            {locality.name}
+                        </option>
+                        ))}
+                    </Select>
                 </FormControl>
 
                 <FormControl>
