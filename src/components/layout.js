@@ -232,7 +232,7 @@ export default function Layout({ children, title, onImportSuccess }) {
       {/* Content */}
       <Box flex="1" p={4} overflowX="auto" maxW="100vw">
         <Flex justify="space-between" align="center" mb={4}>
-          <Heading size="lg">{title}</Heading>
+          <Heading size="lg" ml={2}>{title}</Heading>
 
           <Flex gap={2} align="center">
             {router.pathname === "/qiudao" && (

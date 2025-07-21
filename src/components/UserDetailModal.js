@@ -5,7 +5,7 @@ import {
     Collapse
 } from "@chakra-ui/react";
 import LocationSection from "./LocationSection";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 function UserDetailModal(
     { isOpen, onClose, selectedUser, isEditing, setIsEditing, 
@@ -194,21 +194,26 @@ function UserDetailModal(
 
                             {["street", "locality", "district", "city", "province"].some(f => selectedUser.id_card_location?.[f]) && (
                                 <Text>
-                                <b>Domisili KTP:</b>{" "}
-                                {["street", "locality", "district", "city", "province"]
-                                    .map(f => selectedUser.id_card_location?.[f])
-                                    .filter(Boolean)
-                                    .join(", ")}
+                                    <b>Domisili KTP:</b>{" "}
+                                    {[selectedUser.id_card_location?.street,
+                                        selectedUser.id_card_location?.locality?.name,
+                                        selectedUser.id_card_location?.locality?.district?.name,
+                                        selectedUser.id_card_location?.locality?.district?.city?.name,
+                                        selectedUser.id_card_location?.locality?.district?.city?.province?.name]
+                                    .filter(Boolean).join(", ")}
                                 </Text>
                             )}
+
 
                             {["street", "locality", "district", "city", "province"].some(f => selectedUser.domicile_location?.[f]) && (
                                 <Text>
                                 <b>Domisili Saat Ini:</b>{" "}
-                                {["street", "locality", "district", "city", "province"]
-                                    .map(f => selectedUser.domicile_location?.[f])
-                                    .filter(Boolean)
-                                    .join(", ")}
+                                {[selectedUser.id_card_location?.street,
+                                    selectedUser.id_card_location?.locality?.name,
+                                    selectedUser.id_card_location?.locality?.district?.name,
+                                    selectedUser.id_card_location?.locality?.district?.city?.name,
+                                    selectedUser.id_card_location?.locality?.district?.city?.province?.name]
+                                .filter(Boolean).join(", ")}
                                 </Text>
                             )}
                         </VStack>
@@ -241,9 +246,16 @@ function UserDetailModal(
                     ) : (
                     <Box display="flex" gap={4}>
                         <Button
-                        colorScheme="blue"
-                        flex="1"
-                        onClick={() => setIsEditing(true)}
+                            colorScheme="blue"
+                            flex="1"
+                            onClick={() => {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    ...selectedUser,
+                                    user_info_id: selectedUser.user_info_id ?? prev.user_info_id,
+                                }));
+                                setIsEditing(true);
+                            }}
                         >
                         Edit
                         </Button>

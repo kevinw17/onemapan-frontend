@@ -97,7 +97,6 @@ export default function QiudaoPage() {
       qiu_dao_location_id,
       qiu_dao_name,
       qiu_dao_mandarin_name,
-      dian_chuan_shi_mandarin_name,
       yin_shi_qd_mandarin_name,
       bao_shi_qd_mandarin_name,
       lunar_sui_ci_year,
@@ -130,7 +129,7 @@ export default function QiudaoPage() {
         qiu_dao_location_id,
         qiu_dao_name,
         qiu_dao_mandarin_name,
-        dian_chuan_shi_mandarin_name,
+        dian_chuan_shi_id: formData.dian_chuan_shi_id,
         yin_shi_qd_mandarin_name,
         bao_shi_qd_mandarin_name,
         lunar_sui_ci_year,
@@ -145,6 +144,7 @@ export default function QiudaoPage() {
       setSelectedQiudao({ ...selectedQiudao, ...qiudaoPayload, qiu_dao_location });
       setIsEditing(false);
       refetchQiudaos();
+      handleClose();
 
     } catch (err) {
       console.error("Gagal menyimpan:", err);
@@ -349,11 +349,15 @@ export default function QiudaoPage() {
                     </Td>
                     <Td textAlign="center">{qiudao.qiu_dao_name?.trim() || "-"}</Td>
                     <Td textAlign="center">{qiudao.qiu_dao_mandarin_name}</Td>
-                    <Td textAlign="center">{qiudao.qiu_dao_location?.location_mandarin_name}</Td>
                     <Td textAlign="center">
-                      {qiudao.dian_chuan_shi?.mandarin_name?.trim()
-                        || qiudao.dian_chuan_shi?.name?.trim()
-                        || "-"}
+                      {qiudao.qiu_dao_location
+                        ? `${qiudao.qiu_dao_location.location_name || "-"} (${qiudao.qiu_dao_location.location_mandarin_name || "-"})`
+                        : "-"}
+                    </Td>
+                    <Td textAlign="center">
+                      {qiudao.dian_chuan_shi
+                        ? `${qiudao.dian_chuan_shi.name || "-"} (${qiudao.dian_chuan_shi.mandarin_name || "-"})`
+                        : "-"}
                     </Td>
                     <Td textAlign="center">
                       {qiudao.yin_shi_qd_mandarin_name?.trim() || qiudao.yin_shi_qd_name?.trim() || "-"}

@@ -11,10 +11,12 @@ import {
     Input,
     Button,
     Box,
-    Collapse
+    Collapse,
+    Select
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import LocationSection from "./LocationSection";
+import { axiosInstance } from "@/lib/axios";
 
 export default function QiudaoDetailModal({
     isOpen,
@@ -39,9 +41,28 @@ export default function QiudaoDetailModal({
     };
 
     const [showLocation, setShowLocation] = useState(false);
+    const [dianChuanList, setDianChuanList] = useState([]);
+    const [templeLocations, setTempleLocations] = useState([]);
+
     useEffect(() => {
         if (!isOpen) {
             setShowLocation(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen) {
+            axiosInstance.get("/dianchuanshi")
+                .then(res => setDianChuanList(res.data))
+                .catch(err => console.error("Gagal ambil Dian Chuan Shi:", err));
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen) {
+            axiosInstance.get("/fotang")
+                .then(res => setTempleLocations(res.data || []))
+                .catch(err => console.error("Gagal ambil lokasi vihara:", err));
         }
     }, [isOpen]);
 
@@ -61,8 +82,48 @@ export default function QiudaoDetailModal({
                     <Text fontWeight="bold">Nama Mandarin Qiudao</Text>
                     <Input value={formData.qiu_dao_mandarin_name || ""} onChange={(e) => setFormData({ ...formData, qiu_dao_mandarin_name: e.target.value })} />
 
+                    <Text fontWeight="bold">Lokasi Vihara</Text>
+                    <Select
+                        placeholder="Pilih Lokasi Vihara"
+                        value={formData.qiu_dao_location_id || ""}
+                        onChange={(e) =>
+                            setFormData({ ...formData, qiu_dao_location_id: parseInt(e.target.value) })
+                        }
+                    >
+                        {templeLocations.map((fotang) => {
+                            const label = [fotang.location_name, fotang.location_mandarin_name]
+                                .filter(Boolean)
+                                .join(" (") + (fotang.location_mandarin_name ? ")" : "");
+                            return (
+                                <option key={fotang.fotang_id} value={fotang.fotang_id}>
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </Select>
+
                     <Text fontWeight="bold">Pandita</Text>
-                    <Input value={formData.dian_chuan_shi_mandarin_name || ""} onChange={(e) => setFormData({ ...formData, dian_chuan_shi_mandarin_name: e.target.value })} />
+                    <Select
+                        placeholder="Pilih Pandita"
+                        value={formData.dian_chuan_shi_id || ""}
+                        onChange={(e) => {
+                            const selected = dianChuanList.find(item => item.id === parseInt(e.target.value));
+                            setFormData({
+                                ...formData,
+                                dian_chuan_shi_id: selected?.id || null,
+                            });
+                        }}
+                    >
+                    {dianChuanList.map((item) => {
+                        const indonesian = item.name?.trim() || "(Tanpa Nama)";
+                        const mandarin = item.mandarin_name?.trim() || "(无名)";
+                        return (
+                        <option key={item.id} value={item.id}>
+                            [{item.id}] {indonesian} ({mandarin})
+                        </option>
+                        );
+                    })}
+                    </Select>
 
                     <Text fontWeight="bold">Guru Pengajak</Text>
                     <Input value={formData.yin_shi_qd_mandarin_name || ""} onChange={(e) => setFormData({ ...formData, yin_shi_qd_mandarin_name: e.target.value })} />
@@ -81,50 +142,39 @@ export default function QiudaoDetailModal({
 
                     <Text fontWeight="bold">Waktu Lunar</Text>
                     <Input value={formData.lunar_shi_chen_time || ""} onChange={(e) => setFormData({ ...formData, lunar_shi_chen_time: e.target.value })} />
-
-                    <VStack align="stretch" spacing={4}>
-                        <Button
-                            mt={2}
-                            onClick={() => setShowLocation(prev => !prev)}
-                            colorScheme="teal"
-                        >
-                            {showLocation ? "Sembunyikan Lokasi" : "Tampilkan Lokasi"}
-                        </Button>
-                        <Collapse in={showLocation} animateOpacity>
-                            <LocationSection
-                                location={formData.qiu_dao_location}
-                                onChange={(updatedLocation) =>
-                                    setFormData(prev => ({
-                                    ...prev,
-                                    qiu_dao_location: updatedLocation
-                                    }))
-                                }
-                                customLabels={{
-                                    location_name: "Nama Vihara",
-                                    location_mandarin_name: "Nama Vihara (Mandarin)",
-                                }}
-                            />
-                        </Collapse>
-                    </VStack>
                 </VStack>
                 ) : (
                 <VStack align="start" spacing={3}>
                     {selectedQiudao.qiu_dao_id && <Text><b>ID:</b> {selectedQiudao.qiu_dao_id}</Text>}
 
-                    {selectedQiudao.qiu_dao_location?.location_mandarin_name?.trim() && (
-                    <Text><b>Lokasi Qiudao:</b> {selectedQiudao.qiu_dao_location.location_mandarin_name}</Text>
+                    {selectedQiudao.qiu_dao_location && (
+                        <Text>
+                            <b>Lokasi Qiudao:</b>{" "}
+                            {selectedQiudao.qiu_dao_location.location_name?.trim() || "(Tanpa Nama)"}{" "}
+                            ({selectedQiudao.qiu_dao_location.location_mandarin_name?.trim() || "无名"})
+                        </Text>
                     )}
 
-                    {selectedQiudao.dian_chuan_shi_mandarin_name?.trim() && (
-                    <Text><b>Pandita:</b> {selectedQiudao.dian_chuan_shi_mandarin_name}</Text>
+                    {selectedQiudao.dian_chuan_shi && (
+                        <Text>
+                            <b>Pandita:</b>{" "}
+                            {selectedQiudao.dian_chuan_shi.name?.trim() || "(Tanpa Nama)"}{" "}
+                            ({selectedQiudao.dian_chuan_shi.mandarin_name?.trim() || "无名"})
+                        </Text>
                     )}
 
-                    {selectedQiudao.yin_shi_qd_mandarin_name?.trim() && (
-                    <Text><b>Guru Pengajak:</b> {selectedQiudao.yin_shi_qd_mandarin_name}</Text>
+                    {(selectedQiudao.yin_shi_qd_mandarin_name || selectedQiudao.yin_shi_qd_name)?.trim() && (
+                        <Text>
+                            <b>Guru Pengajak:</b>{" "}
+                            {selectedQiudao.yin_shi_qd_mandarin_name?.trim() || selectedQiudao.yin_shi_qd_name}
+                        </Text>
                     )}
 
-                    {selectedQiudao.bao_shi_qd_mandarin_name?.trim() && (
-                    <Text><b>Guru Penanggung:</b> {selectedQiudao.bao_shi_qd_mandarin_name}</Text>
+                    {(selectedQiudao.bao_shi_qd_mandarin_name || selectedQiudao.bao_shi_qd_name)?.trim() && (
+                        <Text>
+                            <b>Guru Penanggung:</b>{" "}
+                            {selectedQiudao.bao_shi_qd_mandarin_name?.trim() || selectedQiudao.bao_shi_qd_name}
+                        </Text>
                     )}
 
                     {selectedQiudao.qiu_dao_name?.trim() && (

@@ -102,7 +102,32 @@ export default function UmatPage() {
             last_education_level,
             education_major,
             job_name,
+            id_card_location,
+            domicile_location,
         } = formData;
+
+        const idCardLocationId = parseInt(id_card_location?.location_id || 0);
+        const domicileLocationId = parseInt(domicile_location?.location_id || 0);
+
+        if (!idCardLocationId || isNaN(idCardLocationId)) {
+            toast({
+            title: "Lokasi KTP tidak valid",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+            });
+            return;
+        }
+
+        if (!domicileLocationId || isNaN(domicileLocationId)) {
+            toast({
+            title: "Lokasi Domisili tidak valid",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+            });
+            return;
+        }
 
         const payload = {
             full_name,
@@ -119,42 +144,39 @@ export default function UmatPage() {
             last_education_level,
             education_major,
             job_name,
-            id_card_location_id: formData.id_card_location?.location_id || null,
-            domicile_location_id: formData.domicile_location?.location_id || null,
+            id_card_location_id: idCardLocationId,
+            domicile_location_id: domicileLocationId,
         };
 
-        const idCardLoc = formData.id_card_location;
-        const domicileLoc = formData.domicile_location;
-
         try {
-            if (idCardLoc?.location_id && domicileLoc?.location_id) {
-                const sameLocation = idCardLoc.location_id === domicileLoc.location_id;
-
-                if (sameLocation) {
-                    await updateLocationMutation.mutateAsync({
-                    locationId: idCardLoc.location_id,
+            if (id_card_location?.location_id && id_card_location?.localityId) {
+                await updateLocationMutation.mutateAsync({
+                    locationId: id_card_location.location_id,
                     payload: {
-                        ...idCardLoc,
-                        ...domicileLoc,
+                        localityId: id_card_location.localityId,
+                        location_name: id_card_location.location_name,
+                        street: id_card_location.street,
+                        postal_code: id_card_location.postal_code,
+                    }
+                });
+            }
+
+            if (domicile_location?.location_id && domicile_location?.localityId) {
+                await updateLocationMutation.mutateAsync({
+                    locationId: domicile_location.location_id,
+                    payload: {
+                        localityId: domicile_location.localityId,
+                        location_name: domicile_location.location_name,
+                        street: domicile_location.street,
+                        postal_code: domicile_location.postal_code,
                     },
-                    });
-                } else {
-                    await updateLocationMutation.mutateAsync({
-                    locationId: idCardLoc.location_id,
-                    payload: idCardLoc,
-                    });
-                    
-                    await updateLocationMutation.mutateAsync({
-                    locationId: domicileLoc.location_id,
-                    payload: domicileLoc,
-                    });
-                }
+                });
             }
 
             await updateUserMutation.mutateAsync({
-        userId: formData.user_info_id,
-        payload,
-    });
+                userId: formData.user_info_id,
+                payload,
+            });
 
             toast({
                 title: "Berhasil disimpan",
@@ -166,18 +188,18 @@ export default function UmatPage() {
             refetchUsers();
         } catch (err) {
             const errorData = err?.response?.data;
-                const errorMessage =
-                    typeof errorData === "string"
-                    ? errorData
-                    : errorData?.message || "Terjadi kesalahan saat menyimpan";
+            const errorMessage =
+            typeof errorData === "string"
+                ? errorData
+                : errorData?.message || "Terjadi kesalahan saat menyimpan";
 
-                toast({
-                    title: "Gagal menyimpan",
-                    description: errorMessage,
-                    status: "error",
-                    duration: 3000,
-                    isClosable: true,
-                });
+            toast({
+                title: "Gagal menyimpan",
+                description: errorMessage,
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
         }
     };
 
@@ -351,10 +373,10 @@ export default function UmatPage() {
                     <Tbody>
                         {usersList.map(user => (
                             <Tr
-                            key={user.user_info_id}
-                            cursor="pointer"
-                            _hover={{ bg: "gray.50" }}
-                            onClick={() => handleRowClick(user)}
+                                key={user.user_info_id}
+                                cursor="pointer"
+                                _hover={{ bg: "gray.50" }}
+                                onClick={() => handleRowClick(user)}
                             >
                             <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
                                 <Flex align="center" justify="center" gap={3}>

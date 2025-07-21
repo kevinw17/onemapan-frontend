@@ -17,6 +17,7 @@ export default function Pagination({
             align="center"
             flexWrap="wrap"
             gap={4}
+            ml={2}
         >
             <HStack spacing={3}>
                 <Select

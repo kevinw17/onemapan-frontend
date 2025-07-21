@@ -83,7 +83,7 @@ export default function AddUmatPage() {
         try {
             const payload = {
                 ...values,
-                localityId: BigInt(values.locality),
+                localityId: Number(values.locality),
             };
 
             const res = await axiosInstance.post(endpoint, payload);
@@ -203,10 +203,8 @@ export default function AddUmatPage() {
     const renderLocationForm = (type) => (
         <Formik
         initialValues={{
-            location_type: "Home",
             location_name: "",
             location_mandarin_name: "",
-            area: "Home",
             country_iso: "",
             province: "",
             city: "",
@@ -477,7 +475,7 @@ export default function AddUmatPage() {
     );
 
     return (
-        <Layout title="Tambah Data Umat">
+        <Layout title="Umat">
         <Box maxW="xl" ml={0} p={4}>
             {step === 1 && renderLocationForm("Domisili")}
             {step === 2 && renderLocationForm("KTP")}
