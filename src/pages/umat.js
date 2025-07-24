@@ -146,6 +146,7 @@ export default function UmatPage() {
             job_name,
             id_card_location_id: idCardLocationId,
             domicile_location_id: domicileLocationId,
+            spiritual_status: formData.spiritual_status || null,
         };
 
         try {
@@ -364,10 +365,14 @@ export default function UmatPage() {
                         </Th>
                         <Th textAlign="center">Nama Lengkap</Th>
                         <Th textAlign="center">Nama Mandarin</Th>
+                        <Th textAlign="center">Status Rohani</Th>
                         <Th textAlign="center">Status Vegetarian</Th>
                         <Th textAlign="center">Jenis Kelamin</Th>
                         <Th textAlign="center">Golongan Darah</Th>
-                        <Th textAlign="center">Tempat & Tanggal Lahir</Th>
+                        <Th textAlign="center">Tempat Lahir</Th>
+                        <Th textAlign="center">Tanggal Lahir</Th>
+                        <Th textAlign="center">Alamat Domisili</Th>
+                        <Th textAlign="center">Alamat KTP</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
@@ -404,6 +409,9 @@ export default function UmatPage() {
                             </Td>
                             <Td textAlign="center">{user.full_name}</Td>
                             <Td textAlign="center">{user.mandarin_name}</Td>
+                            <Td textAlign="center">
+                                {user.spiritualUser?.spiritual_status || "-"}
+                            </Td>
                             <Td textAlign="center">
                                 <Badge
                                 colorScheme={user.is_qing_kou ? "green" : "gray"}
@@ -442,11 +450,20 @@ export default function UmatPage() {
                                 {user.blood_type || "-"}
                                 </Badge>
                             </Td>
+                            <Td textAlign="center">{user.place_of_birth || "-"}</Td>
                             <Td textAlign="center">
-                                {user.place_of_birth},{" "}
-                                {new Date(user.date_of_birth).toLocaleDateString("id-ID", {
-                                year: "numeric", month: "long", day: "numeric"
-                                })}
+                                {user.date_of_birth
+                                    ? new Date(user.date_of_birth).toLocaleDateString("id-ID", {
+                                        year: "numeric", month: "long", day: "numeric"
+                                    })
+                                    : "-"
+                                }
+                            </Td>
+                            <Td textAlign="center">
+                                {user.domicile_location?.street || "-"}
+                            </Td>
+                            <Td textAlign="center">
+                                {user.id_card_location?.street || "-"}
                             </Td>
                             </Tr>
                         ))}

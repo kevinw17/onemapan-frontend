@@ -42,6 +42,9 @@ const userSchema = Yup.object().shape({
     last_education_level: Yup.string(),
     education_major: Yup.string(),
     job_name: Yup.string(),
+    spiritual_status: Yup.string()
+        .oneOf(["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"], "Status spiritual tidak valid")
+        .required("Status spiritual wajib diisi"),
 });
 
 export default function AddUmatPage() {
@@ -328,22 +331,23 @@ export default function AddUmatPage() {
         
         <Formik
             initialValues={{
-            qiu_dao_id: "",
-            full_name: "",
-            mandarin_name: "",
-            is_qing_kou: false,
-            gender: "",
-            blood_type: "",
-            place_of_birth: "",
-            date_of_birth: "",
-            date_of_death: "",
-            id_card_number: "",
-            phone_number: "",
-            email: "",
-            marital_status: "",
-            last_education_level: "",
-            education_major: "",
-            job_name: "",
+                qiu_dao_id: "",
+                full_name: "",
+                mandarin_name: "",
+                is_qing_kou: false,
+                gender: "",
+                blood_type: "",
+                place_of_birth: "",
+                date_of_birth: "",
+                date_of_death: "",
+                id_card_number: "",
+                phone_number: "",
+                email: "",
+                marital_status: "",
+                last_education_level: "",
+                education_major: "",
+                job_name: "",
+                spiritual_status: "",
             }}
             validationSchema={userSchema}
             onSubmit={handleSubmitUser}
@@ -384,6 +388,27 @@ export default function AddUmatPage() {
                 <FormControl>
                     <FormLabel>Nama Mandarin</FormLabel>
                     <Input name="mandarin_name" value={values.mandarin_name} onChange={handleChange} />
+                </FormControl>
+
+                <FormControl isRequired>
+                    <FormLabel>Status Spiritual</FormLabel>
+                    <Select
+                        name="spiritual_status"
+                        placeholder="Pilih Status Spiritual"
+                        value={values.spiritual_status}
+                        onChange={handleChange}
+                    >
+                        <option value="QianRen">Qian Ren / Sesepuh</option>
+                        <option value="DianChuanShi">Dian Chuan Shi / Pandita</option>
+                        <option value="TanZhu">Tan Zhu / Pandita Madya</option>
+                        <option value="FoYuan">Fo Yuan / Buddha Siswa</option>
+                        <option value="BanShiYuan">Ban Shi Yuan / Pelaksana Vihara</option>
+                        <option value="QianXian">Qian Xian / Aktivis</option>
+                        <option value="DaoQin">Dao Qin / Umat</option>
+                    </Select>
+                    {touched.spiritual_status && errors.spiritual_status && (
+                        <Text color="red.500" fontSize="sm">{errors.spiritual_status}</Text>
+                    )}
                 </FormControl>
 
                 <FormControl isRequired>

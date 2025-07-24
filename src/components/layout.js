@@ -18,6 +18,19 @@ export default function Layout({ children, title, onImportSuccess }) {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const toast = useToast();
   const fileInputRef = useRef();
+  const [username, setUsername] = useState("");
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUsername(user.username);
+      } catch (e) {
+        console.error("Gagal parsing user:", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const checkAuthStatus = () => {
@@ -313,6 +326,11 @@ export default function Layout({ children, title, onImportSuccess }) {
                 aria-label="Settings"
               />
               <MenuList>
+                {username && (
+                  <Text px={3} py={2} fontWeight="bold">
+                    Halo, {username}
+                  </Text>
+                )}
                 <MenuItem onClick={handleLogout}>Logout</MenuItem>
               </MenuList>
             </Menu>

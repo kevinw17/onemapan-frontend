@@ -25,8 +25,11 @@ import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
 
 export default function QiudaoPage() {
   const tableHeaders = [
-    "ID", "Nama Indonesia", "Nama Mandarin Qiudao", "Lokasi Qiudao", 
-    "Dian Chuan Shi", "Guru Pengajak", "Guru Penanggung", "Tanggal Qiudao"
+    "ID", "Nama Indonesia", "Nama Mandarin Qiudao", "Nama Vihara (Indonesia)", "Nama Vihara (Mandarin)",
+    "Nama Indonesia Pandita", "Nama Mandarin Pandita", 
+    "Nama Indonesia Guru Pengajak", "Nama Mandarin Guru Pengajak",
+    "Nama Indonesia Guru Penanggung", "Nama Mandarin Guru Penanggung",
+    "Tanggal Qiudao"
   ];
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -349,22 +352,14 @@ export default function QiudaoPage() {
                     </Td>
                     <Td textAlign="center">{qiudao.qiu_dao_name?.trim() || "-"}</Td>
                     <Td textAlign="center">{qiudao.qiu_dao_mandarin_name}</Td>
-                    <Td textAlign="center">
-                      {qiudao.qiu_dao_location
-                        ? `${qiudao.qiu_dao_location.location_name || "-"} (${qiudao.qiu_dao_location.location_mandarin_name || "-"})`
-                        : "-"}
-                    </Td>
-                    <Td textAlign="center">
-                      {qiudao.dian_chuan_shi
-                        ? `${qiudao.dian_chuan_shi.name || "-"} (${qiudao.dian_chuan_shi.mandarin_name || "-"})`
-                        : "-"}
-                    </Td>
-                    <Td textAlign="center">
-                      {qiudao.yin_shi_qd_mandarin_name?.trim() || qiudao.yin_shi_qd_name?.trim() || "-"}
-                    </Td>
-                    <Td textAlign="center">
-                      {qiudao.bao_shi_qd_mandarin_name?.trim() || qiudao.bao_shi_qd_name?.trim() || "-"}
-                    </Td>
+                    <Td textAlign="center">{qiudao.qiu_dao_location?.location_name || "-"}</Td>
+                    <Td textAlign="center">{qiudao.qiu_dao_location?.location_mandarin_name || "-"}</Td>
+                    <Td textAlign="center">{qiudao.dian_chuan_shi?.name || "-"}</Td>
+                    <Td textAlign="center">{qiudao.dian_chuan_shi?.mandarin_name || "-"}</Td>
+                    <Td textAlign="center">{qiudao.yin_shi_qd_name?.trim() || "-"}</Td>
+                    <Td textAlign="center">{qiudao.yin_shi_qd_mandarin_name?.trim() || "-"}</Td>
+                    <Td textAlign="center">{qiudao.bao_shi_qd_name?.trim() || "-"}</Td>
+                    <Td textAlign="center">{qiudao.bao_shi_qd_mandarin_name?.trim() || "-"}</Td>
                     <Td textAlign="center">{dateFormat(qiudao)}</Td>
                   </Tr>
                 )

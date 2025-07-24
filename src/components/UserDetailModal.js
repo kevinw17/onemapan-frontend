@@ -70,6 +70,28 @@ function UserDetailModal(
                         </FormControl>
 
                         <FormControl>
+                            <FormLabel fontWeight="bold">Status Rohani</FormLabel>
+                            <Select
+                                value={formData.spiritual_status || ""}
+                                onChange={(e) =>
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    spiritual_status: e.target.value,
+                                }))
+                                }
+                            >
+                                <option value="">Pilih status rohani</option>
+                                <option value="QianRen">Qian Ren / Sesepuh</option>
+                                <option value="DianChuanShi">Dian Chuan Shi / Pandita</option>
+                                <option value="TanZhu">Tan Zhu / Pandita Madya</option>
+                                <option value="FoYuan">Fo Yuan / Buddha Siswa</option>
+                                <option value="BanShiYuan">Ban Shi Yuan / Pelaksana Vihara</option>
+                                <option value="QianXian">Qian Xian / Aktivis</option>
+                                <option value="DaoQin">Dao Qin / Umat</option>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl>
                             <FormLabel fontWeight="bold">Jenis Kelamin</FormLabel>
                             <Select
                             value={formData.gender || ""}
@@ -141,11 +163,15 @@ function UserDetailModal(
                                 <Text><b>Nama Mandarin:</b> {selectedUser.mandarin_name}</Text>
                             )}
 
+                            <Text><b>Status Vegetarian:</b> {selectedUser.is_qing_kou ? "Sudah Berikrar Vegetarian" : "Belum Berikrar Vegetarian"}</Text>
+
+                            <Text>
+                                <b>Status Rohani:</b> {selectedUser.spiritualUser?.spiritual_status}
+                            </Text>
+                            
                             {selectedUser.gender?.trim() && (
                                 <Text><b>Jenis Kelamin:</b> {selectedUser.gender === "Male" ? "Pria" : "Wanita"}</Text>
                             )}
-
-                            <Text><b>Status Vegetarian:</b> {selectedUser.is_qing_kou ? "Sudah Berikrar Vegetarian" : "Belum Berikrar Vegetarian"}</Text>
 
                             {selectedUser.blood_type?.trim() && (
                                 <Text><b>Golongan Darah:</b> {selectedUser.blood_type}</Text>
