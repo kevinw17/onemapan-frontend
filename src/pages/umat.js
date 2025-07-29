@@ -1,21 +1,20 @@
 import {
-    Table, Tbody, Thead, Tr, Th, Td, Spinner, Box,
-    useDisclosure, Button,Input, InputGroup, 
+    Table, Tbody, Thead, Tr, Th, Td, Spinner, 
+    Box, useDisclosure, Button,Input, InputGroup, 
     InputLeftElement, InputRightElement, IconButton,
-    useToast, Select,
-    Checkbox
+    useToast, Select, Checkbox
 } from "@chakra-ui/react";
 import { useFetchUsers } from "@/features/user/useFetchUsers";
 import Layout from "../components/layout";
-import { Badge, Flex, VStack } from "@chakra-ui/layout";
+import { Badge, Flex, Heading } from "@chakra-ui/react";
 import { useState } from "react";
 import { useUpdateUser } from "@/features/user/useUpdateUser";
 import { useDeleteUser } from "@/features/user/useDeleteUser";
-import { useRouter } from "next/router";
 import Pagination from "@/components/Pagination";
-import { FiSearch, FiX, FiPlus } from "react-icons/fi";
+import { FiSearch, FiX } from "react-icons/fi";
 import UserDetailModal from "@/components/UserDetailModal";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
+import AddUmatMenu from "@/components/addUmatMenu";
 
 export default function UmatPage() {
     const [page, setPage] = useState(1);
@@ -40,10 +39,8 @@ export default function UmatPage() {
     const toast = useToast();
     const genderMap = { Male: "Pria", Female: "Wanita" };
     const bloodTypeBadgeColor = {
-        A: "blue", B: "purple", O: "yellow", AB: "green"
+        A: "blue", B: "purple", O: "yellow", AB: "gray"
     };
-    
-    const router = useRouter();
     const updateUserMutation = useUpdateUser();
     const deleteUserMutation = useDeleteUser();
     const updateLocationMutation = useUpdateLocation();
@@ -209,7 +206,13 @@ export default function UmatPage() {
     };
 
     return (
-        <Layout title="Umat" onImportSuccess={handleImportSuccess}>
+        <Layout title="Umat">
+            <Heading size="md" mb={4} ml={2}>
+                Data Umat
+                <Box as="span" fontSize="lg" color="gray.500" ml={2}>
+                {total}
+                </Box>
+            </Heading>
         <Flex mb={4} justify="space-between" align="center" wrap="wrap" gap={4}>
             <Box>
                 <Pagination
@@ -314,7 +317,7 @@ export default function UmatPage() {
                     )}
                 </InputGroup>
 
-                <Button
+                {/* <Button
                     colorScheme="blue"
                     borderRadius="full"
                     size="sm"
@@ -322,7 +325,8 @@ export default function UmatPage() {
                     onClick={() => router.push("/umat/addUmat")}
                 >
                     Umat baru
-                </Button>
+                </Button> */}
+                <AddUmatMenu onImportSuccess={handleImportSuccess} />
             </Flex>
         </Flex>
 
@@ -371,8 +375,9 @@ export default function UmatPage() {
                         <Th textAlign="center">Golongan Darah</Th>
                         <Th textAlign="center">Tempat Lahir</Th>
                         <Th textAlign="center">Tanggal Lahir</Th>
-                        <Th textAlign="center">Alamat Domisili</Th>
-                        <Th textAlign="center">Alamat KTP</Th>
+                        <Th textAlign="center">No. HP</Th>
+                        {/* <Th textAlign="center">Alamat Domisili</Th>
+                        <Th textAlign="center">Alamat KTP</Th> */}
                         </Tr>
                     </Thead>
                     <Tbody>
@@ -459,12 +464,15 @@ export default function UmatPage() {
                                     : "-"
                                 }
                             </Td>
-                            <Td textAlign="center">
-                                {user.domicile_location?.street || "-"}
+                            <Td textAlign="center">{user.phone_number}</Td>
+                            {/* <Td textAlign="center">
+                                {user.domicile_location?.street || "-"},{" "}
+                                {user.domicile_location?.locality?.district?.city?.name || "-"}
                             </Td>
                             <Td textAlign="center">
-                                {user.id_card_location?.street || "-"}
-                            </Td>
+                                {user.id_card_location?.street || "-"},{" "}
+                                {user.id_card_location?.locality?.district?.city?.name || "-"}
+                            </Td> */}
                             </Tr>
                         ))}
                     </Tbody>

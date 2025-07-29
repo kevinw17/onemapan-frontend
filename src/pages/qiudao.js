@@ -1,27 +1,20 @@
 import Layout from "../components/layout";
 import {
   Table, Tbody, Thead, Tr, Th, Td, Spinner, Box,
-  useDisclosure,
-  Button,
-  Input,
-  useToast,
-  Flex,
-  InputGroup,
-  InputLeftElement,
-  InputRightElement,
-  IconButton,
-  Select,
-  Checkbox
+  useDisclosure, Button, Input, useToast, Flex,
+  InputGroup, InputLeftElement, InputRightElement,
+  IconButton, Select, Checkbox, Heading
 } from "@chakra-ui/react";
 import { useFetchQiudaos } from "@/features/qiudao/useFetchQiudaos";
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { FiPlus, FiSearch, FiX } from "react-icons/fi";
+import { FiSearch, FiX } from "react-icons/fi";
 import Pagination from "@/components/Pagination";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import QiudaoDetailModal from "@/components/QiudaoDetailModal";
 import { useDeleteQiudao } from "@/features/qiudao/useDeleteQiudao";
 import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
+import { AddQiudaoMenu } from "@/components/addQiudaoMenu";
 
 export default function QiudaoPage() {
   const tableHeaders = [
@@ -160,7 +153,13 @@ export default function QiudaoPage() {
   };
 
   return (
-    <Layout title="Qiudao" onImportSuccess={handleImportSuccess}>
+    <Layout title="Qiudao">
+      <Heading size="md" mb={4} ml={2}>
+        Data Qiudao
+        <Box as="span" fontSize="xl" color="gray.500" ml={2}>
+          {total}
+        </Box>
+      </Heading>
       <Flex justify="space-between" align="center" mb={4}>
           <Pagination
               page={page}
@@ -264,7 +263,7 @@ export default function QiudaoPage() {
                 )}
             </InputGroup>
 
-            <Button
+            {/* <Button
               colorScheme="blue"
               borderRadius="full"
               size="sm"
@@ -272,7 +271,9 @@ export default function QiudaoPage() {
               onClick={() => router.push("/qiudao/addQiudao")}
             >
                 Qiudao baru
-            </Button>
+            </Button> */}
+
+            <AddQiudaoMenu onImportSuccess={handleImportSuccess} />
           </Flex>
       </Flex>
 

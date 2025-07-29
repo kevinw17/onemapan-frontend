@@ -1,11 +1,10 @@
 import {
     Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton,
     ModalBody, ModalFooter, Box, VStack, Text, FormControl, FormLabel,
-    Input, Select, Button,
-    Collapse
+    Input, Select, Button, Collapse
 } from "@chakra-ui/react";
 import LocationSection from "./LocationSection";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 function UserDetailModal(
     { isOpen, onClose, selectedUser, isEditing, setIsEditing, 
@@ -220,7 +219,7 @@ function UserDetailModal(
 
                             {["street", "locality", "district", "city", "province"].some(f => selectedUser.id_card_location?.[f]) && (
                                 <Text>
-                                    <b>Domisili KTP:</b>{" "}
+                                    <b>Lokasi Sesuai KTP:</b>{" "}
                                     {[selectedUser.id_card_location?.street,
                                         selectedUser.id_card_location?.locality?.name,
                                         selectedUser.id_card_location?.locality?.district?.name,
@@ -233,7 +232,7 @@ function UserDetailModal(
 
                             {["street", "locality", "district", "city", "province"].some(f => selectedUser.domicile_location?.[f]) && (
                                 <Text>
-                                <b>Domisili Saat Ini:</b>{" "}
+                                <b>Lokasi Domisili:</b>{" "}
                                 {[selectedUser.id_card_location?.street,
                                     selectedUser.id_card_location?.locality?.name,
                                     selectedUser.id_card_location?.locality?.district?.name,
