@@ -90,7 +90,7 @@ export default function EditQiudao() {
                     }),
             ]).finally(() => setIsLoading(false));
         }
-    }, [qiuDaoId]);
+    }, [qiuDaoId, toast]);
 
     // Menangani perubahan input
     const handleInputChange = (e) => {

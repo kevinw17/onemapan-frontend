@@ -52,7 +52,7 @@ export default function QiudaoDetailModal({
             axiosInstance.get("/fotang").then(res => setTempleLocations(res.data || [])).catch(err => console.error("Gagal ambil lokasi vihara:", err)),
         ]).finally(() => setIsLoading(false));
     }
-}, [isOpen]);
+}, [isOpen, selectedQiudao]);
 
     // Fungsi untuk menangani konfirmasi hapus
     const handleConfirmDelete = async () => {
