@@ -1,5 +1,5 @@
 import { axiosInstance } from "@/lib/axios";
-import { VStack, Input, Box, Text, Select } from "@chakra-ui/react";
+import { VStack, Input, Box, Text, Select, Grid, GridItem } from "@chakra-ui/react";
 import { useCallback, useEffect, useState } from "react";
 
 export default function LocationSection({ location = {}, onChange, hideMandarinName = false, customLabels = {} }) {
@@ -110,125 +110,134 @@ export default function LocationSection({ location = {}, onChange, hideMandarinN
 
     useEffect(() => {
         if (location.province) {
-        fetchCities(location.province);
+            fetchCities(location.province);
         }
     }, [location.province, fetchCities]);
 
     useEffect(() => {
         if (location.city) {
-        fetchDistricts(location.city);
+            fetchDistricts(location.city);
         }
     }, [location.city, fetchDistricts]);
 
     useEffect(() => {
         if (location.district) {
-        fetchLocalities(location.district);
+            fetchLocalities(location.district);
         }
     }, [location.district, fetchLocalities]);
 
     return (
         <VStack spacing={3} align="start" w="100%">
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.location_name}</Text>
-            <Input
-            value={location.location_name || ""}
-            onChange={(e) => onChange({ ...location, location_name: e.target.value })}
-            />
-        </Box>
-
-        {!hideMandarinName && (
             <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.location_mandarin_name}</Text>
-            <Input
-                value={location.location_mandarin_name || ""}
-                onChange={(e) => onChange({ ...location, location_mandarin_name: e.target.value })}
-            />
+                <Text fontWeight="bold" mb={1}>{labels.location_name}</Text>
+                <Input
+                    value={location.location_name || ""}
+                    onChange={(e) => onChange({ ...location, location_name: e.target.value })}
+                />
             </Box>
-        )}
 
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.province}</Text>
-            <Select
-            placeholder="Pilih Provinsi"
-            value={location.province || ""}
-            onChange={(e) =>
-                onChange({ ...location, province: e.target.value, city: "", district: "", locality: "" })
-            }
-            >
-            {loading.provinces ? <option>Loading...</option> :
-                provinces.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-                ))
-            }
-            </Select>
-        </Box>
+            {/* {!hideMandarinName && (
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.location_mandarin_name}</Text>
+                        <Input
+                            value={location.location_mandarin_name || ""}
+                            onChange={(e) => onChange({ ...location, location_mandarin_name: e.target.value })}
+                        />
+                    </Box>
+                </GridItem>
+            )} */}
 
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.city}</Text>
-            <Select
-            placeholder="Pilih Kota"
-            value={location.city || ""}
-            onChange={(e) =>
-                onChange({ ...location, city: e.target.value, district: "", locality: "" })
-            }
-            >
-            {loading.cities ? <option>Loading...</option> :
-                cities.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-                ))
-            }
-            </Select>
-        </Box>
+            <Grid templateColumns="repeat(2, 1fr)" gap={4} w="100%">
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.province}</Text>
+                        <Select
+                            placeholder="Pilih Provinsi"
+                            value={location.province || ""}
+                            onChange={(e) =>
+                                onChange({ ...location, province: e.target.value, city: "", district: "", locality: "" })
+                            }
+                        >
+                            {loading.provinces ? <option>Loading...</option> : provinces.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </Select>
+                    </Box>
+                </GridItem>
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.city}</Text>
+                        <Select
+                            placeholder="Pilih Kota"
+                            value={location.city || ""}
+                            onChange={(e) =>
+                                onChange({ ...location, city: e.target.value, district: "", locality: "" })
+                            }
+                        >
+                            {loading.cities ? <option>Loading...</option> : cities.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </Select>
+                    </Box>
+                </GridItem>
+            </Grid>
 
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.district}</Text>
-            <Select
-            placeholder="Pilih Kecamatan"
-            value={location.district || ""}
-            onChange={(e) =>
-                onChange({ ...location, district: e.target.value, locality: "" })
-            }
-            >
-            {loading.districts ? <option>Loading...</option> :
-                districts.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-                ))
-            }
-            </Select>
-        </Box>
+            <Grid templateColumns="repeat(2, 1fr)" gap={4} w="100%">
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.district}</Text>
+                        <Select
+                            placeholder="Pilih Kecamatan"
+                            value={location.district || ""}
+                            onChange={(e) =>
+                                onChange({ ...location, district: e.target.value, locality: "" })
+                            }
+                        >
+                            {loading.districts ? <option>Loading...</option> : districts.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </Select>
+                    </Box>
+                </GridItem>
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.locality}</Text>
+                        <Select
+                            placeholder="Pilih Kelurahan"
+                            value={location.locality || ""}
+                            onChange={(e) =>
+                                onChange({ ...location, locality: e.target.value, localityId: parseInt(e.target.value) })
+                            }
+                        >
+                            {loading.localities ? <option>Loading...</option> : localities.map(l => (
+                                <option key={l.id} value={l.id}>{l.name}</option>
+                            ))}
+                        </Select>
+                    </Box>
+                </GridItem>
+            </Grid>
 
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.locality}</Text>
-            <Select
-                placeholder="Pilih Kelurahan"
-                value={location.locality || ""}
-                onChange={(e) =>
-                    onChange({ ...location, locality: e.target.value, localityId: parseInt(e.target.value) })
-                }
-            >
-            {loading.localities ? <option>Loading...</option> :
-                localities.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-                ))
-            }
-            </Select>
-        </Box>
-
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.street}</Text>
-            <Input
-            value={location.street || ""}
-            onChange={(e) => onChange({ ...location, street: e.target.value })}
-            />
-        </Box>
-
-        <Box w="100%">
-            <Text fontWeight="bold" mb={1}>{labels.postal_code}</Text>
-            <Input
-            value={location.postal_code || ""}
-            onChange={(e) => onChange({ ...location, postal_code: e.target.value })}
-            />
-        </Box>
+            <Grid templateColumns="repeat(2, 1fr)" gap={4} w="100%">
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.street}</Text>
+                        <Input
+                            value={location.street || ""}
+                            onChange={(e) => onChange({ ...location, street: e.target.value })}
+                        />
+                    </Box>
+                </GridItem>
+                <GridItem>
+                    <Box w="100%">
+                        <Text fontWeight="bold" mb={1}>{labels.postal_code}</Text>
+                        <Input
+                            value={location.postal_code || ""}
+                            onChange={(e) => onChange({ ...location, postal_code: e.target.value })}
+                        />
+                    </Box>
+                </GridItem>
+            </Grid>
         </VStack>
     );
 }

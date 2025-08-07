@@ -434,7 +434,7 @@ export default function AddUmatPage() {
                 <Form onSubmit={handleSubmit}>
                     <VStack spacing={4} align="stretch" w="100%">
                         <Heading size="md">Penambahan Data Umat Baru</Heading>
-                        <Heading size="md" color={"gray"} py={4}>Data diri</Heading>
+                        <Heading size="md" color={"gray"} py={2}>Data diri</Heading>
                         {/* Field Qiu Dao ID dengan AsyncSelect */}
                         <FormControl isInvalid={touched.qiu_dao_id && errors.qiu_dao_id}>
                             <FormLabel htmlFor="qiu_dao_id">Nama Qiudao (Indonesia atau Mandarin)</FormLabel>
@@ -578,14 +578,47 @@ export default function AddUmatPage() {
 
                             <FormControl flex={1}>
                                 <FormLabel>Pekerjaan</FormLabel>
-                                <Input name="job_name" value={values.job_name} onChange={handleChange} placeholder="Masukkan pekerjaan"/>
+                                <Select
+                                    name="job_name"
+                                    value={values.job_name}
+                                    onChange={handleChange}
+                                    placeholder="Pilih pekerjaan"
+                                    w="100%"
+                                    >
+                                    <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+                                    <option value="Guru/Dosen">Guru/Dosen</option>
+                                    <option value="Dokter/Perawat">Dokter/Perawat</option>
+                                    <option value="Wiraswasta">Wiraswasta</option>
+                                    <option value="Karyawan Swasta">Karyawan Swasta</option>
+                                    <option value="Petani/Nelayan">Petani/Nelayan</option>
+                                    <option value="Pelajar/Mahasiswa">Pelajar/Mahasiswa</option>
+                                    <option value="Pensiunan">Pensiunan</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </Select>
                             </FormControl>
                         </HStack>
 
                         <HStack spacing={4} w="100%">
                             <FormControl flex={1}>
                                 <FormLabel>Pendidikan Terakhir</FormLabel>
-                                <Input name="last_education_level" value={values.last_education_level} onChange={handleChange} placeholder="Masukkan pendidikan terakhir"/>
+                                <Select
+                                name="last_education_level"
+                                value={values.last_education_level}
+                                onChange={handleChange}
+                                placeholder="Pilih pendidikan terakhir"
+                                w="100%"
+                                >
+                                <option value="SD">TK (Taman Kanak-Kanak)</option>
+                                <option value="SD">SD (Sekolah Dasar)</option>
+                                <option value="SMP">SMP (Sekolah Menengah Pertama)</option>
+                                <option value="SMA">SMA (Sekolah Menengah Atas)</option>
+                                <option value="D1">D1 (Diploma 1)</option>
+                                <option value="D2">D2 (Diploma 2)</option>
+                                <option value="D3">D3 (Diploma 3)</option>
+                                <option value="S1">S1 (Sarjana)</option>
+                                <option value="S2">S2 (Magister)</option>
+                                <option value="S3">S3 (Doktor)</option>
+                                </Select>
                             </FormControl>
                             
                             <FormControl flex={1}>
@@ -628,264 +661,278 @@ export default function AddUmatPage() {
                             )}
                         </FormControl>
 
-                        {/* Alamat domisili */}
-                        <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat domisili</Heading>
+                        {/* Alamat sesuai identitas */}
+                        <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat sesuai identitas</Heading>
                         <HStack spacing={4} w="100%">
                             <FormControl isRequired flex={1}>
-                                <FormLabel>Nama Lokasi</FormLabel>
-                                <Input name="domicile_location_name" value={values.domicile_location_name} onChange={handleChange} />
-                                {touched.domicile_location_name && errors.domicile_location_name && (
-                                <Text color="red.500" fontSize="sm">{errors.domicile_location_name}</Text>
-                                )}
+                            <FormLabel>Nama Lokasi</FormLabel>
+                            <Input name="ktp_location_name" value={values.ktp_location_name} onChange={handleChange} />
+                            {touched.ktp_location_name && errors.ktp_location_name && (
+                                <Text color="red.500" fontSize="sm">{errors.ktp_location_name}</Text>
+                            )}
                             </FormControl>
                             <FormControl isRequired flex={1}>
-                                <FormLabel>Kode Negara</FormLabel>
-                                <Select
-                                name="domicile_country_iso"
+                            <FormLabel>Kode Negara</FormLabel>
+                            <Select
+                                name="ktp_country_iso"
                                 placeholder="Pilih Kode Negara"
-                                value={values.domicile_country_iso}
+                                value={values.ktp_country_iso}
                                 onChange={handleChange}
                                 w="100%"
-                                >
+                            >
                                 {["IDN", "MYS", "SGP", "HKG", "JPN", "KOR", "AUS"].map((code) => (
-                                    <option key={code} value={code}>{code}</option>
+                                <option key={code} value={code}>{code}</option>
                                 ))}
-                                </Select>
-                                {touched.domicile_country_iso && errors.domicile_country_iso && (
-                                <Text color="red.500" fontSize="sm">{errors.domicile_country_iso}</Text>
-                                )}
+                            </Select>
+                            {touched.ktp_country_iso && errors.ktp_country_iso && (
+                                <Text color="red.500" fontSize="sm">{errors.ktp_country_iso}</Text>
+                            )}
                             </FormControl>
                         </HStack>
 
                         <HStack spacing={4} w="100%">
                             <FormControl isRequired flex={1}>
-                                <FormLabel>Provinsi</FormLabel>
-                                <Select
-                                name="domicile_province"
+                            <FormLabel>Provinsi</FormLabel>
+                            <Select
+                                name="ktp_province"
                                 placeholder="Pilih Provinsi"
-                                value={values.domicile_province}
-                                onChange={(e) => handleProvinceChange(e, setFieldValue, "domicile")}
+                                value={values.ktp_province}
+                                onChange={(e) => handleProvinceChange(e, setFieldValue, "ktp", values, false)}
                                 w="100%"
-                                >
+                            >
                                 {provinces.map((prov) => (
-                                    <option key={prov.id} value={prov.id}>{prov.name}</option>
+                                <option key={prov.id} value={prov.id}>{prov.name}</option>
                                 ))}
-                                </Select>
-                                {touched.domicile_province && errors.domicile_province && (
-                                <Text color="red.500" fontSize="sm">{errors.domicile_province}</Text>
-                                )}
+                            </Select>
+                            {touched.ktp_province && errors.ktp_province && (
+                                <Text color="red.500" fontSize="sm">{errors.ktp_province}</Text>
+                            )}
                             </FormControl>
                             <FormControl isRequired flex={1}>
-                                <FormLabel>Kota / Kabupaten</FormLabel>
-                                <Select
-                                    name="domicile_city"
-                                    placeholder="Pilih Kota"
-                                    value={values.domicile_city}
-                                    onChange={(e) => handleCityChange(e, setFieldValue, "domicile", values, values.is_same_address === "true")}
-                                    isDisabled={!values.domicile_province}
-                                    w="100%"
-                                >
-                                    {domicileCities.map((city) => (
-                                        <option key={city.id} value={city.id}>{city.name}</option>
-                                    ))}
-                                </Select>
-                                {touched.domicile_city && errors.domicile_city && (
-                                <Text color="red.500" fontSize="sm">{errors.domicile_city}</Text>
-                                )}
+                            <FormLabel>Kota / Kabupaten</FormLabel>
+                            <Select
+                                name="ktp_city"
+                                placeholder="Pilih Kota"
+                                value={values.ktp_city}
+                                onChange={(e) => handleCityChange(e, setFieldValue, "ktp", values, false)}
+                                isDisabled={!values.ktp_province}
+                                w="100%"
+                            >
+                                {ktpCities.map((city) => (
+                                <option key={city.id} value={city.id}>{city.name}</option>
+                                ))}
+                            </Select>
+                            {touched.ktp_city && errors.ktp_city && (
+                                <Text color="red.500" fontSize="sm">{errors.ktp_city}</Text>
+                            )}
                             </FormControl>
                         </HStack>
 
                         <HStack spacing={4} w="100%">
                             <FormControl flex={1}>
-                                <FormLabel>Kecamatan</FormLabel>
-                                <Select
-                                name="domicile_district"
+                            <FormLabel>Kecamatan</FormLabel>
+                            <Select
+                                name="ktp_district"
                                 placeholder="Pilih Kecamatan"
-                                value={values.domicile_district}
-                                onChange={(e) => handleDistrictChange(e, setFieldValue, "domicile", values, values.is_same_address === "true")}
-                                isDisabled={!values.domicile_city}
+                                value={values.ktp_district}
+                                onChange={(e) => handleDistrictChange(e, setFieldValue, "ktp", values, false)}
+                                isDisabled={!values.ktp_city}
                                 w="100%"
-                                >
-                                {domicileDistricts.map((district) => (
-                                    <option key={district.id} value={district.id}>{district.name}</option>
+                            >
+                                {ktpDistricts.map((district) => (
+                                <option key={district.id} value={district.id}>{district.name}</option>
                                 ))}
-                                </Select>
+                            </Select>
                             </FormControl>
                             <FormControl flex={1}>
-                                <FormLabel>Kelurahan</FormLabel>
-                                <Select
-                                name="domicile_locality"
+                            <FormLabel>Kelurahan</FormLabel>
+                            <Select
+                                name="ktp_locality"
                                 placeholder="Pilih Kelurahan"
-                                value={values.domicile_locality}
+                                value={values.ktp_locality}
                                 onChange={handleChange}
-                                isDisabled={!values.domicile_district}
+                                isDisabled={!values.ktp_district}
                                 w="100%"
-                                >
-                                {domicileLocalities.map((locality) => (
-                                    <option key={locality.id} value={locality.id}>{locality.name}</option>
+                            >
+                                {ktpLocalities.map((locality) => (
+                                <option key={locality.id} value={locality.id}>{locality.name}</option>
                                 ))}
-                                </Select>
+                            </Select>
                             </FormControl>
                         </HStack>
 
                         <FormControl w="100%">
                             <FormLabel>Alamat</FormLabel>
-                            <Input name="domicile_street" value={values.domicile_street} onChange={handleChange} />
+                            <Input name="ktp_street" value={values.ktp_street} onChange={handleChange} />
                         </FormControl>
 
                         <FormControl w="100%">
                             <FormLabel>Kode Pos</FormLabel>
-                            <Input name="domicile_postal_code" value={values.domicile_postal_code} onChange={handleChange} />
+                            <Input name="ktp_postal_code" value={values.ktp_postal_code} onChange={handleChange} />
                         </FormControl>
-                        
-                        {/* Alamat sesuai identitas */}
-                        <Heading size="md" pt={4} color={"gray"} mt={4} mb={2}>Alamat sesuai identitas</Heading>
+
+                        {/* Konfirmasi alamat domisili */}
                         <FormControl isRequired w="100%">
-                            <FormLabel>Apakah alamat domisili sama dengan alamat sesuai identitas?</FormLabel>
+                            <FormLabel>Apakah alamat domisili saat ini sama dengan alamat sesuai identitas?</FormLabel>
                             <RadioGroup
-                                name="is_same_address"
-                                value={values.is_same_address}
-                                onChange={(value) => {
+                            name="is_same_address"
+                            value={values.is_same_address}
+                            onChange={(value) => {
                                 setFieldValue("is_same_address", value);
                                 if (value === "true") {
-                                    setFieldValue("ktp_location_name", values.domicile_location_name);
-                                    setFieldValue("ktp_location_mandarin_name", values.domicile_location_mandarin_name);
-                                    setFieldValue("ktp_country_iso", values.domicile_country_iso);
-                                    setFieldValue("ktp_province", values.domicile_province);
-                                    setFieldValue("ktp_city", values.domicile_city);
-                                    setFieldValue("ktp_district", values.domicile_district);
-                                    setFieldValue("ktp_locality", values.domicile_locality);
-                                    setFieldValue("ktp_street", values.domicile_street);
-                                    setFieldValue("ktp_postal_code", values.domicile_postal_code);
-                                    setKtpCities(domicileCities);
-                                    setKtpDistricts(domicileDistricts);
-                                    setKtpLocalities(domicileLocalities);
+                                setFieldValue("domicile_location_name", values.ktp_location_name);
+                                setFieldValue("domicile_location_mandarin_name", values.ktp_location_mandarin_name);
+                                setFieldValue("domicile_country_iso", values.ktp_country_iso);
+                                setFieldValue("domicile_province", values.ktp_province);
+                                setFieldValue("domicile_city", values.ktp_city);
+                                setFieldValue("domicile_district", values.ktp_district);
+                                setFieldValue("domicile_locality", values.ktp_locality);
+                                setFieldValue("domicile_street", values.ktp_street);
+                                setFieldValue("domicile_postal_code", values.ktp_postal_code);
+                                setDomicileCities(ktpCities);
+                                setDomicileDistricts(ktpDistricts);
+                                setDomicileLocalities(ktpLocalities);
+                                } else {
+                                setFieldValue("domicile_location_name", "");
+                                setFieldValue("domicile_location_mandarin_name", "");
+                                setFieldValue("domicile_country_iso", "");
+                                setFieldValue("domicile_province", "");
+                                setFieldValue("domicile_city", "");
+                                setFieldValue("domicile_district", "");
+                                setFieldValue("domicile_locality", "");
+                                setFieldValue("domicile_street", "");
+                                setFieldValue("domicile_postal_code", "");
+                                setDomicileCities([]);
+                                setDomicileDistricts([]);
+                                setDomicileLocalities([]);
                                 }
-                                }}
+                            }}
                             >
-                                <HStack spacing={4}>
-                                    <Radio value="true">Ya</Radio>
-                                    <Radio value="false">Tidak</Radio>
-                                </HStack>
+                            <HStack spacing={4}>
+                                <Radio value="true">Ya</Radio>
+                                <Radio value="false">Tidak</Radio>
+                            </HStack>
                             </RadioGroup>
                             {touched.is_same_address && errors.is_same_address && (
-                                <Text color="red.500" fontSize="sm">{errors.is_same_address}</Text>
+                            <Text color="red.500" fontSize="sm">{errors.is_same_address}</Text>
                             )}
                         </FormControl>
 
                         {values.is_same_address === "false" && (
-                        <>
+                            <>
+                            <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat domisili</Heading>
                             <HStack spacing={4} w="100%">
                                 <FormControl isRequired flex={1}>
-                                    <FormLabel>Nama Lokasi</FormLabel>
-                                    <Input name="ktp_location_name" value={values.ktp_location_name} onChange={handleChange} />
-                                    {touched.ktp_location_name && errors.ktp_location_name && (
-                                    <Text color="red.500" fontSize="sm">{errors.ktp_location_name}</Text>
-                                    )}
+                                <FormLabel>Nama Lokasi</FormLabel>
+                                <Input name="domicile_location_name" value={values.domicile_location_name} onChange={handleChange} />
+                                {touched.domicile_location_name && errors.domicile_location_name && (
+                                    <Text color="red.500" fontSize="sm">{errors.domicile_location_name}</Text>
+                                )}
                                 </FormControl>
                                 <FormControl isRequired flex={1}>
-                                    <FormLabel>Kode Negara</FormLabel>
-                                    <Select
-                                    name="ktp_country_iso"
+                                <FormLabel>Kode Negara</FormLabel>
+                                <Select
+                                    name="domicile_country_iso"
                                     placeholder="Pilih Kode Negara"
-                                    value={values.ktp_country_iso}
+                                    value={values.domicile_country_iso}
                                     onChange={handleChange}
                                     w="100%"
-                                    >
+                                >
                                     {["IDN", "MYS", "SGP", "HKG", "JPN", "KOR", "AUS"].map((code) => (
-                                        <option key={code} value={code}>{code}</option>
+                                    <option key={code} value={code}>{code}</option>
                                     ))}
-                                    </Select>
-                                    {touched.ktp_country_iso && errors.ktp_country_iso && (
-                                    <Text color="red.500" fontSize="sm">{errors.ktp_country_iso}</Text>
-                                    )}
+                                </Select>
+                                {touched.domicile_country_iso && errors.domicile_country_iso && (
+                                    <Text color="red.500" fontSize="sm">{errors.domicile_country_iso}</Text>
+                                )}
                                 </FormControl>
                             </HStack>
 
                             <HStack spacing={4} w="100%">
                                 <FormControl isRequired flex={1}>
-                                    <FormLabel>Provinsi</FormLabel>
-                                    <Select
-                                    name="ktp_province"
+                                <FormLabel>Provinsi</FormLabel>
+                                <Select
+                                    name="domicile_province"
                                     placeholder="Pilih Provinsi"
-                                    value={values.ktp_province}
-                                    onChange={(e) => handleProvinceChange(e, setFieldValue, "ktp", values, false)}
+                                    value={values.domicile_province}
+                                    onChange={(e) => handleProvinceChange(e, setFieldValue, "domicile")}
                                     w="100%"
-                                    >
+                                >
                                     {provinces.map((prov) => (
-                                        <option key={prov.id} value={prov.id}>{prov.name}</option>
+                                    <option key={prov.id} value={prov.id}>{prov.name}</option>
                                     ))}
-                                    </Select>
-                                    {touched.ktp_province && errors.ktp_province && (
-                                    <Text color="red.500" fontSize="sm">{errors.ktp_province}</Text>
-                                    )}
+                                </Select>
+                                {touched.domicile_province && errors.domicile_province && (
+                                    <Text color="red.500" fontSize="sm">{errors.domicile_province}</Text>
+                                )}
                                 </FormControl>
                                 <FormControl isRequired flex={1}>
-                                    <FormLabel>Kota / Kabupaten</FormLabel>
-                                    <Select
-                                    name="ktp_city"
+                                <FormLabel>Kota / Kabupaten</FormLabel>
+                                <Select
+                                    name="domicile_city"
                                     placeholder="Pilih Kota"
-                                    value={values.ktp_city}
-                                    onChange={(e) => handleCityChange(e, setFieldValue, "ktp", values, false)}
-                                    isDisabled={!values.ktp_province}
+                                    value={values.domicile_city}
+                                    onChange={(e) => handleCityChange(e, setFieldValue, "domicile", values, false)}
+                                    isDisabled={!values.domicile_province}
                                     w="100%"
-                                    >
-                                    {ktpCities.map((city) => (
-                                        <option key={city.id} value={city.id}>{city.name}</option>
+                                >
+                                    {domicileCities.map((city) => (
+                                    <option key={city.id} value={city.id}>{city.name}</option>
                                     ))}
-                                    </Select>
-                                    {touched.ktp_city && errors.ktp_city && (
-                                    <Text color="red.500" fontSize="sm">{errors.ktp_city}</Text>
-                                    )}
+                                </Select>
+                                {touched.domicile_city && errors.domicile_city && (
+                                    <Text color="red.500" fontSize="sm">{errors.domicile_city}</Text>
+                                )}
                                 </FormControl>
                             </HStack>
 
                             <HStack spacing={4} w="100%">
                                 <FormControl flex={1}>
-                                    <FormLabel>Kecamatan</FormLabel>
-                                    <Select
-                                    name="ktp_district"
+                                <FormLabel>Kecamatan</FormLabel>
+                                <Select
+                                    name="domicile_district"
                                     placeholder="Pilih Kecamatan"
-                                    value={values.ktp_district}
-                                    onChange={(e) => handleDistrictChange(e, setFieldValue, "ktp", values, false)}
-                                    isDisabled={!values.ktp_city}
+                                    value={values.domicile_district}
+                                    onChange={(e) => handleDistrictChange(e, setFieldValue, "domicile", values, false)}
+                                    isDisabled={!values.domicile_city}
                                     w="100%"
-                                    >
-                                    {ktpDistricts.map((district) => (
-                                        <option key={district.id} value={district.id}>{district.name}</option>
+                                >
+                                    {domicileDistricts.map((district) => (
+                                    <option key={district.id} value={district.id}>{district.name}</option>
                                     ))}
-                                    </Select>
+                                </Select>
                                 </FormControl>
                                 <FormControl flex={1}>
-                                    <FormLabel>Kelurahan</FormLabel>
-                                    <Select
-                                    name="ktp_locality"
+                                <FormLabel>Kelurahan</FormLabel>
+                                <Select
+                                    name="domicile_locality"
                                     placeholder="Pilih Kelurahan"
-                                    value={values.ktp_locality}
+                                    value={values.domicile_locality}
                                     onChange={handleChange}
-                                    isDisabled={!values.ktp_district}
+                                    isDisabled={!values.domicile_district}
                                     w="100%"
-                                    >
-                                    {ktpLocalities.map((locality) => (
-                                        <option key={locality.id} value={locality.id}>{locality.name}</option>
+                                >
+                                    {domicileLocalities.map((locality) => (
+                                    <option key={locality.id} value={locality.id}>{locality.name}</option>
                                     ))}
-                                    </Select>
+                                </Select>
                                 </FormControl>
                             </HStack>
 
                             <FormControl w="100%">
                                 <FormLabel>Alamat</FormLabel>
-                                <Input name="ktp_street" value={values.ktp_street} onChange={handleChange} />
+                                <Input name="domicile_street" value={values.domicile_street} onChange={handleChange} />
                             </FormControl>
 
                             <FormControl w="100%">
                                 <FormLabel>Kode Pos</FormLabel>
-                                <Input name="ktp_postal_code" value={values.ktp_postal_code} onChange={handleChange} />
+                                <Input name="domicile_postal_code" value={values.domicile_postal_code} onChange={handleChange} />
                             </FormControl>
-                        </>
+                            </>
                         )}
+
                         <Button type="submit" colorScheme="green" w="100%" mt={4}>Simpan</Button>
-                    </VStack>
+                        </VStack>
                 </Form>
 
                 <Modal isOpen={isOpen} size="3xl" onClose={() => handleQiuDaoCancel(setFieldValue)}>

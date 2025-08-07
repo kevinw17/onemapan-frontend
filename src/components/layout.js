@@ -54,66 +54,15 @@ export default function Layout({ children, title }) {
   }
 
   const navItems = [
-    { label: "Umat", href: "/umat" , iconSrc:"/user_icon.svg"},
+    { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
     { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
   ];
 
   const handleLogout = () => logout();
 
-  const showBackButton = ["/umat/addUmat", "/qiudao/addQiudao"].includes(router.pathname);
-  const backPath = router.pathname === "/umat/addUmat" ? "/umat" : "/qiudao";
-
-  // const handleExportQiudao = async () => {
-  //   try {
-  //     const response = await fetch("http://localhost:2025/export/qiudao", {
-  //       method: "GET",
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error("Gagal mengekspor data");
-  //     }
-
-  //     const blob = await response.blob();
-  //     const url = window.URL.createObjectURL(blob);
-      
-  //     const a = document.createElement("a");
-  //     a.href = url;
-  //     a.download = "qiudao_data.xlsx";
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     a.remove();
-  //     window.URL.revokeObjectURL(url);
-  //   } catch (error) {
-  //     console.error("Export error:", error);
-  //     alert("Terjadi kesalahan saat mengekspor data");
-  //   }
-  // };
-
-  // const handleExportUmat = async () => {
-  //   try {
-  //     const response = await fetch("http://localhost:2025/export/umat", {
-  //       method: "GET",
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error("Gagal mengekspor data");
-  //     }
-
-  //     const blob = await response.blob();
-  //     const url = window.URL.createObjectURL(blob);
-
-  //     const a = document.createElement("a");
-  //     a.href = url;
-  //     a.download = "umat_data.xlsx";
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     a.remove();
-  //     window.URL.revokeObjectURL(url);
-  //   } catch (error) {
-  //     console.error("Export error:", error);
-  //     alert("Terjadi kesalahan saat mengekspor data");
-  //   }
-  // };
+  const showBackButton = ["/umat/addUmat", "/umat/editUmat", "/qiudao/addQiudao", "/qiudao/editQiudao"].includes(router.pathname);
+  const backPath = router.pathname.includes("umat") ? "/umat" : "/qiudao";
+  const pageAction = router.pathname.includes("edit") ? "Edit" : "Tambah";
 
   return (
     <Flex direction="column" h="100vh" maxW="100vw" overflow="hidden">
@@ -205,8 +154,8 @@ export default function Layout({ children, title }) {
                   />
 
                   <Heading size="sm">
-                  Tambah manual
-                </Heading>
+                    Tambah manual
+                  </Heading>
                 </>
               )}
             </HStack>

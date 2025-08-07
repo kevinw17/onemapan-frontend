@@ -6,15 +6,14 @@ import {
   IconButton, Select, Checkbox, Heading
 } from "@chakra-ui/react";
 import { useFetchQiudaos } from "@/features/qiudao/useFetchQiudaos";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/router";
-import { FiSearch, FiX } from "react-icons/fi";
+import { FiSearch, FiX, FiPlus } from "react-icons/fi";
 import Pagination from "@/components/Pagination";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import QiudaoDetailModal from "@/components/QiudaoDetailModal";
 import { useDeleteQiudao } from "@/features/qiudao/useDeleteQiudao";
 import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
-import { AddQiudaoMenu } from "@/components/addQiudaoMenu";
 
 export default function QiudaoPage() {
   const tableHeaders = [
@@ -48,7 +47,8 @@ export default function QiudaoPage() {
   const updateLocationMutation = useUpdateLocation();
   const updateQiudaoMutation = useUpdateQiudao();
   const deleteQiudaoMutation = useDeleteQiudao();
-  
+  const fileInputRef = useRef(null); // Ref untuk input file
+
   const handleRowClick = (qiudao) => {
     setSelectedQiudao(qiudao);
     setFormData(qiudao);
@@ -65,24 +65,9 @@ export default function QiudaoPage() {
   const dateFormat = (qd) => `${qd.lunar_sui_ci_year || ""}${qd.lunar_month || ""}${qd.lunar_day || ""}${qd.lunar_shi_chen_time || ""}`;
 
   const handleDelete = async (id) => {
-    if (!confirm("Yakin ingin menghapus data ini?")) return;
     deleteQiudaoMutation.mutate(id, {
       onSuccess: () => {
-        toast({ title: "Berhasil dihapus", status: "success", duration: 3000, isClosable: true });
         onClose();
-      },
-      onError: (err) => {
-        const message =
-          err?.response?.data?.message ||
-          err?.response?.data ||
-          "Terjadi kesalahan saat menghapus data";
-        toast({
-          title: "Gagal menghapus",
-          description: message,
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
       },
     });
   };
@@ -150,6 +135,50 @@ export default function QiudaoPage() {
 
   const handleImportSuccess = () => {
     refetchQiudaos();
+  };
+
+  const handleImportQiudao = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileQiudaoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("http://localhost:2025/import/qiudao", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Gagal mengimpor");
+      }
+
+      toast({
+        title: "Berhasil mengimpor data Qiudao",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      handleImportSuccess();
+    } catch (err) {
+      toast({
+        title: "Gagal mengimpor data",
+        description: err.message,
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      e.target.value = "";
+    }
   };
 
   return (
@@ -263,17 +292,25 @@ export default function QiudaoPage() {
                 )}
             </InputGroup>
 
-            {/* <Button
+            <Button
               colorScheme="blue"
               borderRadius="full"
               size="sm"
-              leftIcon={<FiPlus style={{ marginTop: "2px" }}/>}
+              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
               onClick={() => router.push("/qiudao/addQiudao")}
             >
-                Qiudao baru
-            </Button> */}
+              Tambah Qiudao
+            </Button>
 
-            <AddQiudaoMenu onImportSuccess={handleImportSuccess} />
+            <Button
+              colorScheme="green"
+              borderRadius="full"
+              size="sm"
+              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
+              onClick={handleImportQiudao}
+            >
+              Import Data Massal
+            </Button>
           </Flex>
       </Flex>
 
@@ -379,6 +416,14 @@ export default function QiudaoPage() {
         setFormData={setFormData}
         handleSave={handleSave}
         handleDelete={handleDelete}
+      />
+
+      <input
+        type="file"
+        accept=".xlsx"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleFileQiudaoChange}
       />
     </Layout>
   );
