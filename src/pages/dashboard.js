@@ -1,110 +1,95 @@
 import Layout from "@/components/layout";
-import { Box, Heading, Text, Stat, StatLabel, StatNumber, StatHelpText, SimpleGrid, VStack, Select, Flex } from "@chakra-ui/react";
-import { useEffect, useState, useRef } from "react";
+import { Box, Heading, Text, Stat, StatLabel, StatNumber, SimpleGrid, VStack, Select, Flex } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
+import { Bar } from "react-chartjs-2";
 import Chart from "chart.js/auto";
-import ChartDataLabels from "chartjs-plugin-datalabels"; // Impor plugin secara eksplisit
+import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Cell, Pie, PieChart, Tooltip, Legend } from "recharts";
 
-// Registrasi plugin datalabels
 Chart.register(ChartDataLabels);
+
+const AREA_OPTIONS = [
+    { value: "Nasional", label: "Nasional" },
+    { value: "Korwil_1", label: "Wilayah 1" },
+    { value: "Korwil_2", label: "Wilayah 2" },
+    { value: "Korwil_3", label: "Wilayah 3" },
+    { value: "Korwil_4", label: "Wilayah 4" },
+    { value: "Korwil_5", label: "Wilayah 5" },
+    { value: "Korwil_6", label: "Wilayah 6" },
+];
 
 export default function Dashboard() {
     const [username, setUsername] = useState("");
     const [selectedArea, setSelectedArea] = useState("Nasional");
-    const [chartInstance, setChartInstance] = useState(null);
-    const canvasRef = useRef(null);
 
     const { data: stats, isLoading, error } = useQuery({
         queryKey: ["dashboard-stats", selectedArea],
         queryFn: async () => {
-            try {
-                const [usersResponse, qiudaoResponse, fotangResponse, dcsResponse] = await Promise.all([
-                    axiosInstance.get("/profile/user"),
-                    axiosInstance.get("/profile/qiudao"),
-                    axiosInstance.get("/fotang"),
-                    axiosInstance.get("/dianchuanshi"),
-                ]);
+        let users = [], qiudaoData = [], fotangData = [], dcsData = [];
 
-                const users = Array.isArray(usersResponse.data) ? usersResponse.data : (usersResponse.data.data || []);
-                const qiudaoData = Array.isArray(qiudaoResponse.data) ? qiudaoResponse.data : (qiudaoResponse.data.data || []);
-                const fotangData = Array.isArray(fotangResponse.data) ? fotangResponse.data : (fotangResponse.data.data || []);
-                const dcsData = Array.isArray(dcsResponse.data) ? dcsResponse.data : (dcsResponse.data.data || []);
+        try {
+            const [usersResponse, qiudaoResponse, fotangResponse, dcsResponse] = await Promise.all([
+            axiosInstance.get("/profile/user").catch(() => ({ data: [] })),
+            axiosInstance.get("/profile/qiudao").catch(() => ({ data: [] })),
+            axiosInstance.get("/fotang").catch(() => ({ data: [] })),
+            axiosInstance.get("/dianchuanshi").catch(() => ({ data: [] })),
+            ]);
 
-                console.log("Full Users Response:", usersResponse);
-                console.log("Full Qiudao Response:", qiudaoResponse);
-                console.log("Users Data:", users);
-                console.log("Qiudao Data:", qiudaoData);
-                console.log("Fotang Data:", fotangData);
-                console.log("DCS Data:", dcsData);
+            users = Array.isArray(usersResponse.data) ? usersResponse.data : usersResponse.data.data || [];
+            qiudaoData = Array.isArray(qiudaoResponse.data) ? qiudaoResponse.data : qiudaoResponse.data.data || [];
+            fotangData = Array.isArray(fotangResponse.data) ? fotangResponse.data : fotangResponse.data.data || [];
+            dcsData = Array.isArray(dcsResponse.data) ? dcsResponse.data : dcsResponse.data.data || [];
 
-                let totalVihara, fyCount, tzCount, totalDCS, totalFYTZDCS, qiudaoUmatByKorwil, userUmatByGender;
+            // Debugging
+            console.log("Users:", users);
+            console.log("Selected Area:", selectedArea);
+        } catch (err) {
+            console.error("Error fetching data:", err);
+        }
 
-                if (selectedArea === "Nasional") {
-                    totalVihara = fotangData.length || 0;
-                    fyCount = (users.filter((u) => u.spiritualUser?.spiritual_status === "FoYuan") || []).length || 0;
-                    tzCount = (users.filter((u) => u.spiritualUser?.spiritual_status === "TanZhu") || []).length || 0;
-                    totalDCS = dcsData.length || 0;
-                    totalFYTZDCS = fyCount + tzCount + totalDCS;
-                    qiudaoUmatByKorwil = qiudaoData.reduce((acc, q) => {
-                        const korwil = q.qiu_dao_location?.area || "Unknown";
-                        const existing = acc.find((item) => item.korwil === korwil);
-                        if (existing) {
-                            existing.umat += 1;
-                        } else {
-                            acc.push({ korwil, umat: 1 });
-                        }
-                        return acc;
-                    }, []);
-                    userUmatByGender = users.reduce((acc, u) => {
-                        const gender = u.gender === "Male" ? "Pria" : u.gender === "Female" ? "Wanita" : "Unknown";
-                        const existing = acc.find((item) => item.gender === gender);
-                        if (existing) {
-                            existing.value += 1;
-                        } else {
-                            acc.push({ gender, value: 1 });
-                        }
-                        return acc;
-                    }, []);
-                } else {
-                    const filteredFotang = fotangData.filter((f) => f.area === selectedArea);
-                    const filteredQiudao = qiudaoData.filter((q) => q.qiu_dao_location?.area === selectedArea);
-                    const filteredDcs = dcsData.filter((d) => d.area === selectedArea);
-                    const qiudaoUserIds = new Set(filteredQiudao.map((q) => q.userId)); // Asumsi ada userId
+        let filteredUsers = users;
+        if (selectedArea !== "Nasional") {
+            filteredUsers = users.filter((u) => u.qiudao?.qiu_dao_location?.area === selectedArea);
+        }
+        console.log("Filtered Users:", filteredUsers);
 
-                    totalVihara = filteredFotang.length || 0;
+        const totalVihara = selectedArea === "Nasional" ? fotangData.length : fotangData.filter((f) => f.area === selectedArea).length;
+        const fyCount = filteredUsers.filter((u) => u.spiritualUser?.spiritual_status === "FoYuan").length;
+        const tzCount = filteredUsers.filter((u) => u.spiritualUser?.spiritual_status === "TanZhu").length;
+        const totalDCS = selectedArea === "Nasional" ? dcsData.length : dcsData.filter((d) => d.area === selectedArea).length;
+        const totalFYTZDCS = fyCount + tzCount + totalDCS;
 
-                    // FY dan TZ: Filter users berdasarkan qiudao yang terkait dengan area
-                    fyCount = (users.filter((u) => u.spiritualUser?.spiritual_status === "FoYuan" && filteredQiudao.some((q) => q.userId === u.id)).length || 0);
-                    tzCount = (users.filter((u) => u.spiritualUser?.spiritual_status === "TanZhu" && filteredQiudao.some((q) => q.userId === u.id)).length || 0);
-                    totalDCS = filteredDcs.length || 0;
-                    totalFYTZDCS = fyCount + tzCount + totalDCS;
-
-                    qiudaoUmatByKorwil = []; // Kosongkan untuk Korwil
-                    userUmatByGender = users.filter((u) => filteredQiudao.some((q) => q.userId === u.id)).reduce((acc, u) => {
-                        const gender = u.gender === "Male" ? "Pria" : u.gender === "Female" ? "Wanita" : "Unknown";
-                        const existing = acc.find((item) => item.gender === gender);
-                        if (existing) {
-                            existing.value += 1;
-                        } else {
-                            acc.push({ gender, value: 1 });
-                        }
-                        return acc;
-                    }, []);
-                }
-
-                return {
-                    totalVihara,
-                    totalFYTZDCS,
-                    qiudaoUmatByKorwil,
-                    userUmatByGender,
-                    lastUpdated: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }),
-                };
-            } catch (err) {
-                console.error("Error in queryFn:", err);
-                throw err;
+        const qiudaoUmatByKorwil = selectedArea === "Nasional" ? qiudaoData.reduce((acc, q) => {
+            const korwil = q.qiu_dao_location?.area || "Unknown";
+            const existing = acc.find((item) => item.korwil === korwil);
+            if (existing) {
+            existing.umat += 1;
+            } else {
+            acc.push({ korwil, umat: 1 });
             }
+            return acc;
+        }, []) : [];
+
+        const userUmatByGender = filteredUsers.length > 0 ? filteredUsers.reduce((acc, u) => {
+            const gender = u.gender === "Male" ? "Pria" : u.gender === "Female" ? "Wanita" : "Unknown";
+            const existing = acc.find((item) => item.gender === gender);
+            if (existing) {
+            existing.value += 1;
+            } else {
+            acc.push({ gender, value: 1 });
+            }
+            return acc;
+        }, []) : [{ gender: "Pria", value: 0 }, { gender: "Wanita", value: 0 }];
+
+        return {
+            totalVihara,
+            totalFYTZDCS,
+            qiudaoUmatByKorwil,
+            userUmatByGender,
+            lastUpdated: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }),
+        };
         },
         refetchInterval: 60000,
     });
@@ -113,60 +98,52 @@ export default function Dashboard() {
         const userStr = localStorage.getItem("user");
         if (userStr) {
         try {
-            const user = JSON.parse(userStr);
-            setUsername(user.username);
+            setUsername(JSON.parse(userStr).username);
         } catch (e) {
             console.error("Gagal parsing user:", e);
         }
         }
     }, []);
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (canvas && selectedArea === "Nasional") {
-            // Hancurkan instance lama hanya jika ada
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-            // Inisialisasi chart hanya jika data tersedia
-            if (stats?.qiudaoUmatByKorwil) {
-                const ctx = canvas.getContext("2d");
-                const newChartInstance = new Chart(ctx, {
-                    type: "bar",
-                    data: {
-                        labels: stats.qiudaoUmatByKorwil.map(item => item.korwil.replace("Korwil_", "Wilayah ")),
-                        datasets: [{
-                            data: stats.qiudaoUmatByKorwil.map(item => item.umat || 0),
-                            backgroundColor: "#216ceeff",
-                            borderColor: "#216ceeff",
-                            borderWidth: 1,
-                        }],
-                    },
-                    options: {
-                        plugins: {
-                            legend: { display: false }, // Pastikan legenda dinonaktifkan
-                            tooltip: { enabled: false },
-                            datalabels: {
-                                display: true,
-                                color: "#fff",
-                                anchor: "center", // Pindah ke dalam bar
-                                align: "center", // Posisi tengah dalam bar
-                                font: { size: 14, weight: "bold" },
-                                formatter: (value) => value || 0, // Hanya tampilkan nilai
-                            },
-                        },
-                        scales: {
-                            y: { beginAtZero: true, ticks: { display: false } }, // Sembunyikan label sumbu Y
-                        },
-                        animation: {
-                            duration: 0,
-                        },
-                    },
-                });
-                setChartInstance(newChartInstance);
-            }
-        }
-    }, [stats, selectedArea]);
+    const barData = {
+        labels: stats?.qiudaoUmatByKorwil?.map((item) => AREA_OPTIONS.find(opt => opt.value === item.korwil)?.label || item.korwil) || [],
+        datasets: [
+        {
+            data: stats?.qiudaoUmatByKorwil?.map((item) => item.umat || 0) || [],
+            backgroundColor: "#216ceeff",
+            borderColor: "#216ceeff",
+            borderWidth: 1,
+        },
+        ],
+    };
+
+    const barOptions = {
+        maintainAspectRatio: false,
+        plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        datalabels: {
+            display: true,
+            color: "#fff",
+            anchor: "end",
+            align: "top",
+            offset: -25,
+            font: { size: 14, weight: "bold" },
+            formatter: (value) => value || 0,
+        },
+        },
+        scales: {
+        x: {
+            grid: { display: false },
+        },
+        y: {
+            beginAtZero: true,
+            ticks: { display: false },
+            grid: { display: false },
+        },
+        },
+        animation: false,
+    };
 
     if (isLoading) return <VStack h="100vh" justify="center"><Text>Loading...</Text></VStack>;
     if (error) return <VStack h="100vh" justify="center"><Text>Error loading data: {error.message}</Text></VStack>;
@@ -177,70 +154,62 @@ export default function Dashboard() {
         <Layout title="Dashboard">
         <VStack spacing={6} align="stretch" p={2}>
             <Flex align="center" justify="space-between" mb={4}>
-                <Box>
-                    <Heading size="lg" mb={2}>Halo, {username}</Heading>
-                    <Text fontSize="md">Dapatkan gambaran lengkap komunitas dalam sekejap.</Text>
-                </Box>
-                <Select
-                    value={selectedArea}
-                    onChange={(e) => setSelectedArea(e.target.value)}
-                    width="200px"
-                >
-                    <option value="Nasional">Nasional</option>
-                    <option value="Korwil_1">Wilayah 1</option>
-                    <option value="Korwil_2">Wilayah 2</option>
-                    <option value="Korwil_3">Wilayah 3</option>
-                    <option value="Korwil_4">Wilayah 4</option>
-                    <option value="Korwil_5">Wilayah 5</option>
-                    <option value="Korwil_6">Wilayah 6</option>
-                </Select>
+            <Box>
+                <Heading size="lg" mb={2}>
+                Halo, {username}
+                </Heading>
+                <Text fontSize="md">Dapatkan gambaran lengkap komunitas dalam sekejap.</Text>
+            </Box>
+            <Select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} width="200px">
+                {AREA_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+                ))}
+            </Select>
             </Flex>
 
-            {/* Baris pertama: Total Vihara dan Total FY + TZ + DCS */}
             <SimpleGrid columns={{ base: 1, md: 2, lg: 2 }} spacing={6}>
-                <Box backgroundColor={"blue.100"} borderRadius={16} >
-                    <Stat>
-                        <StatLabel display="flex" flexDirection="column" alignItems="center" justifyContent="center" my={2}>Total Vihara</StatLabel>
-                        <StatNumber display="flex" flexDirection="column" alignItems="center" justifyContent="center" my={2}>{stats?.totalVihara || 0}</StatNumber>
-                    </Stat>
-                </Box>
-                <Box backgroundColor={"gray.100"} borderRadius={16}>
-                    <Stat>
-                        <StatLabel display="flex" flexDirection="column" alignItems="center" justifyContent="center" my={2}>Total FY,TZ,DCS</StatLabel>
-                        <StatNumber display="flex" flexDirection="column" alignItems="center" justifyContent="center" my={2}>{stats?.totalFYTZDCS || 0}</StatNumber>
-                    </Stat>
-                </Box>
+            <Box bg="blue.100" borderRadius={16}>
+                <Stat textAlign="center" py={2}>
+                <StatLabel>Total Vihara</StatLabel>
+                <StatNumber>{stats?.totalVihara || 0}</StatNumber>
+                </Stat>
+            </Box>
+            <Box bg="gray.100" borderRadius={16}>
+                <Stat textAlign="center" py={2}>
+                <StatLabel>Total FY,TZ,DCS</StatLabel>
+                <StatNumber>{stats?.totalFYTZDCS || 0}</StatNumber>
+                </Stat>
+            </Box>
             </SimpleGrid>
 
-            {/* Baris kedua: Grafik */}
             <SimpleGrid columns={{ base: 1, md: selectedArea === "Nasional" ? 2 : 1 }} spacing={6}>
-            {selectedArea === "Nasional" && (
-                <Box backgroundColor={"gray.100"} borderRadius={16} display="flex" flexDirection="column" alignItems="center" justifyContent="center">
-                    <Text fontWeight="bold" mt={4} mb={8}>Total Umat per Wilayah</Text>
-                    <canvas ref={canvasRef} width="500" height="300"></canvas>
+            {selectedArea === "Nasional" && stats?.qiudaoUmatByKorwil?.length > 0 && (
+                <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
+                <Text fontWeight="bold" mb={4}>
+                    Total Umat per Wilayah
+                </Text>
+                <Box width="100%" height="300px">
+                    <Bar data={barData} options={barOptions} />
+                </Box>
                 </Box>
             )}
-
-            {/* Pie Chart untuk Umat dari User berdasarkan Jenis Kelamin */}
-            <Box backgroundColor={"gray.100"} borderRadius={16} display="flex" flexDirection="column" alignItems="center" justifyContent="center">
-                <Text fontWeight="bold">Total Umat</Text>
+            <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
+                <Text fontWeight="bold" mb={4}>
+                Total Umat {selectedArea === "Nasional" ? "Nasional" : `Wilayah ${selectedArea.replace("Korwil_", "")}`}
+                </Text>
+                {stats?.userUmatByGender?.some(entry => entry.value > 0) ? (
                 <PieChart width={500} height={300}>
-                <Pie
-                    data={stats?.userUmatByGender || []}
-                    dataKey="value"
-                    nameKey="gender"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label
-                >
-                    {(stats?.userUmatByGender || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Pie data={stats.userUmatByGender} dataKey="value" nameKey="gender" cx="50%" cy="50%" outerRadius={100} label>
+                    {stats.userUmatByGender.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
                 </PieChart>
+                ) : (
+                <Text>Tidak ada data umat untuk wilayah ini</Text>
+                )}
             </Box>
             </SimpleGrid>
 
