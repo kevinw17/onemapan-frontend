@@ -37,7 +37,7 @@ export default function LoginForm() {
                 if (data?.token && data?.user_data) {
                 localStorage.setItem("token", data.token);
                 localStorage.setItem("user", JSON.stringify(data.user_data));
-                router.push("/umat");
+                router.push("/dashboard");
                 } else {
                 console.error("Data login tidak lengkap:", data);
                 }

@@ -54,6 +54,7 @@ export default function Layout({ children, title }) {
   }
 
   const navItems = [
+    { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
     { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
     { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
   ];
@@ -62,7 +63,6 @@ export default function Layout({ children, title }) {
 
   const showBackButton = ["/umat/addUmat", "/umat/editUmat", "/qiudao/addQiudao", "/qiudao/editQiudao"].includes(router.pathname);
   const backPath = router.pathname.includes("umat") ? "/umat" : "/qiudao";
-  const pageAction = router.pathname.includes("edit") ? "Edit" : "Tambah";
 
   return (
     <Flex direction="column" h="100vh" maxW="100vw" overflow="hidden">
@@ -83,7 +83,43 @@ export default function Layout({ children, title }) {
             />
           </Box>
           <Flex direction="column" gap={3}>
-            {navItems.map((item) => {
+            {/* Button Dashboard */}
+            {navItems.slice(0, 1).map((item) => {
+              const isActive = router.pathname === item.href;
+              return (
+                <Box
+                  key={item.href}
+                  as={NextLink}
+                  href={item.href}
+                  px={4}
+                  py={2}
+                  borderRadius="full"
+                  bg={isActive ? "blue.100" : "transparent"}
+                  color={isActive ? "blue.600" : "blue.500"}
+                  fontWeight={isActive ? "bold" : "normal"}
+                  _hover={isActive ? {} : { bg: "gray.100" }}
+                >
+                  <HStack spacing={2}>
+                    <Image
+                      src={item.iconSrc}
+                      alt={item.label}
+                      width={24}
+                      height={24}
+                      style={{ minWidth: 24, minHeight: 24 }}
+                    />
+                    <Text>{item.label}</Text>
+                  </HStack>
+                </Box>
+              );
+            })}
+
+            {/* Header Management Umat */}
+            <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>
+              Management Umat
+            </Text>
+
+            {/* Button Umat dan QiuDao */}
+            {navItems.slice(1).map((item) => {
               const isActive = router.pathname === item.href;
               return (
                 <Box
