@@ -7,6 +7,7 @@ import { Bar } from "react-chartjs-2";
 import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import { Cell, Pie, PieChart, Tooltip, Legend } from "recharts";
+import { Line } from "react-chartjs-2";
 
 Chart.register(ChartDataLabels);
 
@@ -42,7 +43,6 @@ export default function Dashboard() {
             fotangData = Array.isArray(fotangResponse.data) ? fotangResponse.data : fotangResponse.data.data || [];
             dcsData = Array.isArray(dcsResponse.data) ? dcsResponse.data : dcsResponse.data.data || [];
 
-            // Debugging
             console.log("Users:", users);
             console.log("Selected Area:", selectedArea);
         } catch (err) {
@@ -72,6 +72,40 @@ export default function Dashboard() {
             return acc;
         }, []) : [];
 
+        let totalActiveUsers = 0;
+        let activeUsersByMonth = {};
+        if (selectedArea === "Nasional") {
+            totalActiveUsers = users.length; // Total umat aktif tanpa filter gender
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            users.forEach((u) => {
+            if (u.created_at) {
+                const createdAt = new Date(u.created_at);
+                if (createdAt >= oneYearAgo) {
+                const monthYear = createdAt.toLocaleString("id-ID", { month: "long", year: "numeric" });
+                activeUsersByMonth[monthYear] = (activeUsersByMonth[monthYear] || 0) + 1;
+                }
+            }
+            });
+        }
+
+        let totalActiveUsersPerArea = 0;
+        let activeUsersByMonthPerArea = {};
+        if (selectedArea !== "Nasional") {
+            totalActiveUsersPerArea = filteredUsers.length; // Total umat aktif per wilayah
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            filteredUsers.forEach((u) => {
+            if (u.created_at) {
+                const createdAt = new Date(u.created_at);
+                if (createdAt >= oneYearAgo) {
+                const monthYear = createdAt.toLocaleString("id-ID", { month: "long", year: "numeric" });
+                activeUsersByMonthPerArea[monthYear] = (activeUsersByMonthPerArea[monthYear] || 0) + 1;
+                }
+            }
+            });
+        }
+
         const userUmatByGender = filteredUsers.length > 0 ? filteredUsers.reduce((acc, u) => {
             const gender = u.gender === "Male" ? "Pria" : u.gender === "Female" ? "Wanita" : "Unknown";
             const existing = acc.find((item) => item.gender === gender);
@@ -88,6 +122,10 @@ export default function Dashboard() {
             totalFYTZDCS,
             qiudaoUmatByKorwil,
             userUmatByGender,
+            totalActiveUsers,
+            activeUsersByMonth,
+            totalActiveUsersPerArea,
+            activeUsersByMonthPerArea,
             lastUpdated: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }),
         };
         },
@@ -145,6 +183,49 @@ export default function Dashboard() {
         animation: false,
     };
 
+    const lineData = {
+        labels: Object.keys(stats?.activeUsersByMonth || {}).sort((a, b) => new Date(b) - new Date(a)),
+        datasets: [
+        {
+            label: "Umat Aktif",
+            data: Object.values(stats?.activeUsersByMonth || {}),
+            fill: false,
+            borderColor: "#216ceeff",
+            tension: 0.1,
+        },
+        ],
+    };
+
+    const lineOptions = {
+        maintainAspectRatio: false,
+        plugins: {
+        legend: { display: true },
+        tooltip: { enabled: true },
+        },
+        scales: {
+        x: {
+            title: { display: true, text: "Bulan" },
+        },
+        y: {
+            beginAtZero: true,
+            title: { display: true, text: "Jumlah Umat" },
+        },
+        },
+    };
+
+    const lineDataPerArea = {
+        labels: Object.keys(stats?.activeUsersByMonthPerArea || {}).sort((a, b) => new Date(b) - new Date(a)),
+        datasets: [
+        {
+            label: "Umat Aktif",
+            data: Object.values(stats?.activeUsersByMonthPerArea || {}),
+            fill: false,
+            borderColor: "#216ceeff",
+            tension: 0.1,
+        },
+        ],
+    };
+
     if (isLoading) return <VStack h="100vh" justify="center"><Text>Loading...</Text></VStack>;
     if (error) return <VStack h="100vh" justify="center"><Text>Error loading data: {error.message}</Text></VStack>;
 
@@ -182,7 +263,7 @@ export default function Dashboard() {
             </Box>
             </SimpleGrid>
 
-            <SimpleGrid columns={{ base: 1, md: selectedArea === "Nasional" ? 2 : 1 }} spacing={6}>
+            <SimpleGrid columns={{ base: 1, md: selectedArea === "Nasional" ? 2 : 2 }} spacing={6}>
             {selectedArea === "Nasional" && stats?.qiudaoUmatByKorwil?.length > 0 && (
                 <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
                 <Text fontWeight="bold" mb={4}>
@@ -193,24 +274,65 @@ export default function Dashboard() {
                 </Box>
                 </Box>
             )}
-            <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
+            {selectedArea === "Nasional" ? (
+                <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
                 <Text fontWeight="bold" mb={4}>
-                Total Umat {selectedArea === "Nasional" ? "Nasional" : `Wilayah ${selectedArea.replace("Korwil_", "")}`}
+                    Umat Aktif
                 </Text>
-                {stats?.userUmatByGender?.some(entry => entry.value > 0) ? (
-                <PieChart width={500} height={300}>
-                    <Pie data={stats.userUmatByGender} dataKey="value" nameKey="gender" cx="50%" cy="50%" outerRadius={100} label>
-                    {stats.userUmatByGender.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                </PieChart>
-                ) : (
-                <Text>Tidak ada data umat untuk wilayah ini</Text>
-                )}
-            </Box>
+                <Stat textAlign="center" mb={4}>
+                    <StatNumber>{stats?.totalActiveUsers || 0}</StatNumber>
+                </Stat>
+                <Box width="100%" height="250px">
+                    <Line data={lineData} options={lineOptions} />
+                </Box>
+                </Box>
+            ) : (
+                <>
+                <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
+                    <Text fontWeight="bold" mb={4}>
+                    Total Umat {`Wilayah ${selectedArea.replace("Korwil_", "")}`}
+                    </Text>
+                    {stats?.userUmatByGender?.some(entry => entry.value > 0) ? (
+                    <PieChart width={300} height={300}>
+                        <Pie
+                        data={stats.userUmatByGender}
+                        dataKey="value"
+                        nameKey="gender"
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({value }) => `${value}`}
+                        >
+                        {stats.userUmatByGender.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                    </PieChart>
+                    ) : (
+                    <Text>Tidak ada data umat untuk wilayah ini</Text>
+                    )}
+                </Box>
+                <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
+                    <Text fontWeight="bold" mb={4}>
+                    Umat Aktif {`Wilayah ${selectedArea.replace("Korwil_", "")}`}
+                    </Text>
+                    {stats?.totalActiveUsersPerArea > 0 && Object.keys(stats?.activeUsersByMonthPerArea).length > 0 ? (
+                    <>
+                        <Stat textAlign="center" mb={4}>
+                        <StatNumber>{stats?.totalActiveUsersPerArea || 0}</StatNumber>
+                        </Stat>
+                        <Box width="100%" height="250px">
+                        <Line data={lineDataPerArea} options={lineOptions} />
+                        </Box>
+                    </>
+                    ) : (
+                    <Text>Tidak ada umat aktif di Wilayah {selectedArea.replace("Korwil_", "")}</Text>
+                    )}
+                </Box>
+                </>
+            )}
             </SimpleGrid>
 
             <Box>

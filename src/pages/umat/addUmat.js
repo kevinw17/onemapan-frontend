@@ -114,6 +114,7 @@ export default function AddUmatPage() {
     const [ktpLocalities, setKtpLocalities] = useState([]);
     const [selectedQiuDao, setSelectedQiuDao] = useState(null);
     const [selectedOption, setSelectedOption] = useState(null);
+    const [isQiuDaoConfirmed, setIsQiuDaoConfirmed] = useState(false);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
     const router = useRouter();
@@ -180,6 +181,9 @@ export default function AddUmatPage() {
             onClose();
         } else {
             setFieldValue("qiu_dao_id", qiuDaoId);
+            setFieldValue("full_name", selectedQiuDao.qiu_dao_name || "");
+            setFieldValue("mandarin_name", selectedQiuDao.qiu_dao_mandarin_name || "");
+            setIsQiuDaoConfirmed(true);
             onClose();
             toast({
                 title: "Data qiudao bisa digunakan",
@@ -194,6 +198,7 @@ export default function AddUmatPage() {
         setFieldValue("qiu_dao_id", "");
         setSelectedQiuDao(null);
         setSelectedOption(null);
+        setIsQiuDaoConfirmed(false);
         onClose();
     };
 
@@ -286,10 +291,10 @@ export default function AddUmatPage() {
                 setKtpDistricts([]);
                 setKtpLocalities([]);
             }
-            } else {
-                setKtpCities([]);
-                setKtpDistricts([]);
-                setKtpLocalities([]);
+        } else {
+            setKtpCities([]);
+            setKtpDistricts([]);
+            setKtpLocalities([]);
         }
 
         if (!provinceId) return;
@@ -450,6 +455,7 @@ export default function AddUmatPage() {
                                     } else {
                                         setFieldValue("qiu_dao_id", "");
                                         setSelectedQiuDao(null);
+                                        setIsQiuDaoConfirmed(false);
                                     }
                                 }}
                                 onBlur={handleBlur}
@@ -473,21 +479,21 @@ export default function AddUmatPage() {
                         </FormControl>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Nama Lengkap</FormLabel>
-                                    <Input name="full_name" value={values.full_name} onChange={handleChange} placeholder="Masukkan nama lengkap"/>
-                                    {touched.full_name && errors.full_name && (
-                                    <Text color="red.500" fontSize="sm">{errors.full_name}</Text>
-                                    )}
+                                <Input name="full_name" value={values.full_name} onChange={handleChange} placeholder="Masukkan nama lengkap"/>
+                                {touched.full_name && errors.full_name && (
+                                <Text color="red.500" fontSize="sm">{errors.full_name}</Text>
+                                )}
                             </FormControl>
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Nama Mandarin</FormLabel>
                                 <Input name="mandarin_name" value={values.mandarin_name} onChange={handleChange} placeholder="Masukkan nama mandarin"/>
                             </FormControl>
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Status Rohani</FormLabel>
                                 <Select
                                 name="spiritual_status"
@@ -509,7 +515,7 @@ export default function AddUmatPage() {
                                 )}
                             </FormControl>
 
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Sudah berikrar vegetarian?</FormLabel>
                                 <Select
                                 name="is_qing_kou"
@@ -525,7 +531,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Jenis Kelamin</FormLabel>
                                 <Select name="gender" placeholder="Pilihan" value={values.gender} onChange={handleChange} w="100%">
                                 <option value="Male">Pria</option>
@@ -536,7 +542,7 @@ export default function AddUmatPage() {
                                 )}
                             </FormControl>
 
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Golongan Darah</FormLabel>
                                 <Select name="blood_type" value={values.blood_type} onChange={handleChange} w="100%" placeholder="Pilihan">
                                 <option value="A">A</option>
@@ -548,7 +554,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Nomor Handphone</FormLabel>
                                 <Input name="phone_number" value={values.phone_number} onChange={handleChange} placeholder="Masukkan nomor handphone"/>
                                 {touched.phone_number && errors.phone_number && (
@@ -556,7 +562,7 @@ export default function AddUmatPage() {
                                 )}
                             </FormControl>
 
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Nomor Identitas</FormLabel>
                                 <Input 
                                     name="id_card_number" 
@@ -568,7 +574,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Status Pernikahan</FormLabel>
                                 <Select name="marital_status" value={values.marital_status} onChange={handleChange} w="100%" placeholder="Pilihan">
                                 <option value="Not_Married">Belum menikah</option>
@@ -576,7 +582,7 @@ export default function AddUmatPage() {
                                 </Select>
                             </FormControl>
 
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Pekerjaan</FormLabel>
                                 <Select
                                     name="job_name"
@@ -599,7 +605,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Pendidikan Terakhir</FormLabel>
                                 <Select
                                 name="last_education_level"
@@ -621,13 +627,13 @@ export default function AddUmatPage() {
                                 </Select>
                             </FormControl>
                             
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Jurusan</FormLabel>
                                 <Input name="education_major" value={values.education_major} onChange={handleChange} placeholder="Masukkan jurusan pendidikan"/>
                             </FormControl>
                         </HStack>
 
-                        <FormControl w="100%">
+                        <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Tempat Lahir</FormLabel>
                             <Input name="place_of_birth" value={values.place_of_birth} onChange={handleChange} placeholder="Masukkan tempat lahir"/>
                             {touched.place_of_birth && errors.place_of_birth && (
@@ -635,7 +641,7 @@ export default function AddUmatPage() {
                             )}
                         </FormControl>
 
-                        <FormControl w="100%" isRequired>
+                        <FormControl w="100%" isRequired isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Masukkan tanggal lahir</FormLabel>
                             <Input
                             name="date_of_birth"
@@ -648,12 +654,12 @@ export default function AddUmatPage() {
                             )}
                         </FormControl>
 
-                        <FormControl hidden="true" w="100%">
+                        <FormControl hidden="true" w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Tanggal Wafat</FormLabel>
                             <Input name="date_of_death" type="date" value={values.date_of_death} onChange={handleChange} placeholder="Masukkan tanggal wafat"/>
                         </FormControl>
 
-                        <FormControl w="100%">
+                        <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Email</FormLabel>
                             <Input name="email" type="email" value={values.email} onChange={handleChange} placeholder="Masukkan email"/>
                             {touched.email && errors.email && (
@@ -664,14 +670,14 @@ export default function AddUmatPage() {
                         {/* Alamat sesuai identitas */}
                         <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat sesuai identitas</Heading>
                         <HStack spacing={4} w="100%">
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Nama Lokasi</FormLabel>
                             <Input name="ktp_location_name" value={values.ktp_location_name} onChange={handleChange} />
                             {touched.ktp_location_name && errors.ktp_location_name && (
                                 <Text color="red.500" fontSize="sm">{errors.ktp_location_name}</Text>
                             )}
                             </FormControl>
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kode Negara</FormLabel>
                             <Select
                                 name="ktp_country_iso"
@@ -691,7 +697,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Provinsi</FormLabel>
                             <Select
                                 name="ktp_province"
@@ -708,7 +714,7 @@ export default function AddUmatPage() {
                                 <Text color="red.500" fontSize="sm">{errors.ktp_province}</Text>
                             )}
                             </FormControl>
-                            <FormControl isRequired flex={1}>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kota / Kabupaten</FormLabel>
                             <Select
                                 name="ktp_city"
@@ -729,7 +735,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kecamatan</FormLabel>
                             <Select
                                 name="ktp_district"
@@ -744,7 +750,7 @@ export default function AddUmatPage() {
                                 ))}
                             </Select>
                             </FormControl>
-                            <FormControl flex={1}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kelurahan</FormLabel>
                             <Select
                                 name="ktp_locality"
@@ -761,18 +767,18 @@ export default function AddUmatPage() {
                             </FormControl>
                         </HStack>
 
-                        <FormControl w="100%">
+                        <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Alamat</FormLabel>
                             <Input name="ktp_street" value={values.ktp_street} onChange={handleChange} />
                         </FormControl>
 
-                        <FormControl w="100%">
+                        <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kode Pos</FormLabel>
                             <Input name="ktp_postal_code" value={values.ktp_postal_code} onChange={handleChange} />
                         </FormControl>
 
                         {/* Konfirmasi alamat domisili */}
-                        <FormControl isRequired w="100%">
+                        <FormControl isRequired w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Apakah alamat domisili saat ini sama dengan alamat sesuai identitas?</FormLabel>
                             <RadioGroup
                             name="is_same_address"
@@ -822,14 +828,14 @@ export default function AddUmatPage() {
                             <>
                             <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat domisili</Heading>
                             <HStack spacing={4} w="100%">
-                                <FormControl isRequired flex={1}>
+                                <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Nama Lokasi</FormLabel>
                                 <Input name="domicile_location_name" value={values.domicile_location_name} onChange={handleChange} />
                                 {touched.domicile_location_name && errors.domicile_location_name && (
                                     <Text color="red.500" fontSize="sm">{errors.domicile_location_name}</Text>
                                 )}
                                 </FormControl>
-                                <FormControl isRequired flex={1}>
+                                <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Kode Negara</FormLabel>
                                 <Select
                                     name="domicile_country_iso"
@@ -849,7 +855,7 @@ export default function AddUmatPage() {
                             </HStack>
 
                             <HStack spacing={4} w="100%">
-                                <FormControl isRequired flex={1}>
+                                <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Provinsi</FormLabel>
                                 <Select
                                     name="domicile_province"
@@ -866,7 +872,7 @@ export default function AddUmatPage() {
                                     <Text color="red.500" fontSize="sm">{errors.domicile_province}</Text>
                                 )}
                                 </FormControl>
-                                <FormControl isRequired flex={1}>
+                                <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Kota / Kabupaten</FormLabel>
                                 <Select
                                     name="domicile_city"
@@ -887,7 +893,7 @@ export default function AddUmatPage() {
                             </HStack>
 
                             <HStack spacing={4} w="100%">
-                                <FormControl flex={1}>
+                                <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Kecamatan</FormLabel>
                                 <Select
                                     name="domicile_district"
@@ -902,7 +908,7 @@ export default function AddUmatPage() {
                                     ))}
                                 </Select>
                                 </FormControl>
-                                <FormControl flex={1}>
+                                <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Kelurahan</FormLabel>
                                 <Select
                                     name="domicile_locality"
@@ -919,132 +925,132 @@ export default function AddUmatPage() {
                                 </FormControl>
                             </HStack>
 
-                            <FormControl w="100%">
+                            <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Alamat</FormLabel>
                                 <Input name="domicile_street" value={values.domicile_street} onChange={handleChange} />
                             </FormControl>
 
-                            <FormControl w="100%">
+                            <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
                                 <FormLabel>Kode Pos</FormLabel>
                                 <Input name="domicile_postal_code" value={values.domicile_postal_code} onChange={handleChange} />
                             </FormControl>
                             </>
                         )}
 
-                        <Button type="submit" colorScheme="green" w="100%" mt={4}>Simpan</Button>
-                        </VStack>
+                        <Button type="submit" colorScheme="green" w="100%" mt={4} isDisabled={!isQiuDaoConfirmed}>Simpan</Button>
+                    </VStack>
                 </Form>
 
                 <Modal isOpen={isOpen} size="3xl" onClose={() => handleQiuDaoCancel(setFieldValue)}>
-                            <ModalOverlay />
-                            <ModalContent>
-                                <ModalHeader>Konfirmasi Data Qiu Dao</ModalHeader>
-                                <ModalBody>
-                                    {selectedQiuDao ? (
-                                        <VStack spacing={4} align="stretch">
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                <FormControl>
-                                                    <FormLabel>Nama QiuDao</FormLabel>
-                                                    <Input value={selectedQiuDao.qiu_dao_name || "-"} isReadOnly />
-                                                </FormControl>
-                                                <FormControl>
-                                                    <FormLabel>Nama Mandarin QiuDao</FormLabel>
-                                                    <Input value={selectedQiuDao.qiu_dao_mandarin_name || "-"} isReadOnly />
-                                                </FormControl>
-                                            </SimpleGrid>
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                <FormControl>
-                                                    <FormLabel>Nama Pandita</FormLabel>
-                                                    <Input value={selectedQiuDao.dian_chuan_shi?.name || "-"} isReadOnly />
-                                                </FormControl>
-                                                <FormControl>
-                                                    <FormLabel>Nama Mandarin Pandita</FormLabel>
-                                                    <Input value={selectedQiuDao.dian_chuan_shi?.mandarin_name || "-"} isReadOnly />
-                                                </FormControl>
-                                            </SimpleGrid>
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                <FormControl>
-                                                    <FormLabel>Nama Guru Pengajak</FormLabel>
-                                                    <Input value={selectedQiuDao.yin_shi_qd_name || "-"} isReadOnly />
-                                                </FormControl>
-                                                <FormControl>
-                                                    <FormLabel>Nama Mandarin Guru Pengajak</FormLabel>
-                                                    <Input value={selectedQiuDao.yin_shi_qd_mandarin_name || "-"} isReadOnly />
-                                                </FormControl>
-                                            </SimpleGrid>
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                <FormControl>
-                                                    <FormLabel>Nama Guru Penanggung</FormLabel>
-                                                    <Input value={selectedQiuDao.bao_shi_qd_name || "-"} isReadOnly />
-                                                </FormControl>
-                                                <FormControl>
-                                                    <FormLabel>Nama Mandarin Guru Penanggung</FormLabel>
-                                                    <Input value={selectedQiuDao.bao_shi_qd_mandarin_name || "-"} isReadOnly />
-                                                </FormControl>
-                                            </SimpleGrid>
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                <FormControl>
-                                                    <FormLabel>Tahun Lunar (岁次)</FormLabel>
-                                                    <Input value={selectedQiuDao.lunar_sui_ci_year || "-"} isReadOnly />
-                                                </FormControl>
-                                                <FormControl>
-                                                    <FormLabel>Bulan Lunar</FormLabel>
-                                                    <Input value={selectedQiuDao.lunar_month || "-"} isReadOnly />
-                                                </FormControl>
-                                            </SimpleGrid>
-                                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                                                <FormControl>
-                                                    <FormLabel>Tanggal Lunar</FormLabel>
-                                                    <Input value={selectedQiuDao.lunar_day || "-"} isReadOnly />
-                                                </FormControl>
-                                                <FormControl>
-                                                    <FormLabel>Jam Lunar (时辰)</FormLabel>
-                                                    <Input value={selectedQiuDao.lunar_shi_chen_time || "-"} isReadOnly />
-                                                </FormControl>
-                                            </SimpleGrid>
-                                            <FormControl>
-                                                <FormLabel>Lokasi Vihara</FormLabel>
-                                                <Input value={selectedQiuDao.qiu_dao_location?.location_name
-                                                    ? `${selectedQiuDao.qiu_dao_location.location_name}${
-                                                        selectedQiuDao.qiu_dao_location?.location_mandarin_name
-                                                            ? ` (${selectedQiuDao.qiu_dao_location.location_mandarin_name})`
-                                                            : ""
-                                                    }`
-                                                : "-"} isReadOnly />
-                                            </FormControl>
-                                        </VStack>
-                                    ) : (
-                                        <Text>Memuat data...</Text>
-                                    )}
-                                </ModalBody>
-                                <ModalFooter>
-                                    <HStack w="100%" spacing={2} align="center">
-                                        <Text fontSize="lg" fontWeight="bold" w="auto" mb={2}>Apakah data qiudao sudah benar?</Text>
-                                        <HStack flex={1} justify="flex-end" spacing={2}>
-                                            <Button
-                                                colorScheme="green"
-                                                w="120px"
-                                                onClick={() => handleQiuDaoConfirm(setFieldValue, selectedQiuDao?.qiu_dao_id)}
-                                                isDisabled={!selectedQiuDao}
-                                            >
-                                                Ya
-                                            </Button>
-                                            <Button
-                                                colorScheme="red"
-                                                w="120px"
-                                                onClick={() => handleQiuDaoCancel(setFieldValue)}
-                                            >
-                                                Tidak
-                                            </Button>
-                                        </HStack>
-                                    </HStack>
-                                </ModalFooter>
-                            </ModalContent>
-                        </Modal>
-                    </>
-                )}
-            </Formik>
-        );
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>Konfirmasi Data Qiu Dao</ModalHeader>
+                        <ModalBody>
+                            {selectedQiuDao ? (
+                                <VStack spacing={4} align="stretch">
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        <FormControl>
+                                            <FormLabel>Nama QiuDao</FormLabel>
+                                            <Input value={selectedQiuDao.qiu_dao_name || "-"} isReadOnly />
+                                        </FormControl>
+                                        <FormControl>
+                                            <FormLabel>Nama Mandarin QiuDao</FormLabel>
+                                            <Input value={selectedQiuDao.qiu_dao_mandarin_name || "-"} isReadOnly />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        <FormControl>
+                                            <FormLabel>Nama Pandita</FormLabel>
+                                            <Input value={selectedQiuDao.dian_chuan_shi?.name || "-"} isReadOnly />
+                                        </FormControl>
+                                        <FormControl>
+                                            <FormLabel>Nama Mandarin Pandita</FormLabel>
+                                            <Input value={selectedQiuDao.dian_chuan_shi?.mandarin_name || "-"} isReadOnly />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        <FormControl>
+                                            <FormLabel>Nama Guru Pengajak</FormLabel>
+                                            <Input value={selectedQiuDao.yin_shi_qd_name || "-"} isReadOnly />
+                                        </FormControl>
+                                        <FormControl>
+                                            <FormLabel>Nama Mandarin Guru Pengajak</FormLabel>
+                                            <Input value={selectedQiuDao.yin_shi_qd_mandarin_name || "-"} isReadOnly />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        <FormControl>
+                                            <FormLabel>Nama Guru Penanggung</FormLabel>
+                                            <Input value={selectedQiuDao.bao_shi_qd_name || "-"} isReadOnly />
+                                        </FormControl>
+                                        <FormControl>
+                                            <FormLabel>Nama Mandarin Guru Penanggung</FormLabel>
+                                            <Input value={selectedQiuDao.bao_shi_qd_mandarin_name || "-"} isReadOnly />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        <FormControl>
+                                            <FormLabel>Tahun Lunar (岁次)</FormLabel>
+                                            <Input value={selectedQiuDao.lunar_sui_ci_year || "-"} isReadOnly />
+                                        </FormControl>
+                                        <FormControl>
+                                            <FormLabel>Bulan Lunar</FormLabel>
+                                            <Input value={selectedQiuDao.lunar_month || "-"} isReadOnly />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        <FormControl>
+                                            <FormLabel>Tanggal Lunar</FormLabel>
+                                            <Input value={selectedQiuDao.lunar_day || "-"} isReadOnly />
+                                        </FormControl>
+                                        <FormControl>
+                                            <FormLabel>Jam Lunar (时辰)</FormLabel>
+                                            <Input value={selectedQiuDao.lunar_shi_chen_time || "-"} isReadOnly />
+                                        </FormControl>
+                                    </SimpleGrid>
+                                    <FormControl>
+                                        <FormLabel>Lokasi Vihara</FormLabel>
+                                        <Input value={selectedQiuDao.qiu_dao_location?.location_name
+                                            ? `${selectedQiuDao.qiu_dao_location.location_name}${
+                                                selectedQiuDao.qiu_dao_location?.location_mandarin_name
+                                                    ? ` (${selectedQiuDao.qiu_dao_location.location_mandarin_name})`
+                                                    : ""
+                                            }`
+                                        : "-"} isReadOnly />
+                                    </FormControl>
+                                </VStack>
+                            ) : (
+                                <Text>Memuat data...</Text>
+                            )}
+                        </ModalBody>
+                        <ModalFooter>
+                            <HStack w="100%" spacing={2} align="center">
+                                <Text fontSize="lg" fontWeight="bold" w="auto" mb={2}>Apakah data qiudao sudah benar?</Text>
+                                <HStack flex={1} justify="flex-end" spacing={2}>
+                                    <Button
+                                        colorScheme="green"
+                                        w="120px"
+                                        onClick={() => handleQiuDaoConfirm(setFieldValue, selectedQiuDao?.qiu_dao_id)}
+                                        isDisabled={!selectedQiuDao}
+                                    >
+                                        Ya
+                                    </Button>
+                                    <Button
+                                        colorScheme="red"
+                                        w="120px"
+                                        onClick={() => handleQiuDaoCancel(setFieldValue)}
+                                    >
+                                        Tidak
+                                    </Button>
+                                </HStack>
+                            </HStack>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+            </>
+        )}
+        </Formik>
+    );
 
     return (
         <Layout title="Umat">
