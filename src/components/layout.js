@@ -55,6 +55,8 @@ export default function Layout({ children, title }) {
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
+    { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
+    { label: "Laporan", href: "", iconSrc: "/report_icon.svg" },
     { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
     { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
   ];
@@ -84,7 +86,7 @@ export default function Layout({ children, title }) {
           </Box>
           <Flex direction="column" gap={3}>
             {/* Button Dashboard */}
-            {navItems.slice(0, 1).map((item) => {
+            {navItems.slice(0, 2).map((item) => {
               const isActive = router.pathname === item.href;
               return (
                 <Box
@@ -119,7 +121,7 @@ export default function Layout({ children, title }) {
             </Text>
 
             {/* Button Umat dan QiuDao */}
-            {navItems.slice(1).map((item) => {
+            {navItems.slice(3).map((item) => {
               const isActive = router.pathname === item.href;
               return (
                 <Box
