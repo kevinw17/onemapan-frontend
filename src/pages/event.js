@@ -45,7 +45,7 @@ const updateEvent = async (id, payload) => {
 
 export default function Event() {
     const toast = useToast();
-    const [filter, setFilter] = useState("Now");
+    const [filter, setFilter] = useState("Bulan ini");
     const queryClient = useQueryClient();
     const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure(); // Modal for event details
     const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose } = useDisclosure(); // Modal for adding event
@@ -309,15 +309,24 @@ export default function Event() {
     };
 
     const currentDate = new Date(); // Dynamic current timestamp
+    const currentMonth = currentDate.getMonth(); // 0-based (0 = January, 7 = August)
+    const currentYear = currentDate.getFullYear();
+
     const filteredEvents = events.filter((event) => {
-        const eventFullDate = event.rawDate; // Use rawDate for accurate comparison
-        const oneWeekFromNow = new Date(currentDate);
-        oneWeekFromNow.setDate(currentDate.getDate() + 7);
-        if (filter === "Past") return eventFullDate < currentDate;
-        if (filter === "Now") return eventFullDate >= currentDate && eventFullDate <= oneWeekFromNow;
-        if (filter === "Upcoming") return eventFullDate > oneWeekFromNow;
+        const eventMonth = event.rawDate.getMonth();
+        const eventYear = event.rawDate.getFullYear();
+
+        if (filter === "Bulan lalu") {
+            return eventYear < currentYear || (eventYear === currentYear && eventMonth < currentMonth);
+        }
+        if (filter === "Bulan ini") {
+            return eventYear === currentYear && eventMonth === currentMonth;
+        }
+        if (filter === "Bulan depan") {
+            return eventYear > currentYear || (eventYear === currentYear && eventMonth > currentMonth);
+        }
         return true;
-    });
+    }).sort((a, b) => a.rawDate.getDate() - b.rawDate.getDate());
 
     return (
         <Layout title="Kegiatan">
@@ -333,9 +342,9 @@ export default function Event() {
                         Show: {filter}
                     </MenuButton>
                     <MenuList>
-                        <MenuItem onClick={() => setFilter("Upcoming")}>Upcoming</MenuItem>
-                        <MenuItem onClick={() => setFilter("Now")}>Now</MenuItem>
-                        <MenuItem onClick={() => setFilter("Past")}>Past</MenuItem>
+                        <MenuItem onClick={() => setFilter("Bulan depan")}>Bulan depan</MenuItem>
+                        <MenuItem onClick={() => setFilter("Bulan ini")}>Bulan ini</MenuItem>
+                        <MenuItem onClick={() => setFilter("Bulan lalu")}>Bulan lalu</MenuItem>
                     </MenuList>
                     </Menu>
                 </Flex>
