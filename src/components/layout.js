@@ -141,7 +141,7 @@ export default function Layout({ children, title, showCalendar = false }) {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
     { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
-    { label: "Laporan", href: "", iconSrc: "/report_icon.svg" },
+    { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
     { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
     { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
   ];
@@ -192,8 +192,8 @@ export default function Layout({ children, title, showCalendar = false }) {
             />
           </Box>
           <Flex direction="column" gap={3}>
-            {/* Button Dashboard */}
-            {navItems.slice(0, 2).map((item) => {
+            {/* Button Dashboard, Kegiatan, dan Laporan */}
+            {navItems.slice(0, 3).map((item) => {
               const isActive = router.pathname === item.href;
               return (
                 <Box
