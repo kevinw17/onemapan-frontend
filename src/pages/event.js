@@ -308,6 +308,21 @@ export default function Event() {
         }
     };
 
+    const resetFormData = () => {
+        setFormData({
+            event_name: "",
+            event_mandarin_name: "",
+            greg_occur_date: "",
+            location_name: "",
+            event_type: "Regular",
+            description: "",
+            lunar_sui_ci_year: "",
+            lunar_month: "",
+            lunar_day: "",
+            is_recurring: false,
+        });
+    };
+
     const currentDate = new Date(); // Dynamic current timestamp
     const currentMonth = currentDate.getMonth(); // 0-based (0 = January, 7 = August)
     const currentYear = currentDate.getFullYear();
@@ -334,7 +349,7 @@ export default function Event() {
             <Flex justify="space-between" align="center" mb={6}>
                 <Heading size="md">{currentDate.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</Heading>
                 <Flex gap={4} align="center">
-                    <Button colorScheme="blue" leftIcon={<FiPlus />} onClick={onAddOpen} size="sm">
+                    <Button colorScheme="blue" leftIcon={<FiPlus />} onClick={() => { resetFormData(); onAddOpen(); }} size="sm">
                     Buat Kegiatan Baru
                     </Button>
                     <Menu>
