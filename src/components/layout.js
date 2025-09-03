@@ -4,18 +4,18 @@ import {
   HStack, Spinner, Text, 
   Menu, MenuButton, MenuList, 
   MenuItem, IconButton, Tag, 
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Button 
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton 
 } from "@chakra-ui/react";
-import { FiArrowLeft, FiChevronRight, FiSettings, FiChevronLeft, FiChevronRight as FiChevronRightNav, FiMoreVertical, FiEdit, FiTrash } from "react-icons/fi";
+import { FiArrowLeft, FiChevronRight, FiSettings, FiChevronLeft, FiChevronRight as FiChevronRightNav, FiMoreVertical } from "react-icons/fi";
 import Image from "next/image";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { logout } from "@/lib/auth/logout";
 import { isAuthenticated } from "@/lib/auth/checkAuth";
 import { useEffect, useState } from "react";
-import Calendar from "react-calendar"; // Impor react-calendar
-import "react-calendar/dist/Calendar.css"; // Impor CSS bawaan
-import { axiosInstance } from "@/lib/axios"; // Impor axiosInstance dari konfigurasi Anda
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import { axiosInstance } from "@/lib/axios";
 
 export default function Layout({ children, title, showCalendar = false }) {
   const router = useRouter();
@@ -24,6 +24,7 @@ export default function Layout({ children, title, showCalendar = false }) {
   const [events, setEvents] = useState([]);
   const [date, setDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [viewMode, setViewMode] = useState("month"); // Default ke mode bulan
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -52,27 +53,26 @@ export default function Layout({ children, title, showCalendar = false }) {
     checkAuthStatus();
   }, [router]);
 
-  // Fetch events for calendar with error handling using axiosInstance
+  // Fetch events for calendar
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const response = await axiosInstance.get("/event").catch(() => ({ data: [] }));
-        console.log("Response status:", response.status); // Debug: Periksa status
-        console.log("Response data:", response.data); // Debug: Periksa data yang diambil
+        console.log("Response status:", response.status);
+        console.log("Response data:", response.data);
         if (!response.data || !Array.isArray(response.data)) {
-          // Data dummy untuk menguji tanggal 12 dan 17 Agustus 2025
           const dummyEvents = [
             {
               event_id: "1",
-              event_name: "Kegiatan 12 Agustus",
-              occurrences: [{ greg_occur_date: "2025-08-12T09:00:00Z" }],
+              event_name: "Kegiatan 3 September",
+              occurrences: [{ greg_occur_date: "2025-09-03T09:00:00Z" }],
               location_name: "Vihara 1",
               event_type: "Ad-hoc",
             },
             {
               event_id: "2",
-              event_name: "Kegiatan 17 Agustus",
-              occurrences: [{ greg_occur_date: "2025-08-17T14:00:00Z" }],
+              event_name: "Kegiatan 10 September",
+              occurrences: [{ greg_occur_date: "2025-09-10T14:00:00Z" }],
               location_name: "Vihara 2",
               event_type: "Hari Besar",
             },
@@ -151,8 +151,9 @@ export default function Layout({ children, title, showCalendar = false }) {
   const showBackButton = ["/umat/addUmat", "/umat/editUmat", "/qiudao/addQiudao", "/qiudao/editQiudao"].includes(router.pathname);
   const backPath = router.pathname.includes("umat") ? "/umat" : "/qiudao";
 
+  // Fungsi untuk mendapatkan kegiatan di tanggal tertentu
   const getEventsForDate = (selectedDate) => {
-    console.log("Checking date:", selectedDate); // Debug: Periksa tanggal yang dicek
+    console.log("Checking date:", selectedDate);
     const eventsForDate = events.filter((event) => {
       const eventDate = new Date(event.date);
       const isMatch = (
@@ -160,15 +161,44 @@ export default function Layout({ children, title, showCalendar = false }) {
         eventDate.getMonth() === selectedDate.getMonth() &&
         eventDate.getFullYear() === selectedDate.getFullYear()
       );
-      console.log("Event:", event.name, "Date:", eventDate, "Match:", isMatch); // Debug: Periksa setiap event
+      console.log("Event:", event.name, "Date:", eventDate, "Match:", isMatch);
       return isMatch;
     }).sort((a, b) => {
       const timeA = a.time.replace(" WIB", "").split(":");
       const timeB = b.time.replace(" WIB", "").split(":");
       return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
     });
-    console.log("Events for date:", eventsForDate); // Debug: Periksa hasil filter
+    console.log("Events for date:", eventsForDate);
     return eventsForDate;
+  };
+
+  // Fungsi untuk mendapatkan kegiatan di bulan aktif
+  const getEventsForMonth = (selectedDate) => {
+    const eventsForMonth = events.filter((event) => {
+      const eventDate = new Date(event.date);
+      return (
+        eventDate.getMonth() === selectedDate.getMonth() &&
+        eventDate.getFullYear() === selectedDate.getFullYear()
+      );
+    }).sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateA - dateB;
+    });
+    console.log("Events for month:", selectedDate.toLocaleString("id-ID", { month: "long", year: "numeric" }), eventsForMonth);
+    return eventsForMonth;
+  };
+
+  // Handler untuk perubahan tanggal
+  const handleDateChange = (newDate) => {
+    setDate(newDate);
+    setViewMode("date");
+  };
+
+  // Handler untuk perubahan bulan aktif
+  const handleActiveDateChange = ({ activeStartDate }) => {
+    setDate(new Date(activeStartDate.getFullYear(), activeStartDate.getMonth(), 1));
+    setViewMode("month");
   };
 
   const onCloseModal = () => setSelectedEvent(null);
@@ -192,7 +222,6 @@ export default function Layout({ children, title, showCalendar = false }) {
             />
           </Box>
           <Flex direction="column" gap={3}>
-            {/* Button Dashboard, Kegiatan, dan Laporan */}
             {navItems.slice(0, 3).map((item) => {
               const isActive = router.pathname === item.href;
               return (
@@ -221,13 +250,9 @@ export default function Layout({ children, title, showCalendar = false }) {
                 </Box>
               );
             })}
-
-            {/* Header Management Umat */}
             <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>
               Management Umat
             </Text>
-
-            {/* Button Umat dan QiuDao */}
             {navItems.slice(3).map((item) => {
               const isActive = router.pathname === item.href;
               return (
@@ -259,7 +284,6 @@ export default function Layout({ children, title, showCalendar = false }) {
           </Flex>
         </Box>
 
-        {/* Konten Utama dan Kalender */}
         <Flex flex="1" direction="row" overflow="hidden">
           <Box
             flex="1"
@@ -284,11 +308,9 @@ export default function Layout({ children, title, showCalendar = false }) {
                     />
                   </>
                 )}
-
                 <Heading size="sm" color={showBackButton ? "gray.300" : "black"}>
                   {title}
                 </Heading>
-
                 {showBackButton && (
                   <>
                     <IconButton
@@ -298,14 +320,12 @@ export default function Layout({ children, title, showCalendar = false }) {
                       aria-label="ActivePage"
                       p={2.5}
                     />
-
                     <Heading size="sm">
                       Tambah manual
                     </Heading>
                   </>
                 )}
               </HStack>
-
               <Flex gap={2} align="center">
                 <Menu>
                   <MenuButton
@@ -325,14 +345,12 @@ export default function Layout({ children, title, showCalendar = false }) {
                 </Menu>
               </Flex>
             </Flex>
-
             <Divider borderBottomWidth="4px"/>
             <Box p={4}>
               {children}
             </Box>
           </Box>
 
-          {/* Box Khusus Kalender */}
           {showCalendar && (
             <Box
               width="320px"
@@ -342,14 +360,24 @@ export default function Layout({ children, title, showCalendar = false }) {
               overflowY="auto"
             >
               <Calendar
-                onChange={setDate}
+                onChange={handleDateChange}
+                onActiveStartDateChange={handleActiveDateChange}
                 value={date}
                 locale="id-ID"
                 tileClassName={({ date: tileDate }) => {
                   const today = new Date();
                   const isToday = new Date(tileDate).toDateString() === new Date(today).toDateString();
+                  const hasEvents = events.some((event) => {
+                    const eventDate = new Date(event.date);
+                    return (
+                      eventDate.getDate() === tileDate.getDate() &&
+                      eventDate.getMonth() === tileDate.getMonth() &&
+                      eventDate.getFullYear() === tileDate.getFullYear()
+                    );
+                  });
                   const classes = [];
                   if (isToday) classes.push("highlight");
+                  if (hasEvents) classes.push("has-events");
                   return classes.join(" ");
                 }}
               />
@@ -369,7 +397,7 @@ export default function Layout({ children, title, showCalendar = false }) {
                   justify-content: center;
                   border-radius: 4px;
                   position: relative;
-                  color: #2d3748; /* Warna default tanggal */
+                  color: #2d3748;
                 }
                 .react-calendar__tile--now {
                   background: #edf2f7;
@@ -379,6 +407,15 @@ export default function Layout({ children, title, showCalendar = false }) {
                   background: #edf2f7;
                   color: #2b6cb0;
                 }
+                .react-calendar__tile:global(.has-events):after {
+                  content: '';
+                  width: 6px;
+                  height: 6px;
+                  background: #2b6cb0;
+                  border-radius: 50%;
+                  position: absolute;
+                  bottom: 4px;
+                }
                 .react-calendar__navigation button {
                   color: #2b6cb0;
                   font-weight: bold;
@@ -387,21 +424,30 @@ export default function Layout({ children, title, showCalendar = false }) {
                   color: #a0aec0;
                 }
                 .react-calendar__tile:hover {
-                  background-color: #e2e8f0; /* Warna abu-abu saat hover */
-                  color: #2d3748; /* Tetap hitam untuk teks */
+                  background-color: #e2e8f0;
+                  color: #2d3748;
                 }
                 .react-calendar__tile--active {
-                  background-color: #e2e8f0; /* Warna abu-abu saat tanggal dipilih */
-                  color: #2d3748; /* Tetap hitam untuk teks */
+                  background-color: #e2e8f0;
+                  color: #2d3748;
                 }
               `}</style>
-              {/* Detail Acara untuk tanggal yang dipilih */}
+              {/* Detail Acara */}
               <Box mt={4}>
-                {getEventsForDate(date).length > 0 ? (
-                  getEventsForDate(date).map((event) => (
+                {(viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).length > 0 ? (
+                  (viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).map((event) => (
                     <Flex key={event.id} justify="space-between" align="center" mb={2} p={2} bg="gray.50" borderRadius="md">
                       <Box>
-                        <Text fontSize="lg" fontWeight="bold" color={"#2e05e8ff"}>{event.time}</Text>
+                        {viewMode === "month" ? (
+                          <>
+                            <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">
+                              {event.date.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
+                            </Text>
+                            <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                          </>
+                        ) : (
+                          <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                        )}
                         <Text fontSize="md" fontWeight="bold">{event.name}</Text>
                         <Text fontSize="sm" color="gray.600">{event.location}</Text>
                         <HStack spacing={2} mt={1}>
@@ -423,7 +469,11 @@ export default function Layout({ children, title, showCalendar = false }) {
                     </Flex>
                   ))
                 ) : (
-                  <Text color="gray.500" textAlign="center">Tidak ada acara pada tanggal ini.</Text>
+                  <Text color="gray.500" textAlign="center">
+                    {viewMode === "month"
+                      ? `Tidak ada acara di bulan ${date.toLocaleString("id-ID", { month: "long", year: "numeric" })}`
+                      : "Tidak ada acara pada tanggal ini."}
+                  </Text>
                 )}
               </Box>
             </Box>
@@ -431,7 +481,6 @@ export default function Layout({ children, title, showCalendar = false }) {
         </Flex>
       </Flex>
 
-      {/* Modal untuk Detail Event */}
       <Modal isOpen={selectedEvent !== null} onClose={onCloseModal}>
         <ModalOverlay />
         <ModalContent>

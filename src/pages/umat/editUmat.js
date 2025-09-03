@@ -199,7 +199,7 @@ export default function EditUmat() {
             });
         })
         .finally(() => setLoading((prev) => ({ ...prev, initialData: false })));
-    }, [userId]);
+    }, [userId, toast]);
 
     useEffect(() => {
         fetchLocationData("provinces", null, setProvinces, "provinces");
