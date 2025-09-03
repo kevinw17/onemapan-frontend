@@ -11,6 +11,14 @@ import {
     GridItem,
     Button,
     Heading,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalCloseButton,
+    ModalBody,
+    ModalFooter,
+    useDisclosure,
 } from "@chakra-ui/react";
 import Layout from "@/components/layout";
 import { useEffect, useState } from "react";
@@ -19,8 +27,8 @@ import { axiosInstance } from "@/lib/axios";
 import { useToast } from "@chakra-ui/react";
 import { useUpdateUser } from "@/features/user/useUpdateUser";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
+import { useDeleteUser } from "@/features/user/useDeleteUser";
 
-// Opsi untuk Status Rohani
 const SPIRITUAL_STATUS_OPTIONS = [
     { value: "", label: "Pilih status rohani" },
     { value: "QianRen", label: "Qian Ren / Sesepuh" },
@@ -32,7 +40,6 @@ const SPIRITUAL_STATUS_OPTIONS = [
     { value: "DaoQin", label: "Dao Qin / Umat" },
 ];
 
-// Opsi untuk Jenis Kelamin dan Golongan Darah
 const GENDER_OPTIONS = [
     { value: "Male", label: "Pria" },
     { value: "Female", label: "Wanita" },
@@ -45,12 +52,26 @@ const BLOOD_TYPE_OPTIONS = [
     { value: "AB", label: "AB" },
 ];
 
+const JOB_OPTIONS = [
+    { value: "PNS", label: "PNS (Pegawai Negeri Sipil)" },
+    { value: "Guru/Dosen", label: "Guru/Dosen" },
+    { value: "Dokter/Perawat", label: "Dokter/Perawat" },
+    { value: "Wiraswasta", label: "Wiraswasta" },
+    { value: "Karyawan Swasta", label: "Karyawan Swasta" },
+    { value: "Petani/Nelayan", label: "Petani/Nelayan" },
+    { value: "Pelajar/Mahasiswa", label: "Pelajar/Mahasiswa" },
+    { value: "Pensiunan", label: "Pensiunan" },
+    { value: "Lainnya", label: "Lainnya" },
+];
+
 export default function EditUmat() {
     const router = useRouter();
     const { userId } = router.query;
     const toast = useToast();
+    const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } =useDisclosure();
     const updateUserMutation = useUpdateUser();
     const updateLocationMutation = useUpdateLocation();
+    const deleteUserMutation = useDeleteUser();
 
     const [formData, setFormData] = useState({
         full_name: "",
@@ -83,7 +104,6 @@ export default function EditUmat() {
         initialData: true,
     });
 
-    // Fungsi untuk mengambil data lokasi
     const fetchLocationData = async (type, id, setter, field) => {
         if (!id && type !== "provinces") return;
         setLoading((prev) => ({ ...prev, [field]: true }));
@@ -103,7 +123,6 @@ export default function EditUmat() {
         }
     };
 
-    // Fetch data awal user
     useEffect(() => {
         if (!userId) return;
         setLoading((prev) => ({ ...prev, initialData: true }));
@@ -130,7 +149,6 @@ export default function EditUmat() {
             domicile_location: data.domicile_location || {},
             };
 
-            // Set hierarki lokasi
             if (data.id_card_location?.locality) {
             initialFormData.id_card_location = {
                 ...initialFormData.id_card_location,
@@ -152,7 +170,6 @@ export default function EditUmat() {
 
             setFormData(initialFormData);
 
-            // Fetch data hierarki berdasarkan nilai awal
             if (initialFormData.id_card_location?.province) {
             fetchLocationData("cities", initialFormData.id_card_location.province, setCities, "id_card");
             }
@@ -184,12 +201,10 @@ export default function EditUmat() {
         .finally(() => setLoading((prev) => ({ ...prev, initialData: false })));
     }, [userId]);
 
-    // Fetch provinces saat komponen dimount
     useEffect(() => {
         fetchLocationData("provinces", null, setProvinces, "provinces");
     }, []);
 
-    // Handle perubahan lokasi
     const handleLocationChange = (section, field, value) => {
         setFormData((prev) => ({
         ...prev,
@@ -211,7 +226,36 @@ export default function EditUmat() {
         }
     };
 
-    // Handle simpan data
+    const handleDelete = () => {
+        onConfirmOpen();
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!userId) return;
+        try {
+            await deleteUserMutation.mutateAsync(userId);
+            toast({
+                title: "Umat berhasil dihapus",
+                status: "success",
+                duration: 3000,
+                isClosable: true,
+            });
+            router.push("/umat");
+        } catch (err) {
+            const errorMessage =
+                err?.response?.data?.message || "Terjadi kesalahan saat menghapus";
+            toast({
+                title: "Gagal menghapus",
+                description: errorMessage,
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            onConfirmClose();
+        }
+    };
+
     const handleSave = async () => {
         const {
         full_name,
@@ -335,7 +379,6 @@ export default function EditUmat() {
         router.push("/umat");
     };
 
-    // Komponen untuk field lokasi
     const LocationFields = ({ section, title }) => (
         <>
         <Heading size="md" color="gray" pt={4} pb={2}>
@@ -485,11 +528,25 @@ export default function EditUmat() {
                     <GridItem key={field}>
                         <FormControl>
                         <FormLabel fontWeight="bold">{label}</FormLabel>
-                        <Input
-                            type={type || "text"}
-                            value={formData[field] || ""}
-                            onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                        />
+                        {field === "job_name" ? (
+                            <Select
+                                value={formData[field] || ""}
+                                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                                placeholder="Pilih pekerjaan"
+                            >
+                                {JOB_OPTIONS.map(({ value, label }) => (
+                                    <option key={value} value={value}>
+                                        {label}
+                                    </option>
+                                ))}
+                            </Select>
+                        ) : (
+                            <Input
+                                type={type || "text"}
+                                value={formData[field] || ""}
+                                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                            />
+                        )}
                         </FormControl>
                     </GridItem>
                     ))}
@@ -562,17 +619,41 @@ export default function EditUmat() {
                 <LocationFields section="domicile_location" title="Lokasi Domisili" />
 
                 <Flex gap={4} mt={4}>
+                    <Button colorScheme="red" w="100px" onClick={handleDelete}>
+                        Delete
+                    </Button>
                     <Button colorScheme="gray" flex="1" onClick={handleCancel}>
-                    Batal
+                        Batal
                     </Button>
                     <Button colorScheme="blue" flex="1" onClick={handleSave}>
-                    Submit
+                        Submit
                     </Button>
                 </Flex>
                 </VStack>
             )}
             </VStack>
         </Box>
+
+            <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="xs" isCentered>
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>Konfirmasi hapus data</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                        <Text>Apakah Anda yakin ingin menghapus data ini?</Text>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Flex w="100%" gap={2}>
+                            <Button variant="ghost" onClick={onConfirmClose} flex="1">
+                                Tidak
+                            </Button>
+                            <Button colorScheme="red" onClick={handleConfirmDelete} flex="1">
+                                Ya
+                            </Button>
+                        </Flex>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </Layout>
     );
 }

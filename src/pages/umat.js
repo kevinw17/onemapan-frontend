@@ -8,7 +8,7 @@ import {
 import { useFetchUsers } from "@/features/user/useFetchUsers";
 import Layout from "../components/layout";
 import { Badge, Flex, Heading } from "@chakra-ui/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useUpdateUser } from "@/features/user/useUpdateUser";
 import { useDeleteUser } from "@/features/user/useDeleteUser";
 import Pagination from "@/components/Pagination";
@@ -27,10 +27,22 @@ export default function UmatPage() {
     const [filterOpen, setFilterOpen] = useState(false);
     const [jobFilter, setJobFilter] = useState([]);
     const [educationFilter, setEducationFilter] = useState([]);
+    const [spiritualFilter, setSpiritualFilter] = useState([]);
+    const [qingKouFilter, setQingKouFilter] = useState([]);
+    const [genderFilter, setGenderFilter] = useState([]);
+    const [bloodTypeFilter, setBloodTypeFilter] = useState([]);
     const [tempJobFilter, setTempJobFilter] = useState([]);
     const [tempEducationFilter, setTempEducationFilter] = useState([]);
+    const [tempSpiritualFilter, setTempSpiritualFilter] = useState([]);
+    const [tempQingKouFilter, setTempQingKouFilter] = useState([]);
+    const [tempGenderFilter, setTempGenderFilter] = useState([]);
+    const [tempBloodTypeFilter, setTempBloodTypeFilter] = useState([]);
     const [isJobFilterOpen, setIsJobFilterOpen] = useState(false);
     const [isEducationFilterOpen, setIsEducationFilterOpen] = useState(false);
+    const [isSpiritualFilterOpen, setIsSpiritualFilterOpen] = useState(false);
+    const [isQingKouFilterOpen, setIsQingKouFilterOpen] = useState(false);
+    const [isGenderFilterOpen, setIsGenderFilterOpen] = useState(false);
+    const [isBloodTypeFilterOpen, setIsBloodTypeFilterOpen] = useState(false);
     const { data: users, isLoading, refetch: refetchUsers } = useFetchUsers({
         page,
         limit,
@@ -38,6 +50,10 @@ export default function UmatPage() {
         searchField: searchField,
         job_name: jobFilter,
         last_education_level: educationFilter,
+        spiritualStatus: spiritualFilter, 
+        is_qing_kou: qingKouFilter,
+        gender: genderFilter,
+        blood_type: bloodTypeFilter,
     });
     const usersList = users?.data || [];
     const total = users?.total || 0;
@@ -56,6 +72,62 @@ export default function UmatPage() {
     const updateLocationMutation = useUpdateLocation();
     const router = useRouter();
     const fileInputRef = useRef(null);
+    const [columnFilters, setColumnFilters] = useState({
+        job_name: [],
+        last_education_level: [],
+        spiritualStatus: [],
+        is_qing_kou: [],
+        gender: [],
+        blood_type: [],
+    });
+    const [isColumnFilterOpen, setIsColumnFilterOpen] = useState({
+        job_name: false,
+        last_education_level: false,
+        spiritualStatus: false,
+        is_qing_kou: false,
+        gender: false,
+        blood_type: false,
+    });
+
+    // Sinkronisasi awal dan real-time antara temp*Filter dan columnFilters
+    useEffect(() => {
+        setTempJobFilter([...columnFilters.job_name]);
+        setTempEducationFilter([...columnFilters.last_education_level]);
+        setTempSpiritualFilter([...columnFilters.spiritualStatus]);
+        setTempQingKouFilter([...columnFilters.is_qing_kou]);
+        setTempGenderFilter([...columnFilters.gender]);
+        setTempBloodTypeFilter([...columnFilters.blood_type]);
+    }, [columnFilters]);
+
+    useEffect(() => {
+        setColumnFilters((prev) => ({
+            ...prev,
+            job_name: [...jobFilter],
+            last_education_level: [...educationFilter],
+            spiritualStatus: [...spiritualFilter],
+            is_qing_kou: [...qingKouFilter],
+            gender: [...genderFilter],
+            blood_type: [...bloodTypeFilter],
+        }));
+    }, [jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter]);
+
+    const handleClickOutside = (e) => {
+        if (!e.target.closest('.filter-dropdown')) {
+            setIsColumnFilterOpen({
+                job_name: false,
+                last_education_level: false,
+                spiritualStatus: false,
+                is_qing_kou: false,
+                gender: false,
+                blood_type: false,
+            });
+        }
+    };
+
+    useEffect(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleRowClick = (user) => {
         setSelectedUser(user);
@@ -198,6 +270,19 @@ export default function UmatPage() {
     const applyFilters = () => {
         setJobFilter([...tempJobFilter]);
         setEducationFilter([...tempEducationFilter]);
+        setSpiritualFilter([...tempSpiritualFilter]);
+        setQingKouFilter([...tempQingKouFilter]);
+        setGenderFilter([...tempGenderFilter]);
+        setBloodTypeFilter([...tempBloodTypeFilter]);
+        setColumnFilters((prev) => ({
+            ...prev,
+            job_name: [...tempJobFilter],
+            last_education_level: [...tempEducationFilter],
+            spiritualStatus: [...tempSpiritualFilter],
+            is_qing_kou: [...tempQingKouFilter],
+            gender: [...tempGenderFilter],
+            blood_type: [...tempBloodTypeFilter],
+        }));
         refetchUsers({
             page,
             limit,
@@ -205,8 +290,19 @@ export default function UmatPage() {
             searchField,
             job_name: tempJobFilter,
             last_education_level: tempEducationFilter,
+            spiritualStatus: tempSpiritualFilter,
+            is_qing_kou: tempQingKouFilter,
+            gender: tempGenderFilter,
+            blood_type: tempBloodTypeFilter,
         }).then(() => {
-            console.log("Applied filters:", { job_name: tempJobFilter, last_education_level: tempEducationFilter });
+            console.log("Applied filters:", {
+                job_name: tempJobFilter,
+                last_education_level: tempEducationFilter,
+                spiritualStatus: tempSpiritualFilter,
+                is_qing_kou: tempQingKouFilter,
+                gender: tempGenderFilter,
+                blood_type: tempBloodTypeFilter,
+            });
         }).catch((error) => {
             console.error("Error applying filters:", error);
         });
@@ -216,8 +312,24 @@ export default function UmatPage() {
     const clearFilters = () => {
         setTempJobFilter([]);
         setTempEducationFilter([]);
+        setTempSpiritualFilter([]);
+        setTempQingKouFilter([]);
+        setTempGenderFilter([]);
+        setTempBloodTypeFilter([]);
         setJobFilter([]);
         setEducationFilter([]);
+        setSpiritualFilter([]);
+        setQingKouFilter([]);
+        setGenderFilter([]);
+        setBloodTypeFilter([]);
+        setColumnFilters({
+            job_name: [],
+            last_education_level: [],
+            spiritualStatus: [],
+            is_qing_kou: [],
+            gender: [],
+            blood_type: [],
+        });
         refetchUsers({
             page,
             limit,
@@ -241,6 +353,108 @@ export default function UmatPage() {
                 ? prev.filter((item) => item !== value)
                 : [...prev, value]
         );
+    };
+
+    const handleSpiritualFilterChange = (value) => {
+        setTempSpiritualFilter((prev) =>
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value]
+        );
+    };
+
+    const handleQingKouFilterChange = (value) => {
+        setTempQingKouFilter((prev) =>
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value === "true" ? "true" : "false"]
+        );
+    };
+
+    const handleGenderFilterChange = (value) => {
+        setTempGenderFilter((prev) =>
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value]
+        );
+    };
+
+    const handleBloodTypeFilterChange = (value) => {
+        setTempBloodTypeFilter((prev) =>
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value]
+        );
+    };
+
+    const handleColumnFilterChange = (column, value) => {
+        setColumnFilters((prev) => {
+            const current = prev[column] || [];
+            const updated = current.includes(value)
+                ? current.filter((item) => item !== value)
+                : [...current, value];
+            // Sinkronisasi ke temp*Filter langsung di dalam callback
+            switch (column) {
+                case "job_name": setTempJobFilter((prev) => updated); break;
+                case "last_education_level": setTempEducationFilter((prev) => updated); break;
+                case "spiritualStatus": setTempSpiritualFilter((prev) => updated); break;
+                case "is_qing_kou": setTempQingKouFilter((prev) => updated); break;
+                case "gender": setTempGenderFilter((prev) => updated); break;
+                case "blood_type": setTempBloodTypeFilter((prev) => updated); break;
+            }
+            return { ...prev, [column]: updated };
+        });
+    };
+
+    const applyColumnFilters = () => {
+        setJobFilter([...columnFilters.job_name]);
+        setEducationFilter([...columnFilters.last_education_level]);
+        setSpiritualFilter([...columnFilters.spiritualStatus]);
+        setQingKouFilter([...columnFilters.is_qing_kou]);
+        setGenderFilter([...columnFilters.gender]);
+        setBloodTypeFilter([...columnFilters.blood_type]);
+        setTempJobFilter([...columnFilters.job_name]);
+        setTempEducationFilter([...columnFilters.last_education_level]);
+        setTempSpiritualFilter([...columnFilters.spiritualStatus]);
+        setTempQingKouFilter([...columnFilters.is_qing_kou]);
+        setTempGenderFilter([...columnFilters.gender]);
+        setTempBloodTypeFilter([...columnFilters.blood_type]);
+        refetchUsers({
+            page,
+            limit,
+            search: searchQuery,
+            searchField,
+            job_name: columnFilters.job_name,
+            last_education_level: columnFilters.last_education_level,
+            spiritualStatus: columnFilters.spiritualStatus,
+            is_qing_kou: columnFilters.is_qing_kou,
+            gender: columnFilters.gender,
+            blood_type: columnFilters.blood_type,
+        });
+    };
+
+    const clearColumnFilters = (column) => {
+        setColumnFilters((prev) => ({ ...prev, [column]: [] }));
+        setTempJobFilter((prev) => (column === "job_name" ? [] : prev));
+        setTempEducationFilter((prev) => (column === "last_education_level" ? [] : prev));
+        setTempSpiritualFilter((prev) => (column === "spiritualStatus" ? [] : prev));
+        setTempQingKouFilter((prev) => (column === "is_qing_kou" ? [] : prev));
+        setTempGenderFilter((prev) => (column === "gender" ? [] : prev));
+        setTempBloodTypeFilter((prev) => (column === "blood_type" ? [] : prev));
+        switch (column) {
+            case "job_name": setJobFilter([]); break;
+            case "last_education_level": setEducationFilter([]); break;
+            case "spiritualStatus": setSpiritualFilter([]); break;
+            case "is_qing_kou": setQingKouFilter([]); break;
+            case "gender": setGenderFilter([]); break;
+            case "blood_type": setBloodTypeFilter([]); break;
+        }
+        refetchUsers({
+            page,
+            limit,
+            search: searchQuery,
+            searchField,
+        });
     };
 
     const handleImportUmat = () => {
@@ -433,8 +647,133 @@ export default function UmatPage() {
                                     </Collapse>
                                 </FormControl>
 
+                                <FormControl>
+                                    <Flex align="center" justify="space-between">
+                                        <FormLabel mb={0}>Status Rohani</FormLabel>
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label={isSpiritualFilterOpen ? "Hide spiritual filter" : "Show spiritual filter"}
+                                            icon={isSpiritualFilterOpen ? <FiMinus /> : <FiPlus />}
+                                            onClick={() => setIsSpiritualFilterOpen(!isSpiritualFilterOpen)}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                    </Flex>
+                                    <Collapse in={isSpiritualFilterOpen} animateOpacity>
+                                        <VStack align="start" spacing={1}>
+                                            {["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
+                                                <Checkbox
+                                                    key={status}
+                                                    isChecked={tempSpiritualFilter.includes(status)}
+                                                    onChange={() => handleSpiritualFilterChange(status)}
+                                                >
+                                                    {status === "QianRen" ? "Qian Ren / Sesepuh" :
+                                                        status === "DianChuanShi" ? "Dian Chuan Shi / Pandita" :
+                                                        status === "TanZhu" ? "Tan Zhu / Pandita Madya" :
+                                                        status === "FoYuan" ? "Fo Yuan / Buddha Siswa" :
+                                                        status === "BanShiYuan" ? "Ban Shi Yuan / Pelaksana Vihara" :
+                                                        status === "QianXian" ? "Qian Xian / Aktivis" :
+                                                        "Dao Qin / Umat"}
+                                                </Checkbox>
+                                            ))}
+                                        </VStack>
+                                    </Collapse>
+                                </FormControl>
+
+                                <FormControl>
+                                    <Flex align="center" justify="space-between">
+                                        <FormLabel mb={0}>Status Vegetarian</FormLabel>
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label={isQingKouFilterOpen ? "Hide vegetarian filter" : "Show vegetarian filter"}
+                                            icon={isQingKouFilterOpen ? <FiMinus /> : <FiPlus />}
+                                            onClick={() => setIsQingKouFilterOpen(!isQingKouFilterOpen)}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                    </Flex>
+                                    <Collapse in={isQingKouFilterOpen} animateOpacity>
+                                        <VStack align="start" spacing={1}>
+                                            <Checkbox
+                                                key="true"
+                                                isChecked={tempQingKouFilter.includes("true")}
+                                                onChange={() => handleQingKouFilterChange("true")}
+                                            >
+                                                Sudah
+                                            </Checkbox>
+                                            <Checkbox
+                                                key="false"
+                                                isChecked={tempQingKouFilter.includes("false")}
+                                                onChange={() => handleQingKouFilterChange("false")}
+                                            >
+                                                Belum
+                                            </Checkbox>
+                                        </VStack>
+                                    </Collapse>
+                                </FormControl>
+
+                                <FormControl>
+                                    <Flex align="center" justify="space-between">
+                                        <FormLabel mb={0}>Jenis Kelamin</FormLabel>
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label={isGenderFilterOpen ? "Hide gender filter" : "Show gender filter"}
+                                            icon={isGenderFilterOpen ? <FiMinus /> : <FiPlus />}
+                                            onClick={() => setIsGenderFilterOpen(!isGenderFilterOpen)}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                    </Flex>
+                                    <Collapse in={isGenderFilterOpen} animateOpacity>
+                                        <VStack align="start" spacing={1}>
+                                            <Checkbox
+                                                key="Male"
+                                                isChecked={tempGenderFilter.includes("Male")}
+                                                onChange={() => handleGenderFilterChange("Male")}
+                                            >
+                                                Pria
+                                            </Checkbox>
+                                            <Checkbox
+                                                key="Female"
+                                                isChecked={tempGenderFilter.includes("Female")}
+                                                onChange={() => handleGenderFilterChange("Female")}
+                                            >
+                                                Wanita
+                                            </Checkbox>
+                                        </VStack>
+                                    </Collapse>
+                                </FormControl>
+
+                                <FormControl>
+                                    <Flex align="center" justify="space-between">
+                                        <FormLabel mb={0}>Golongan Darah</FormLabel>
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label={isBloodTypeFilterOpen ? "Hide blood type filter" : "Show blood type filter"}
+                                            icon={isBloodTypeFilterOpen ? <FiMinus /> : <FiPlus />}
+                                            onClick={() => setIsBloodTypeFilterOpen(!isBloodTypeFilterOpen)}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                    </Flex>
+                                    <Collapse in={isBloodTypeFilterOpen} animateOpacity>
+                                        <VStack align="start" spacing={1}>
+                                            {["A", "B", "O", "AB"].map((type) => (
+                                                <Checkbox
+                                                    key={type}
+                                                    isChecked={tempBloodTypeFilter.includes(type)}
+                                                    onChange={() => handleBloodTypeFilterChange(type)}
+                                                >
+                                                    {type}
+                                                </Checkbox>
+                                            ))}
+                                        </VStack>
+                                    </Collapse>
+                                </FormControl>
+
                                 <HStack justify="flex-end" spacing={2}>
-                                    <Button size="sm" onClick={clearFilters}>Cancel</Button>
+                                    <Button size="sm" onClick={clearFilters}>Reset</Button>
+                                    <Button size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
                                     <Button size="sm" colorScheme="blue" onClick={applyFilters}>Unggah</Button>
                                 </HStack>
                             </VStack>
@@ -474,7 +813,6 @@ export default function UmatPage() {
                             }}
                             borderRadius="full"
                         />
-
                         {searchQuery && (
                             <InputRightElement>
                                 <IconButton
@@ -519,16 +857,6 @@ export default function UmatPage() {
             <Box overflowX="auto" minH="80vh">
                 {isLoading ? (
                     <Flex justify="center" py={10} height="60vh"><Spinner size="sm" /></Flex>
-                ) : usersList.length === 0 ? (
-                    <Flex 
-                        justify="center"
-                        align="center"
-                        direction="column"
-                        height="60vh"
-                        color="gray.500"
-                    >
-                        Belum ada data
-                    </Flex>
                 ) : (
                     <Table minWidth="max-content">
                         <Thead>
@@ -536,7 +864,7 @@ export default function UmatPage() {
                                 <Th textAlign="center">
                                     <Flex align="center" justify="center" gap={2}>
                                         <Checkbox
-                                            size="sm" 
+                                            size="sm"
                                             isChecked={isAllSelected}
                                             onChange={(e) => {
                                                 const checked = e.target.checked;
@@ -555,102 +883,411 @@ export default function UmatPage() {
                                 </Th>
                                 <Th textAlign="center">Nama Lengkap</Th>
                                 <Th textAlign="center">Nama Mandarin</Th>
-                                <Th textAlign="center">Status Rohani</Th>
-                                <Th textAlign="center">Status Vegetarian</Th>
-                                <Th textAlign="center">Jenis Kelamin</Th>
-                                <Th textAlign="center">Golongan Darah</Th>
+                                <Th textAlign="center">
+                                    <Flex align="center" justify="center" gap={1} position="relative">
+                                        Status Rohani
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label="Filter spiritual status"
+                                            icon={<FiFilter />}
+                                            onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: !prev.spiritualStatus }))}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                        {isColumnFilterOpen.spiritualStatus && (
+                                            <VStack
+                                                className="filter-dropdown"
+                                                spacing={1}
+                                                p={2}
+                                                bg="white"
+                                                borderRadius="md"
+                                                boxShadow="md"
+                                                zIndex={10}
+                                                position="absolute"
+                                                top="100%"
+                                                left="0"
+                                                mt={1}
+                                                align="start"
+                                                width="200px"
+                                                style={{ textTransform: "none" }}
+                                            >
+                                                {["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
+                                                    <Checkbox
+                                                        key={status}
+                                                        isChecked={columnFilters.spiritualStatus.includes(status)}
+                                                        onChange={() => handleColumnFilterChange("spiritualStatus", status)}
+                                                        style={{ textTransform: "none", textAlign: "left" }}
+                                                    >
+                                                        {status === "QianRen" ? "Qian Ren / Sesepuh" :
+                                                            status === "DianChuanShi" ? "Dian Chuan Shi / Pandita" :
+                                                            status === "TanZhu" ? "Tan Zhu / Pandita Madya" :
+                                                            status === "FoYuan" ? "Fo Yuan / Buddha Siswa" :
+                                                            status === "BanShiYuan" ? "Ban Shi Yuan / Pelaksana Vihara" :
+                                                            status === "QianXian" ? "Qian Xian / Aktivis" :
+                                                            "Dao Qin / Umat"}
+                                                    </Checkbox>
+                                                ))}
+                                                <HStack justify="flex-end" spacing={2}>
+                                                    <Button size="xs" onClick={() => { clearColumnFilters("spiritualStatus"); setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: false })); }}>Reset</Button>
+                                                    <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: false })); }}>Apply</Button>
+                                                </HStack>
+                                            </VStack>
+                                        )}
+                                    </Flex>
+                                </Th>
+                                <Th textAlign="center">
+                                    <Flex align="center" justify="center" gap={1} position="relative">
+                                        Status Vegetarian
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label="Filter vegetarian status"
+                                            icon={<FiFilter />}
+                                            onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: !prev.is_qing_kou }))}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                        {isColumnFilterOpen.is_qing_kou && (
+                                            <VStack
+                                                className="filter-dropdown"
+                                                spacing={1}
+                                                p={2}
+                                                bg="white"
+                                                borderRadius="md"
+                                                boxShadow="md"
+                                                zIndex={10}
+                                                position="absolute"
+                                                top="100%"
+                                                left="0"
+                                                mt={1}
+                                                align="start"
+                                                width="200px"
+                                                style={{ textTransform: "none" }}
+                                            >
+                                                <Checkbox
+                                                    key="true"
+                                                    isChecked={columnFilters.is_qing_kou.includes("true")}
+                                                    onChange={() => handleColumnFilterChange("is_qing_kou", "true")}
+                                                    style={{ textTransform: "none", textAlign: "left" }}
+                                                >
+                                                    Sudah
+                                                </Checkbox>
+                                                <Checkbox
+                                                    key="false"
+                                                    isChecked={columnFilters.is_qing_kou.includes("false")}
+                                                    onChange={() => handleColumnFilterChange("is_qing_kou", "false")}
+                                                    style={{ textTransform: "none", textAlign: "left" }}
+                                                >
+                                                    Belum
+                                                </Checkbox>
+                                                <HStack justify="flex-end" spacing={2}>
+                                                    <Button size="xs" onClick={() => { clearColumnFilters("is_qing_kou"); setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: false })); }}>Reset</Button>
+                                                    <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: false })); }}>Apply</Button>
+                                                </HStack>
+                                            </VStack>
+                                        )}
+                                    </Flex>
+                                </Th>
+                                <Th textAlign="center">
+                                    <Flex align="center" justify="center" gap={1} position="relative">
+                                        Jenis Kelamin
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label="Filter gender"
+                                            icon={<FiFilter />}
+                                            onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, gender: !prev.gender }))}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                        {isColumnFilterOpen.gender && (
+                                            <VStack
+                                                className="filter-dropdown"
+                                                spacing={1}
+                                                p={2}
+                                                bg="white"
+                                                borderRadius="md"
+                                                boxShadow="md"
+                                                zIndex={10}
+                                                position="absolute"
+                                                top="100%"
+                                                left="0"
+                                                mt={1}
+                                                align="start"
+                                                width="200px"
+                                                style={{ textTransform: "none" }}
+                                            >
+                                                <Checkbox
+                                                    key="Male"
+                                                    isChecked={columnFilters.gender.includes("Male")}
+                                                    onChange={() => handleColumnFilterChange("gender", "Male")}
+                                                    style={{ textTransform: "none", textAlign: "left" }}
+                                                >
+                                                    Pria
+                                                </Checkbox>
+                                                <Checkbox
+                                                    key="Female"
+                                                    isChecked={columnFilters.gender.includes("Female")}
+                                                    onChange={() => handleColumnFilterChange("gender", "Female")}
+                                                    style={{ textTransform: "none", textAlign: "left" }}
+                                                >
+                                                    Wanita
+                                                </Checkbox>
+                                                <HStack justify="flex-end" spacing={2}>
+                                                    <Button size="xs" onClick={() => { clearColumnFilters("gender"); setIsColumnFilterOpen((prev) => ({ ...prev, gender: false })); }}>Reset</Button>
+                                                    <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, gender: false })); }}>Apply</Button>
+                                                </HStack>
+                                            </VStack>
+                                        )}
+                                    </Flex>
+                                </Th>
+                                <Th textAlign="center">
+                                    <Flex align="center" justify="center" gap={1} position="relative">
+                                        Golongan Darah
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label="Filter blood type"
+                                            icon={<FiFilter />}
+                                            onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: !prev.blood_type }))}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                        {isColumnFilterOpen.blood_type && (
+                                            <VStack
+                                                className="filter-dropdown"
+                                                spacing={1}
+                                                p={2}
+                                                bg="white"
+                                                borderRadius="md"
+                                                boxShadow="md"
+                                                zIndex={10}
+                                                position="absolute"
+                                                top="100%"
+                                                left="0"
+                                                mt={1}
+                                                align="start"
+                                                width="200px"
+                                                style={{ textTransform: "none" }}
+                                            >
+                                                {["A", "B", "O", "AB"].map((type) => (
+                                                    <Checkbox
+                                                        key={type}
+                                                        isChecked={columnFilters.blood_type.includes(type)}
+                                                        onChange={() => handleColumnFilterChange("blood_type", type)}
+                                                        style={{ textTransform: "none", textAlign: "left" }}
+                                                    >
+                                                        {type}
+                                                    </Checkbox>
+                                                ))}
+                                                <HStack justify="flex-end" spacing={2}>
+                                                    <Button size="xs" onClick={() => { clearColumnFilters("blood_type"); setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: false })); }}>Reset</Button>
+                                                    <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: false })); }}>Apply</Button>
+                                                </HStack>
+                                            </VStack>
+                                        )}
+                                    </Flex>
+                                </Th>
                                 <Th textAlign="center">Tempat Lahir</Th>
                                 <Th textAlign="center">Tanggal Lahir</Th>
                                 <Th textAlign="center">No. HP</Th>
+                                <Th textAlign="center">
+                                    <Flex align="center" justify="center" gap={1} position="relative">
+                                        Pekerjaan
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label="Filter job"
+                                            icon={<FiFilter />}
+                                            onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, job_name: !prev.job_name }))}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                        {isColumnFilterOpen.job_name && (
+                                            <VStack
+                                                className="filter-dropdown"
+                                                spacing={1}
+                                                p={2}
+                                                bg="white"
+                                                borderRadius="md"
+                                                boxShadow="md"
+                                                zIndex={10}
+                                                position="absolute"
+                                                top="100%"
+                                                left="0"
+                                                mt={1}
+                                                align="start"
+                                                width="200px"
+                                                style={{ textTransform: "none" }}
+                                            >
+                                                {["PNS", "Guru/Dosen", "Dokter/Perawat", "Wiraswasta", "Karyawan Swasta", "Petani/Nelayan", "Pelajar/Mahasiswa", "Pensiunan", "Lainnya"].map((job) => (
+                                                    <Checkbox
+                                                        key={job}
+                                                        isChecked={columnFilters.job_name.includes(job)}
+                                                        onChange={() => handleColumnFilterChange("job_name", job)}
+                                                        style={{ textTransform: "none", textAlign: "left" }}
+                                                    >
+                                                        {job}
+                                                    </Checkbox>
+                                                ))}
+                                                <HStack justify="flex-end" spacing={2}>
+                                                    <Button size="xs" onClick={() => { clearColumnFilters("job_name"); setIsColumnFilterOpen((prev) => ({ ...prev, job_name: false })); }}>Reset</Button>
+                                                    <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, job_name: false })); }}>Apply</Button>
+                                                </HStack>
+                                            </VStack>
+                                        )}
+                                    </Flex>
+                                </Th>
+                                <Th textAlign="center">
+                                    <Flex align="center" justify="center" gap={1} position="relative">
+                                        Pendidikan Terakhir
+                                        <IconButton
+                                            size="xs"
+                                            variant="ghost"
+                                            aria-label="Filter education"
+                                            icon={<FiFilter />}
+                                            onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: !prev.last_education_level }))}
+                                            _hover={{ bg: "transparent" }}
+                                        />
+                                        {isColumnFilterOpen.last_education_level && (
+                                            <VStack
+                                                className="filter-dropdown"
+                                                spacing={1}
+                                                p={2}
+                                                bg="white"
+                                                borderRadius="md"
+                                                boxShadow="md"
+                                                zIndex={10}
+                                                position="absolute"
+                                                top="100%"
+                                                left="0"
+                                                mt={1}
+                                                align="start"
+                                                width="200px"
+                                                style={{ textTransform: "none" }}
+                                            >
+                                                {["TK", "SD", "SMP", "SMA", "D1", "D2", "D3", "S1", "S2", "S3"].map((edu) => (
+                                                    <Checkbox
+                                                        key={edu}
+                                                        isChecked={columnFilters.last_education_level.includes(edu)}
+                                                        onChange={() => handleColumnFilterChange("last_education_level", edu)}
+                                                        style={{ textTransform: "none", textAlign: "left" }}
+                                                    >
+                                                        {edu === "TK" ? "TK (Taman Kanak-Kanak)" :
+                                                            edu === "SD" ? "SD (Sekolah Dasar)" :
+                                                            edu === "SMP" ? "SMP (Sekolah Menengah Pertama)" :
+                                                            edu === "SMA" ? "SMA (Sekolah Menengah Atas)" :
+                                                            edu === "D1" ? "D1 (Diploma 1)" :
+                                                            edu === "D2" ? "D2 (Diploma 2)" :
+                                                            edu === "D3" ? "D3 (Diploma 3)" :
+                                                            edu === "S1" ? "S1 (Sarjana 1)" :
+                                                            edu === "S2" ? "S2 (Magister)" :
+                                                            "S3 (Doktor)"}
+                                                    </Checkbox>
+                                                ))}
+                                                <HStack justify="flex-end" spacing={2}>
+                                                    <Button size="xs" onClick={() => { clearColumnFilters("last_education_level"); setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: false })); }}>Reset</Button>
+                                                    <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: false })); }}>Apply</Button>
+                                                </HStack>
+                                            </VStack>
+                                        )}
+                                    </Flex>
+                                </Th>
                             </Tr>
                         </Thead>
                         <Tbody>
-                            {usersList.map(user => (
-                                <Tr
-                                    key={user.user_info_id}
-                                    cursor="pointer"
-                                    _hover={{ bg: "gray.50" }}
-                                    onClick={() => handleRowClick(user)}
-                                >
-                                    <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
-                                        <Flex align="center" justify="center" gap={3}>
-                                            <Checkbox
-                                                size="sm"
-                                                isChecked={selectedIds.includes(user.user_info_id)}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    if (checked) {
-                                                        setSelectedIds((prev) => [...prev, user.user_info_id]);
-                                                    } else {
-                                                        setSelectedIds((prev) => prev.filter(id => id !== user.user_info_id));
-                                                    }
-                                                }}
-                                                onClick={(e) => e.stopPropagation()}
-                                                sx={{
-                                                    ".chakra-checkbox__control": {
-                                                        borderColor: "gray.500",
-                                                        borderWidth: "1px",
-                                                    }
-                                                }}
-                                            />
-                                            <Box>{user.user_info_id}</Box>
-                                        </Flex>
+                            {usersList.length === 0 ? (
+                                <Tr>
+                                    <Td colSpan={12} textAlign="center" color="gray.500">
+                                        Belum ada data
                                     </Td>
-                                    <Td textAlign="center">{user.full_name}</Td>
-                                    <Td textAlign="center">{user.mandarin_name}</Td>
-                                    <Td textAlign="center">
-                                        {user.spiritualUser?.spiritual_status || "-"}
-                                    </Td>
-                                    <Td textAlign="center">
-                                        <Badge
-                                            colorScheme={user.is_qing_kou ? "green" : "gray"}
-                                            variant="subtle"
-                                            borderRadius="full"
-                                            px={3}
-                                            py={1}
-                                        >
-                                            {user.is_qing_kou ? "Sudah" : "Belum"}
-                                        </Badge>
-                                    </Td>
-                                    <Td textAlign="center">
-                                        <Badge
-                                            colorScheme={
-                                                user.gender === "Male" ? "blue" :
-                                                user.gender === "Female" ? "pink" : "gray"
-                                            }
-                                            variant="subtle"
-                                            borderRadius="full"
-                                            px={3}
-                                            py={1}
-                                        >
-                                            {genderMap[user.gender] || "-"}
-                                        </Badge>
-                                    </Td>
-                                    <Td textAlign="center">
-                                        <Badge
-                                            colorScheme={
-                                                bloodTypeBadgeColor[user.blood_type] || "gray"
-                                            }
-                                            variant="subtle"
-                                            borderRadius="full"
-                                            px={3}
-                                            py={1}
-                                        >
-                                            {user.blood_type || "-"}
-                                        </Badge>
-                                    </Td>
-                                    <Td textAlign="center">{user.place_of_birth || "-"}</Td>
-                                    <Td textAlign="center">
-                                        {user.date_of_birth
-                                            ? new Date(user.date_of_birth).toLocaleDateString("id-ID", {
-                                                year: "numeric", month: "long", day: "numeric"
-                                            })
-                                            : "-"
-                                        }
-                                    </Td>
-                                    <Td textAlign="center">{user.phone_number}</Td>
                                 </Tr>
-                            ))}
+                            ) : (
+                                usersList.map(user => (
+                                    <Tr
+                                        key={user.user_info_id}
+                                        cursor="pointer"
+                                        _hover={{ bg: "gray.50" }}
+                                        onClick={() => handleRowClick(user)}
+                                    >
+                                        <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
+                                            <Flex align="center" justify="center" gap={3}>
+                                                <Checkbox
+                                                    size="sm"
+                                                    isChecked={selectedIds.includes(user.user_info_id)}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        if (checked) {
+                                                            setSelectedIds((prev) => [...prev, user.user_info_id]);
+                                                        } else {
+                                                            setSelectedIds((prev) => prev.filter(id => id !== user.user_info_id));
+                                                        }
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{
+                                                        ".chakra-checkbox__control": {
+                                                            borderColor: "gray.500",
+                                                            borderWidth: "1px",
+                                                        }
+                                                    }}
+                                                />
+                                                <Box>{user.user_info_id}</Box>
+                                            </Flex>
+                                        </Td>
+                                        <Td textAlign="center">{user.full_name}</Td>
+                                        <Td textAlign="center">{user.mandarin_name}</Td>
+                                        <Td textAlign="center">
+                                            {user.spiritualUser?.spiritual_status || "-"}
+                                        </Td>
+                                        <Td textAlign="center">
+                                            <Badge
+                                                colorScheme={user.is_qing_kou ? "green" : "gray"}
+                                                variant="subtle"
+                                                borderRadius="full"
+                                                px={3}
+                                                py={1}
+                                            >
+                                                {user.is_qing_kou ? "Sudah" : "Belum"}
+                                            </Badge>
+                                        </Td>
+                                        <Td textAlign="center">
+                                            <Badge
+                                                colorScheme={
+                                                    user.gender === "Male" ? "blue" :
+                                                    user.gender === "Female" ? "pink" : "gray"
+                                                }
+                                                variant="subtle"
+                                                borderRadius="full"
+                                                px={3}
+                                                py={1}
+                                            >
+                                                {genderMap[user.gender] || "-"}
+                                            </Badge>
+                                        </Td>
+                                        <Td textAlign="center">
+                                            <Badge
+                                                colorScheme={
+                                                    bloodTypeBadgeColor[user.blood_type] || "gray"
+                                                }
+                                                variant="subtle"
+                                                borderRadius="full"
+                                                px={3}
+                                                py={1}
+                                            >
+                                                {user.blood_type || "-"}
+                                            </Badge>
+                                        </Td>
+                                        <Td textAlign="center">{user.place_of_birth || "-"}</Td>
+                                        <Td textAlign="center">
+                                            {user.date_of_birth
+                                                ? new Date(user.date_of_birth).toLocaleDateString("id-ID", {
+                                                    year: "numeric", month: "long", day: "numeric"
+                                                })
+                                                : "-"
+                                            }
+                                        </Td>
+                                        <Td textAlign="center">{user.phone_number}</Td>
+                                        <Td textAlign="center">{user.job_name || "-"}</Td>
+                                        <Td textAlign="center">{user.last_education_level || "-"}</Td>
+                                    </Tr>
+                                ))
+                            )}
                         </Tbody>
                     </Table>
                 )}

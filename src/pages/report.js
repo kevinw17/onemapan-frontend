@@ -208,18 +208,31 @@ export default function Report() {
             legend: { display: false },
             tooltip: { enabled: false },
             datalabels: {
-                display: true,
-                color: "#fff",
+                display: function(context) {
+                    return context.dataset.data[context.dataIndex] > 0;
+                },
+                color: "#000",
                 anchor: "end",
                 align: "top",
-                offset: -25,
+                offset: 5,
                 font: { size: 14, weight: "bold" },
-                formatter: (value) => Math.round(value) || 0,
+                formatter: (value) => Math.round(value),
             },
         },
         scales: {
             x: { grid: { display: false } },
-            y: { beginAtZero: true, ticks: { callback: (value) => Math.round(value), stepSize: 1 }, grid: { display: false } },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: (value) => Math.round(value),
+                    stepSize: 20, // Increased step size for better spacing
+                    max: function() {
+                        const maxDataValue = Math.max(...stats?.viharaData.datasets[0].data);
+                        return Math.ceil(maxDataValue / 20) * 20 + 50; // Increased buffer to 50
+                    }
+                },
+                grid: { display: false }
+            },
         },
         animation: false,
     };
@@ -236,13 +249,13 @@ export default function Report() {
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
                     <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
                         <Text fontWeight="bold" mb={4}>Jumlah Vihara per Wilayah</Text>
-                        <Box width="100%" height="300px">
+                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
                             <Bar data={stats?.viharaData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
                         </Box>
                     </Box>
                     <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
                         <Text fontWeight="bold" mb={4}>Total Umat per Wilayah</Text>
-                        <Box width="100%" height="300px">
+                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
                             <Bar data={stats?.umatData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
                         </Box>
                     </Box>
@@ -250,13 +263,13 @@ export default function Report() {
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mt={6}>
                     <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
                         <Text fontWeight="bold" mb={4}>Jumlah Pandita per Wilayah</Text>
-                        <Box width="100%" height="300px">
+                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
                             <Bar data={stats?.panditaData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
                         </Box>
                     </Box>
                     <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
                         <Text fontWeight="bold" mb={4}>Jumlah Biarawan/Biarawati per Wilayah</Text>
-                        <Box width="100%" height="300px">
+                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
                             <Bar data={stats?.fuwuyuanData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
                         </Box>
                     </Box>

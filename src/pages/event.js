@@ -542,11 +542,11 @@ export default function Event() {
                         <Textarea name="description" value={formData.description} onChange={handleChange} placeholder="Masukkan deskripsi kegiatan" />
                     </FormControl>
 
-                    <FormControl>
+                    {/* <FormControl>
                         <Checkbox name="is_recurring" isChecked={formData.is_recurring} onChange={handleChange}>
                         Berulang
                         </Checkbox>
-                    </FormControl>
+                    </FormControl> */}
                     </VStack>
                 </form>
                 </ModalBody>
@@ -629,11 +629,11 @@ export default function Event() {
                         <Textarea name="description" value={formData.description} onChange={handleChange} placeholder="Masukkan deskripsi kegiatan" />
                     </FormControl>
 
-                    <FormControl>
+                    {/* <FormControl>
                         <Checkbox name="is_recurring" isChecked={formData.is_recurring} onChange={handleChange}>
                         Berulang
                         </Checkbox>
-                    </FormControl>
+                    </FormControl> */}
                     </VStack>
                 </form>
                 </ModalBody>

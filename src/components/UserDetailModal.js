@@ -7,7 +7,6 @@ import LocationSection from "./LocationSection";
 import { useEffect, useState } from "react";
 import { FiEdit, FiTrash2, FiX } from "react-icons/fi";
 import { useRouter } from "next/router";
-import { useToast } from "@chakra-ui/react";
 
 function UserDetailModal(
     { isOpen, onClose, selectedUser, isEditing, setIsEditing, 
@@ -16,11 +15,6 @@ function UserDetailModal(
     const [showKtpLocation, setShowKtpLocation] = useState(false);
     const [showDomicileLocation, setShowDomicileLocation] = useState(false);
     const router = useRouter();
-    const toast = useToast();
-
-    // State untuk modal konfirmasi hapus
-    const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
-    const [userIdToDelete, setUserIdToDelete] = useState(null);
 
     useEffect(() => {
         if (!isOpen) {
@@ -28,35 +22,6 @@ function UserDetailModal(
             setShowDomicileLocation(false);
         }
     }, [isOpen]);
-
-    // Fungsi untuk menangani konfirmasi hapus
-    const handleConfirmDelete = async () => {
-        try {
-            await handleDelete(userIdToDelete);
-            toast({
-                title: "Berhasil dihapus",
-                status: "success",
-                duration: 3000,
-                isClosable: true,
-            });
-        } catch (err) {
-            const errorData = err?.response?.data;
-            const errorMessage =
-                typeof errorData === "string"
-                    ? errorData
-                    : errorData?.message || "Terjadi kesalahan saat menghapus";
-            toast({
-                title: "Gagal menghapus",
-                description: errorMessage,
-                status: "error",
-                duration: 3000,
-                isClosable: true,
-            });
-        } finally {
-            onConfirmClose();
-            onClose();
-        }
-    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} size="lg">
@@ -68,8 +33,7 @@ function UserDetailModal(
                         <Flex align="center">
                             {!isEditing && (
                                 <>
-                                    <IconButton
-                                        icon={<FiEdit />}
+                                    <Button
                                         aria-label="Edit"
                                         variant="solid"
                                         colorScheme="blue"
@@ -81,19 +45,9 @@ function UserDetailModal(
                                         }}
                                         size="sm"
                                         mr={2}
-                                    />
-                                    <IconButton
-                                        icon={<FiTrash2 />}
-                                        aria-label="Delete"
-                                        variant="solid"
-                                        colorScheme="red"
-                                        onClick={() => {
-                                            setUserIdToDelete(selectedUser.user_info_id);
-                                            onConfirmOpen();
-                                        }}
-                                        size="sm"
-                                        mr={2}
-                                    />
+                                    >
+                                        Edit
+                                    </Button>
                                 </>
                             )}
                             <IconButton
@@ -351,28 +305,6 @@ function UserDetailModal(
                     </Box>
                 </ModalFooter>
             </ModalContent>
-
-            {/* Modal Konfirmasi Hapus */}
-            <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="xs" isCentered>
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Konfirmasi hapus data</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        <Text>Apakah Anda yakin ingin menghapus data ini?</Text>
-                    </ModalBody>
-                    <ModalFooter>
-                        <Flex w="100%" gap={2}>
-                            <Button variant="ghost" onClick={onConfirmClose} flex="1">
-                                Tidak
-                            </Button>
-                            <Button colorScheme="red" onClick={handleConfirmDelete} flex="1">
-                                Ya
-                            </Button>
-                        </Flex>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
         </Modal>
     );
 }
