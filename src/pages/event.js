@@ -27,39 +27,94 @@ const fetchEvents = async ({ event_type = [], provinceId = [] }) => {
 
         // Flatten occurrences into individual event entries
         const flattenedEvents = response.data.flatMap((event) =>
-            event.occurrences.map((occ) => ({
-                id: event.event_id,
-                occurrence_id: occ.occurrence_id,
-                date: new Date(occ.greg_occur_date).toLocaleDateString("id-ID", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                }),
-                day: new Date(occ.greg_occur_date)
-                    .toLocaleDateString("id-ID", { weekday: "long" })
-                    .split(",")[0],
-                time:
-                new Date(occ.greg_occur_date).toLocaleTimeString("en-US", {
+            event.occurrences.map((occ) => {
+                const startDate = new Date(occ.greg_occur_date);
+                const endDate = occ.greg_end_date ? new Date(occ.greg_end_date) : null;
+
+                // Check for valid dates to prevent errors
+                if (isNaN(startDate.getTime())) {
+                    console.warn(`Invalid start date for event ${event.event_id}: ${occ.greg_occur_date}`);
+                    return null;
+                }
+
+                // Determine if the event spans multiple days
+                const isSameDay = endDate
+                    ? startDate.getFullYear() === endDate.getFullYear() &&
+                      startDate.getMonth() === endDate.getMonth() &&
+                      startDate.getDate() === endDate.getDate()
+                    : true;
+
+                // Check if start and end dates are in the same month and year
+                const isSameMonthYear = endDate
+                    ? startDate.getFullYear() === endDate.getFullYear() &&
+                      startDate.getMonth() === endDate.getMonth()
+                    : false;
+
+                // Format date range
+                const startDay = startDate.toLocaleDateString("id-ID", { day: "numeric" }); // e.g., "20"
+                const endDay = endDate && !isNaN(endDate.getTime())
+                    ? endDate.toLocaleDateString("id-ID", { day: "numeric" }) // e.g., "21"
+                    : "TBD";
+                const monthYear = startDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" }); // e.g., "September 2025"
+                const endMonthYear = endDate && !isNaN(endDate.getTime())
+                    ? endDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
+                    : "TBD";
+                const dateRange = isSameDay
+                    ? `${startDay} ${monthYear}` // e.g., "20 September 2025"
+                    : isSameMonthYear
+                    ? `${startDay} - ${endDay} ${monthYear}` // e.g., "20 - 21 September 2025"
+                    : `${startDay} ${monthYear} - ${endDay} ${endMonthYear}`; // e.g., "20 September 2025 - 21 Oktober 2025"
+
+                // Format day range
+                const startDayName = startDate.toLocaleDateString("id-ID", { weekday: "long" }).split(",")[0];
+                const endDayName = endDate && !isNaN(endDate.getTime())
+                    ? endDate.toLocaleDateString("id-ID", { weekday: "long" }).split(",")[0]
+                    : "TBD";
+                const dayRange = isSameDay ? startDayName : `${startDayName} - ${endDayName}`;
+
+                // Format time display
+                const startTime = startDate.toLocaleTimeString("en-US", {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: false,
-                }) + " WIB",
-                name: event.event_name,
-                location: event.location.location_name,
-                localityId: event.location.localityId,
-                provinceId: event.location.locality.district.city.provinceId,
-                type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type,
-                description: event.description || "No description available",
-                lunar_sui_ci_year: event.lunar_sui_ci_year || "",
-                lunar_month: event.lunar_month || "",
-                lunar_day: event.lunar_day || "",
-                is_recurring: event.is_recurring || false,
-                rawDate: new Date(occ.greg_occur_date),
-                occurrences: event.occurrences.map((o) => ({
-                    occurrence_id: o.occurrence_id,
-                    greg_occur_date: new Date(o.greg_occur_date),
-                })),
-            }))
+                }) + " WIB";
+                const endTime = endDate && !isNaN(endDate.getTime())
+                    ? endDate.toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                      }) + " WIB"
+                    : "TBD";
+                const timeDisplay = isSameDay ? `${startTime} - ${endTime}` : startTime;
+
+                return {
+                    id: event.event_id,
+                    occurrence_id: occ.occurrence_id,
+                    date: dateRange,
+                    day: dayRange,
+                    time: timeDisplay,
+                    isSameDay,
+                    name: event.event_name || "Unnamed Event",
+                    location: event.location?.location_name || "Unknown Location",
+                    localityId: event.location?.localityId || "",
+                    provinceId: event.location?.locality?.district?.city?.provinceId || "",
+                    cityId: event.location?.locality?.district?.city?.id || "",
+                    districtId: event.location?.locality?.district?.id || "",
+                    type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "Regular",
+                    description: event.description || "No description available",
+                    lunar_sui_ci_year: event.lunar_sui_ci_year || "",
+                    lunar_month: event.lunar_month || "",
+                    lunar_day: event.lunar_day || "",
+                    is_recurring: event.is_recurring || false,
+                    rawDate: startDate,
+                    rawEndDate: endDate,
+                    occurrences: event.occurrences.map((o) => ({
+                        occurrence_id: o.occurrence_id,
+                        greg_occur_date: new Date(o.greg_occur_date),
+                        greg_end_date: o.greg_end_date ? new Date(o.greg_end_date) : null,
+                    })),
+                };
+            }).filter(event => event !== null) // Remove invalid events
         );
         return flattenedEvents;
     } catch (error) {
@@ -71,25 +126,28 @@ const fetchEvents = async ({ event_type = [], provinceId = [] }) => {
 // Fetch provinces
 const fetchProvinces = async () => {
     const response = await axiosInstance.get("/profile/location/provinces");
-    return response.data;
+    return response.data || [];
 };
 
 // Fetch cities by provinceId
 const fetchCities = async (provinceId) => {
+    if (!provinceId) return [];
     const response = await axiosInstance.get(`/profile/location/cities?provinceId=${provinceId}`);
-    return response.data;
+    return response.data || [];
 };
 
 // Fetch districts by cityId
 const fetchDistricts = async (cityId) => {
+    if (!cityId) return [];
     const response = await axiosInstance.get(`/profile/location/districts?cityId=${cityId}`);
-    return response.data;
+    return response.data || [];
 };
 
 // Fetch localities by districtId
 const fetchLocalities = async (districtId) => {
+    if (!districtId) return [];
     const response = await axiosInstance.get(`/profile/location/localities?districtId=${districtId}`);
-    return response.data;
+    return response.data || [];
 };
 
 const deleteEvent = async (id) => {
@@ -122,6 +180,7 @@ export default function Event() {
         event_name: "",
         event_mandarin_name: "",
         greg_occur_date: "",
+        greg_end_date: "",
         provinceId: "",
         cityId: "",
         districtId: "",
@@ -142,7 +201,7 @@ export default function Event() {
     const [isEventTypeFilterOpen, setIsEventTypeFilterOpen] = useState(false);
     const [isProvinceFilterOpen, setIsProvinceFilterOpen] = useState(false);
 
-  // Fetch provinces on component mount
+    // Fetch provinces on component mount
     useEffect(() => {
         const fetchProvincesData = async () => {
             try {
@@ -152,18 +211,18 @@ export default function Event() {
             } catch (err) {
                 console.error("Failed to fetch provinces:", err);
                 toast({
-                title: "Gagal memuat data provinsi",
-                description: err.message || "Terjadi kesalahan saat memuat data provinsi.",
-                status: "error",
-                duration: 3000,
-                isClosable: true,
+                    title: "Gagal memuat data provinsi",
+                    description: err.message || "Terjadi kesalahan saat memuat data provinsi.",
+                    status: "error",
+                    duration: 3000,
+                    isClosable: true,
                 });
             }
         };
         fetchProvincesData();
     }, [toast]);
 
-  // Handle province change
+    // Handle province change
     const handleProvinceChange = async (e) => {
         const provinceId = e.target.value;
         console.log("Province changed to:", provinceId);
@@ -196,10 +255,10 @@ export default function Event() {
         }
     };
 
-  // Handle city change
-  const handleCityChange = async (e) => {
+    // Handle city change
+    const handleCityChange = async (e) => {
         const cityId = e.target.value;
-        consol.log("City changed to:", cityId);
+        console.log("City changed to:", cityId);
         setFormData((prev) => ({
             ...prev,
             cityId,
@@ -227,7 +286,7 @@ export default function Event() {
         }
     };
 
-  // Handle district change
+    // Handle district change
     const handleDistrictChange = async (e) => {
         const districtId = e.target.value;
         console.log("District changed to:", districtId);
@@ -271,7 +330,7 @@ export default function Event() {
         }
     };
 
-  // Handle form input changes
+    // Handle form input changes
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         console.log(`Field ${name} changed to: ${value}`);
@@ -281,7 +340,7 @@ export default function Event() {
         }));
     };
 
-  // Handle radio button change for is_recurring
+    // Handle radio button change for is_recurring
     const handleIsRecurringChange = (value) => {
         setFormData((prev) => ({
             ...prev,
@@ -289,20 +348,20 @@ export default function Event() {
         }));
     };
 
-  // Handle filter changes
+    // Handle filter changes
     const handleEventTypeFilterChange = (value) => {
         setTempEventTypeFilter((prev) =>
-        prev.includes(value)
-            ? prev.filter((item) => item !== value)
-            : [...prev, value]
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value]
         );
     };
 
     const handleProvinceFilterChange = (value) => {
         setTempProvinceFilter((prev) =>
-        prev.includes(value)
-            ? prev.filter((item) => item !== value)
-            : [...prev, value]
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value]
         );
     };
 
@@ -393,7 +452,7 @@ export default function Event() {
         },
     });
 
-    const handleEdit = (name) => {
+    const handleEdit = async (name) => {
         if (selectedEvent) {
             const localDateTime = selectedEvent.rawDate.toLocaleString("sv-SE", {
                 timeZone: "Asia/Jakarta",
@@ -405,24 +464,75 @@ export default function Event() {
                 hour12: false,
             }).replace(" ", "T");
 
-            console.log("Selected event localityId:", selectedEvent.localityId);
+            const localEndDateTime = selectedEvent.rawEndDate && !isNaN(selectedEvent.rawEndDate.getTime())
+                ? selectedEvent.rawEndDate.toLocaleString("sv-SE", {
+                      timeZone: "Asia/Jakarta",
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                  }).replace(" ", "T")
+                : "";
+
+            console.log("Selected event for edit:", selectedEvent);
+
+            // Set initial form data with all location IDs
             setFormData({
-                event_name: selectedEvent.name,
+                event_name: selectedEvent.name || "",
                 event_mandarin_name: selectedEvent.event_mandarin_name || "",
                 greg_occur_date: localDateTime,
+                greg_end_date: localEndDateTime,
                 provinceId: selectedEvent.provinceId ? selectedEvent.provinceId.toString() : "",
-                cityId: "",
-                districtId: "",
+                cityId: selectedEvent.cityId ? selectedEvent.cityId.toString() : "",
+                districtId: selectedEvent.districtId ? selectedEvent.districtId.toString() : "",
                 localityId: selectedEvent.localityId ? selectedEvent.localityId.toString() : "",
-                location_name: selectedEvent.location,
-                event_type: selectedEvent.type === "Hari Besar" ? "Hari_Besar" : selectedEvent.type,
-                description: selectedEvent.description,
-                lunar_sui_ci_year: selectedEvent.lunar_sui_ci_year,
-                lunar_month: selectedEvent.lunar_month,
-                lunar_day: selectedEvent.lunar_day,
+                location_name: selectedEvent.location || "",
+                event_type: selectedEvent.type === "Hari Besar" ? "Hari_Besar" : selectedEvent.type || "Regular",
+                description: selectedEvent.description || "",
+                lunar_sui_ci_year: selectedEvent.lunar_sui_ci_year || "",
+                lunar_month: selectedEvent.lunar_month || "",
+                lunar_day: selectedEvent.lunar_day || "",
                 is_recurring: selectedEvent.is_recurring || false,
             });
-            // Optionally, log all occurrences to help users see them
+
+            // Fetch location data for the dropdowns
+            try {
+                // Fetch cities if provinceId exists
+                if (selectedEvent.provinceId) {
+                    const citiesData = await fetchCities(selectedEvent.provinceId);
+                    console.log("Fetched cities for edit:", citiesData);
+                    setCities(citiesData);
+                }
+
+                // Fetch districts if cityId exists
+                if (selectedEvent.cityId) {
+                    const districtsData = await fetchDistricts(selectedEvent.cityId);
+                    console.log("Fetched districts for edit:", districtsData);
+                    setDistricts(districtsData);
+                }
+
+                // Fetch localities if districtId exists
+                if (selectedEvent.districtId) {
+                    setIsLocalityLoading(true);
+                    const localitiesData = await fetchLocalities(selectedEvent.districtId);
+                    console.log("Fetched localities for edit:", localitiesData);
+                    setLocalities(localitiesData);
+                    setIsLocalityLoading(false);
+                }
+            } catch (error) {
+                console.error("Error fetching location data for edit:", error);
+                toast({
+                    title: "Gagal memuat data lokasi",
+                    description: error.message || "Terjadi kesalahan saat memuat data lokasi.",
+                    status: "error",
+                    duration: 3000,
+                    isClosable: true,
+                });
+            }
+
+            // Log all occurrences for debugging
             console.log("All occurrences for this event:", selectedEvent.occurrences);
             onEditOpen();
         }
@@ -458,7 +568,8 @@ export default function Event() {
         console.log("Is locality loading?", isLocalityLoading);
         console.log("Raw localityId:", formData.localityId, "Parsed localityId:", parseInt(formData.localityId));
 
-        if ( !formData.event_name ||
+        if (
+            !formData.event_name ||
             !formData.greg_occur_date ||
             !formData.location_name ||
             !formData.event_type ||
@@ -472,7 +583,7 @@ export default function Event() {
         ) {
             toast({
                 title: "Error",
-                description: "Semua field wajib diisi kecuali Nama Kegiatan (Mandarin) dan Deskripsi.",
+                description: "Semua field wajib diisi kecuali Nama Kegiatan (Mandarin), Deskripsi, dan Tanggal Selesai.",
                 status: "error",
                 duration: 3000,
                 isClosable: true,
@@ -485,7 +596,8 @@ export default function Event() {
         const districtId = parseInt(formData.districtId);
         const localityId = parseInt(formData.localityId);
 
-        if ( isNaN(provinceId) ||
+        if (
+            isNaN(provinceId) ||
             isNaN(cityId) ||
             isNaN(districtId) ||
             isNaN(localityId)
@@ -511,22 +623,40 @@ export default function Event() {
             return;
         }
 
+        // Validate greg_end_date is after greg_occur_date if provided
+        if (formData.greg_end_date && new Date(formData.greg_end_date) <= new Date(formData.greg_occur_date)) {
+            toast({
+                title: "Error",
+                description: "Tanggal selesai harus setelah tanggal mulai.",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
         // Generate occurrences for recurring events
         const occurrences = [
             {
                 greg_occur_date: new Date(formData.greg_occur_date).toISOString(),
+                greg_end_date: formData.greg_end_date ? new Date(formData.greg_end_date).toISOString() : null,
             },
         ];
 
         if (formData.is_recurring) {
             const startDate = new Date(formData.greg_occur_date);
+            const endDate = formData.greg_end_date ? new Date(formData.greg_end_date) : null;
+            const timeDiff = endDate ? endDate.getTime() - startDate.getTime() : 0;
             const endOfNextMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 2, 0); // Last day of next month
             let currentDate = new Date(startDate);
             currentDate.setDate(currentDate.getDate() + 7); // Start from next week
 
             while (currentDate <= endOfNextMonth) {
+                const newOccurDate = new Date(currentDate);
+                const newEndDate = endDate ? new Date(newOccurDate.getTime() + timeDiff) : null;
                 occurrences.push({
-                greg_occur_date: new Date(currentDate).toISOString(),
+                    greg_occur_date: newOccurDate.toISOString(),
+                    greg_end_date: newEndDate ? newEndDate.toISOString() : null,
                 });
                 currentDate.setDate(currentDate.getDate() + 7);
             }
@@ -559,25 +689,7 @@ export default function Event() {
                 duration: 3000,
                 isClosable: true,
             });
-            setFormData({
-                event_name: "",
-                event_mandarin_name: "",
-                greg_occur_date: "",
-                provinceId: "",
-                cityId: "",
-                districtId: "",
-                localityId: "",
-                location_name: "",
-                event_type: "Regular",
-                description: "",
-                lunar_sui_ci_year: "",
-                lunar_month: "",
-                lunar_day: "",
-                is_recurring: false,
-            });
-            setCities([]);
-            setDistricts([]);
-            setLocalities([]);
+            resetFormData();
             onAddClose();
             queryClient.invalidateQueries({ queryKey: ["events"] });
         } catch (error) {
@@ -607,26 +719,26 @@ export default function Event() {
         console.log("Raw localityId:", formData.localityId, "Parsed localityId:", parseInt(formData.localityId));
 
         if (
-        !formData.event_name ||
-        !formData.greg_occur_date ||
-        !formData.location_name ||
-        !formData.event_type ||
-        !formData.lunar_sui_ci_year ||
-        !formData.lunar_month ||
-        !formData.lunar_day ||
-        !formData.provinceId ||
-        !formData.cityId ||
-        !formData.districtId ||
-        !formData.localityId
+            !formData.event_name ||
+            !formData.greg_occur_date ||
+            !formData.location_name ||
+            !formData.event_type ||
+            !formData.lunar_sui_ci_year ||
+            !formData.lunar_month ||
+            !formData.lunar_day ||
+            !formData.provinceId ||
+            !formData.cityId ||
+            !formData.districtId ||
+            !formData.localityId
         ) {
-        toast({
-            title: "Error",
-            description: "Semua field wajib diisi kecuali Nama Kegiatan (Mandarin) dan Deskripsi.",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-        });
-        return;
+            toast({
+                title: "Error",
+                description: "Semua field wajib diisi kecuali Nama Kegiatan (Mandarin), Deskripsi, dan Tanggal Selesai.",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
         }
 
         const provinceId = parseInt(formData.provinceId);
@@ -635,93 +747,109 @@ export default function Event() {
         const localityId = parseInt(formData.localityId);
 
         if (
-        isNaN(provinceId) ||
-        isNaN(cityId) ||
-        isNaN(districtId) ||
-        isNaN(localityId)
+            isNaN(provinceId) ||
+            isNaN(cityId) ||
+            isNaN(districtId) ||
+            isNaN(localityId)
         ) {
-        toast({
-            title: "Error",
-            description: `Semua ID lokasi harus berupa angka. Province: ${formData.provinceId}, City: ${formData.cityId}, District: ${formData.districtId}, Locality: ${formData.localityId}`,
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-        });
-        return;
+            toast({
+                title: "Error",
+                description: `Semua ID lokasi harus berupa angka. Province: ${formData.provinceId}, City: ${formData.cityId}, District: ${formData.districtId}, Locality: ${formData.localityId}`,
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
         }
 
         if (isLocalityLoading) {
-        toast({
-            title: "Error",
-            description: "Data kelurahan masih dimuat. Tunggu sebentar.",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-        });
-        return;
+            toast({
+                title: "Error",
+                description: "Data kelurahan masih dimuat. Tunggu sebentar.",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        // Validate greg_end_date is after greg_occur_date if provided
+        if (formData.greg_end_date && new Date(formData.greg_end_date) <= new Date(formData.greg_occur_date)) {
+            toast({
+                title: "Error",
+                description: "Tanggal selesai harus setelah tanggal mulai.",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
         }
 
         // Generate occurrences for recurring events
         const occurrences = [
-        {
-            greg_occur_date: new Date(formData.greg_occur_date).toISOString(),
-        },
+            {
+                greg_occur_date: new Date(formData.greg_occur_date).toISOString(),
+                greg_end_date: formData.greg_end_date ? new Date(formData.greg_end_date).toISOString() : null,
+            },
         ];
 
         if (formData.is_recurring) {
-        const startDate = new Date(formData.greg_occur_date);
-        const endOfNextMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 2, 0); // Last day of next month
-        let currentDate = new Date(startDate);
-        currentDate.setDate(currentDate.getDate() + 7); // Start from next week
+            const startDate = new Date(formData.greg_occur_date);
+            const endDate = formData.greg_end_date ? new Date(formData.greg_end_date) : null;
+            const timeDiff = endDate ? endDate.getTime() - startDate.getTime() : 0;
+            const endOfNextMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 2, 0); // Last day of next month
+            let currentDate = new Date(startDate);
+            currentDate.setDate(currentDate.getDate() + 7); // Start from next week
 
-        while (currentDate <= endOfNextMonth) {
-            occurrences.push({
-            greg_occur_date: new Date(currentDate).toISOString(),
-            });
-            currentDate.setDate(currentDate.getDate() + 7);
-        }
+            while (currentDate <= endOfNextMonth) {
+                const newOccurDate = new Date(currentDate);
+                const newEndDate = endDate ? new Date(newOccurDate.getTime() + timeDiff) : null;
+                occurrences.push({
+                    greg_occur_date: newOccurDate.toISOString(),
+                    greg_end_date: newEndDate ? newEndDate.toISOString() : null,
+                });
+                currentDate.setDate(currentDate.getDate() + 7);
+            }
         }
 
         const payload = {
-        event_name: formData.event_name,
-        event_mandarin_name: formData.event_mandarin_name || null,
-        localityId: localityId,
-        location_name: formData.location_name,
-        provinceId: provinceId,
-        cityId: cityId,
-        districtId: districtId,
-        event_type: formData.event_type,
-        description: formData.description || null,
-        lunar_sui_ci_year: formData.lunar_sui_ci_year,
-        lunar_month: formData.lunar_month,
-        lunar_day: formData.lunar_day,
-        is_recurring: formData.is_recurring,
-        occurrences,
+            event_name: formData.event_name,
+            event_mandarin_name: formData.event_mandarin_name || null,
+            localityId: localityId,
+            location_name: formData.location_name,
+            provinceId: provinceId,
+            cityId: cityId,
+            districtId: districtId,
+            event_type: formData.event_type,
+            description: formData.description || null,
+            lunar_sui_ci_year: formData.lunar_sui_ci_year,
+            lunar_month: formData.lunar_month,
+            lunar_day: formData.lunar_day,
+            is_recurring: formData.is_recurring,
+            occurrences,
         };
 
         try {
-        console.log("Sending update payload:", JSON.stringify(payload, null, 2));
-        await updateMutation.mutateAsync({ id: selectedEvent.id, payload });
-        setCities([]);
-        setDistricts([]);
-        setLocalities([]);
-        onActionClose();
+            console.log("Sending update payload:", JSON.stringify(payload, null, 2));
+            await updateMutation.mutateAsync({ id: selectedEvent.id, payload });
+            resetFormData();
+            onActionClose();
         } catch (error) {
-        const errorMessage = error.response?.data?.message || error.message || "Gagal memperbarui kegiatan.";
-        console.error("Update Error:", {
-            message: errorMessage,
-            status: error.response?.status,
-            data: error.response?.data,
-            requestId: error.response?.headers?.["x-request-id"],
-            payload: JSON.stringify(payload, null, 2),
-        });
-        toast({
-            title: "Error",
-            description: `${errorMessage} Periksa konsol untuk detail.`,
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-        });
+            const errorMessage = error.response?.data?.message || error.message || "Gagal memperbarui kegiatan.";
+            console.error("Update Error:", {
+                message: errorMessage,
+                status: error.response?.status,
+                data: error.response?.data,
+                requestId: error.response?.headers?.["x-request-id"],
+                payload: JSON.stringify(payload, null, 2),
+            });
+            toast({
+                title: "Error",
+                description: `${errorMessage} Periksa konsol untuk detail.`,
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
         }
     };
 
@@ -730,6 +858,7 @@ export default function Event() {
             event_name: "",
             event_mandarin_name: "",
             greg_occur_date: "",
+            greg_end_date: "",
             provinceId: "",
             cityId: "",
             districtId: "",
@@ -769,7 +898,7 @@ export default function Event() {
             }
             return event.rawDate <= endOfNextMonth; // Show all events up to the end of next month
         })
-        .sort((a, b) => a.rawDate.getDate() - b.rawDate.getDate());
+        .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime()); // Sort by date ascending
 
     const lunarYears = ["乙巳年"];
     const lunarMonths = [
@@ -823,781 +952,801 @@ export default function Event() {
 
     return (
         <Layout title="Kegiatan">
-        <Box p={2}>
-            <Flex justify="space-between" align="center" mb={6}>
-            <Heading size="md">
-                {currentDate.toLocaleDateString("id-ID", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-                })}
-            </Heading>
-            <Flex gap={2} align="center">
-                <Box position="relative">
-                <Button
-                    colorScheme="white"
-                    textColor="gray.700"
-                    borderRadius={16}
-                    borderWidth="1px"
-                    borderColor="gray.400"
-                    size="sm"
-                    leftIcon={<FiFilter />}
-                    onClick={() => setFilterOpen(!filterOpen)}
-                >
-                    Filter
-                </Button>
-                {filterOpen && (
-                    <VStack
-                    spacing={2}
-                    p={4}
-                    bg="white"
-                    borderRadius="md"
-                    boxShadow="md"
-                    zIndex={10}
-                    align="stretch"
-                    w="300px"
-                    position="absolute"
-                    top="100%"
-                    left={0}
-                    mt={1}
-                    >
-                    <FormControl>
-                        <Flex align="center" justify="space-between">
-                        <FormLabel mb={0}>Jenis Kegiatan</FormLabel>
-                        <IconButton
-                            size="xs"
-                            variant="ghost"
-                            aria-label={isEventTypeFilterOpen ? "Hide event type filter" : "Show event type filter"}
-                            icon={isEventTypeFilterOpen ? <FiMinus /> : <FiPlusIcon />}
-                            onClick={() => setIsEventTypeFilterOpen(!isEventTypeFilterOpen)}
-                            _hover={{ bg: "transparent" }}
-                        />
-                        </Flex>
-                        <Collapse in={isEventTypeFilterOpen} animateOpacity>
-                        <VStack align="start" spacing={1}>
-                            {eventTypes.map((type) => (
-                            <Checkbox
-                                key={type}
-                                isChecked={tempEventTypeFilter.includes(type)}
-                                onChange={() => handleEventTypeFilterChange(type)}
+            <Box p={2}>
+                <Flex justify="space-between" align="center" mb={6}>
+                    <Heading size="md">
+                        {currentDate.toLocaleDateString("id-ID", {
+                            weekday: "long",
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                        })}
+                    </Heading>
+                    <Flex gap={2} align="center">
+                        <Box position="relative">
+                            <Button
+                                colorScheme="white"
+                                textColor="gray.700"
+                                borderRadius={16}
+                                borderWidth="1px"
+                                borderColor="gray.400"
+                                size="sm"
+                                leftIcon={<FiFilter />}
+                                onClick={() => setFilterOpen(!filterOpen)}
                             >
-                                {type === "Hari_Besar" ? "Hari Besar" : type}
-                            </Checkbox>
-                            ))}
-                        </VStack>
-                        </Collapse>
-                    </FormControl>
+                                Filter
+                            </Button>
+                            {filterOpen && (
+                                <VStack
+                                    spacing={2}
+                                    p={4}
+                                    bg="white"
+                                    borderRadius="md"
+                                    boxShadow="md"
+                                    zIndex={10}
+                                    align="stretch"
+                                    w="300px"
+                                    position="absolute"
+                                    top="100%"
+                                    left={0}
+                                    mt={1}
+                                >
+                                    <FormControl>
+                                        <Flex align="center" justify="space-between">
+                                            <FormLabel mb={0}>Jenis Kegiatan</FormLabel>
+                                            <IconButton
+                                                size="xs"
+                                                variant="ghost"
+                                                aria-label={isEventTypeFilterOpen ? "Hide event type filter" : "Show event type filter"}
+                                                icon={isEventTypeFilterOpen ? <FiMinus /> : <FiPlusIcon />}
+                                                onClick={() => setIsEventTypeFilterOpen(!isEventTypeFilterOpen)}
+                                                _hover={{ bg: "transparent" }}
+                                            />
+                                        </Flex>
+                                        <Collapse in={isEventTypeFilterOpen} animateOpacity>
+                                            <VStack align="start" spacing={1}>
+                                                {eventTypes.map((type) => (
+                                                    <Checkbox
+                                                        key={type}
+                                                        isChecked={tempEventTypeFilter.includes(type)}
+                                                        onChange={() => handleEventTypeFilterChange(type)}
+                                                    >
+                                                        {type === "Hari_Besar" ? "Hari Besar" : type}
+                                                    </Checkbox>
+                                                ))}
+                                            </VStack>
+                                        </Collapse>
+                                    </FormControl>
 
-                    <FormControl>
-                        <Flex align="center" justify="space-between">
-                        <FormLabel mb={0}>Provinsi</FormLabel>
-                        <IconButton
-                            size="xs"
-                            variant="ghost"
-                            aria-label={isProvinceFilterOpen ? "Hide province filter" : "Show province filter"}
-                            icon={isProvinceFilterOpen ? <FiMinus /> : <FiPlusIcon />}
-                            onClick={() => setIsProvinceFilterOpen(!isProvinceFilterOpen)}
-                            _hover={{ bg: "transparent" }}
-                        />
-                        </Flex>
-                        <Collapse in={isProvinceFilterOpen} animateOpacity>
-                        <VStack align="start" spacing={1}>
-                            {provinces.map((province) => (
-                            <Checkbox
-                                key={province.id}
-                                isChecked={tempProvinceFilter.includes(province.id.toString())}
-                                onChange={() => handleProvinceFilterChange(province.id.toString())}
-                            >
-                                {province.name}
-                            </Checkbox>
-                            ))}
-                        </VStack>
-                        </Collapse>
-                    </FormControl>
+                                    <FormControl>
+                                        <Flex align="center" justify="space-between">
+                                            <FormLabel mb={0}>Provinsi</FormLabel>
+                                            <IconButton
+                                                size="xs"
+                                                variant="ghost"
+                                                aria-label={isProvinceFilterOpen ? "Hide province filter" : "Show province filter"}
+                                                icon={isProvinceFilterOpen ? <FiMinus /> : <FiPlusIcon />}
+                                                onClick={() => setIsProvinceFilterOpen(!isProvinceFilterOpen)}
+                                                _hover={{ bg: "transparent" }}
+                                            />
+                                        </Flex>
+                                        <Collapse in={isProvinceFilterOpen} animateOpacity>
+                                            <VStack align="start" spacing={1}>
+                                                {provinces.map((province) => (
+                                                    <Checkbox
+                                                        key={province.id}
+                                                        isChecked={tempProvinceFilter.includes(province.id.toString())}
+                                                        onChange={() => handleProvinceFilterChange(province.id.toString())}
+                                                    >
+                                                        {province.name}
+                                                    </Checkbox>
+                                                ))}
+                                            </VStack>
+                                        </Collapse>
+                                    </FormControl>
 
-                    <HStack justify="flex-end" spacing={2}>
-                        <Button size="sm" onClick={clearFilters}>Reset</Button>
-                        <Button size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
-                        <Button size="sm" colorScheme="blue" onClick={applyFilters}>Terapkan</Button>
-                    </HStack>
-                    </VStack>
-                )}
-                </Box>
-                <Button
-                colorScheme="blue"
-                leftIcon={<FiPlus />}
-                onClick={() => {
-                    resetFormData();
-                    onAddOpen();
-                }}
-                size="sm"
-                >
-                Buat Kegiatan Baru
-                </Button>
-                <Menu>
-                <MenuButton as={Button} rightIcon={<FiChevronDown />} variant="outline" size="sm">
-                    Show: {filter}
-                </MenuButton>
-                <MenuList>
-                    <MenuItem onClick={() => setFilter("Bulan depan")}>Bulan depan</MenuItem>
-                    <MenuItem onClick={() => setFilter("Bulan ini")}>Bulan ini</MenuItem>
-                    <MenuItem onClick={() => setFilter("Bulan lalu")}>Bulan lalu</MenuItem>
-                    <MenuItem onClick={() => setFilter("Semua")}>Semua</MenuItem>
-                </MenuList>
-                </Menu>
-            </Flex>
-            </Flex>
-
-            <Divider borderBottomWidth="2px" />
-
-            {isLoading ? (
-            <VStack h="70vh" justify="center" align="center">
-                <Text fontSize="xl" textAlign="center">
-                Loading...
-                </Text>
-            </VStack>
-            ) : error ? (
-            <VStack h="70vh" justify="center" align="center">
-                <Text fontSize="xl" textAlign="center">
-                Error loading events: {error.message}
-                </Text>
-            </VStack>
-            ) : filteredEvents.length === 0 ? (
-            <VStack h="70vh" justify="center" align="center">
-                <Text fontSize="xl" textAlign="center">
-                Tidak ada kegiatan untuk saat ini
-                </Text>
-            </VStack>
-            ) : (
-            filteredEvents.map((event, index) => (
-                <Box
-                    key={`${event.id}-${event.occurrence_id}`} // Unique key for each occurrence
-                    bg="white"
-                    p={4}
-                    mb={4}
-                    borderRadius="md"
-                    boxShadow="sm"
-                    border="1px solid #e2e8f0"
-                    onClick={() => openActionPopup(event)}
-                    cursor="pointer"
-                    _hover={{ bg: "gray.50" }}
-                >
-                    <Flex align="stretch" gap={4}>
-                    <Box
-                        bg="gray.100"
-                        p={4}
-                        borderRadius="md"
-                        minWidth="80px"
-                        display="flex"
-                        flexDirection="column"
-                        justifyContent="flex-start"
-                    >
-                        <Text fontWeight="bold" color="gray.600">
-                        {event.date}
-                        </Text>
-                        <Text fontSize="sm" color="gray.500">
-                        {event.day}
-                        </Text>
-                    </Box>
-                    <Box flex="1">
-                        <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">
-                        {event.time}
-                        </Text>
-                        <Text mt={1}>{event.name}</Text>
-                        <Text color="gray.500" mt={1}>
-                        {event.location}
-                        </Text>
-                        <Flex mt={2} align="center" gap={2}>
-                        <Tag size="sm" colorScheme="blue" borderRadius="full">
-                            {event.type}
-                        </Tag>
-                        {event.is_recurring && (
-                            <Tag size="sm" colorScheme="green" borderRadius="full">
-                            Berulang
-                            </Tag>
-                        )}
-                        </Flex>
-                    </Box>
+                                    <HStack justify="flex-end" spacing={2}>
+                                        <Button size="sm" onClick={clearFilters}>Reset</Button>
+                                        <Button size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
+                                        <Button size="sm" colorScheme="blue" onClick={applyFilters}>Terapkan</Button>
+                                    </HStack>
+                                </VStack>
+                            )}
+                        </Box>
+                        <Button
+                            colorScheme="blue"
+                            leftIcon={<FiPlus />}
+                            onClick={() => {
+                                resetFormData();
+                                onAddOpen();
+                            }}
+                            size="sm"
+                        >
+                            Buat Kegiatan Baru
+                        </Button>
+                        <Menu>
+                            <MenuButton as={Button} rightIcon={<FiChevronDown />} variant="outline" size="sm">
+                                Show: {filter}
+                            </MenuButton>
+                            <MenuList>
+                                <MenuItem onClick={() => setFilter("Bulan depan")}>Bulan depan</MenuItem>
+                                <MenuItem onClick={() => setFilter("Bulan ini")}>Bulan ini</MenuItem>
+                                <MenuItem onClick={() => setFilter("Bulan lalu")}>Bulan lalu</MenuItem>
+                                <MenuItem onClick={() => setFilter("Semua")}>Semua</MenuItem>
+                            </MenuList>
+                        </Menu>
                     </Flex>
-                </Box>
-                ))
-            )}
-
-            {/* Modal for Event Details */}
-            <Modal isOpen={isDetailOpen} onClose={onDetailClose}>
-            <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>{selectedEvent?.name || "Event Details"}</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                <Text mb={2}>
-                    <strong>Tanggal:</strong> {selectedEvent?.day}, {selectedEvent?.date}
-                </Text>
-                <Text my={2}>
-                    <strong>Tanggal Lunar:</strong> {selectedEvent?.lunar_sui_ci_year} {selectedEvent?.lunar_month}{" "}
-                    {selectedEvent?.lunar_day}
-                </Text>
-                <Text my={2}>
-                    <strong>Waktu:</strong> {selectedEvent?.time}
-                </Text>
-                <Text my={2}>
-                    <strong>Lokasi:</strong> {selectedEvent?.location}
-                </Text>
-                <Text my={2}>
-                    <strong>Jenis:</strong> {selectedEvent?.type}
-                </Text>
-                <Text my={2}>
-                    <strong>Berulang:</strong> {selectedEvent?.is_recurring ? "Ya" : "Tidak"}
-                </Text>
-                <Text my={2}>
-                    <strong>Deskripsi:</strong> {selectedEvent?.description}
-                </Text>
-                </ModalBody>
-                <ModalFooter>
-                <Flex w="100%" justifyContent="space-between">
-                    <Button
-                    colorScheme="green"
-                    leftIcon={<FiEdit />}
-                    onClick={() => handleEdit(selectedEvent?.name)}
-                    flex="1"
-                    mr={2}
-                    >
-                    Edit
-                    </Button>
-                    <Button
-                    colorScheme="red"
-                    leftIcon={<FiTrash />}
-                    onClick={() => handleDelete(selectedEvent?.id, selectedEvent?.name)}
-                    flex="1"
-                    ml={2}
-                    >
-                    Hapus
-                    </Button>
                 </Flex>
-                </ModalFooter>
-            </ModalContent>
-            </Modal>
 
-            {/* Modal for Actions (Edit/Delete) */}
-            <Modal isOpen={isActionOpen} onClose={onActionClose}>
-            <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>{selectedEvent?.name || "Event Actions"}</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                <Text mb={2}>
-                    <strong>Tanggal:</strong> {selectedEvent?.day}, {selectedEvent?.date}
-                </Text>
-                <Text my={2}>
-                    <strong>Tanggal Lunar:</strong> {selectedEvent?.lunar_sui_ci_year} {selectedEvent?.lunar_month}{" "}
-                    {selectedEvent?.lunar_day}
-                </Text>
-                <Text my={2}>
-                    <strong>Waktu:</strong> {selectedEvent?.time}
-                </Text>
-                <Text my={2}>
-                    <strong>Lokasi:</strong> {selectedEvent?.location}
-                </Text>
-                <Text my={2}>
-                    <strong>Jenis:</strong> {selectedEvent?.type}
-                </Text>
-                <Text my={2}>
-                    <strong>Berulang:</strong> {selectedEvent?.is_recurring ? "Ya" : "Tidak"}
-                </Text>
-                <Text my={2}>
-                    <strong>Deskripsi:</strong> {selectedEvent?.description}
-                </Text>
-                </ModalBody>
-                <ModalFooter>
-                <Flex w="100%" justifyContent="space-between">
-                    <Button
-                    colorScheme="green"
-                    leftIcon={<FiEdit />}
-                    onClick={() => handleEdit(selectedEvent?.name)}
-                    flex="1"
-                    mr={2}
-                    >
-                    Edit
-                    </Button>
-                    <Button
-                    colorScheme="red"
-                    leftIcon={<FiTrash />}
-                    onClick={() => handleDelete(selectedEvent?.id, selectedEvent?.name)}
-                    flex="1"
-                    ml={2}
-                    >
-                    Hapus
-                    </Button>
-                </Flex>
-                </ModalFooter>
-            </ModalContent>
-            </Modal>
+                <Divider borderBottomWidth="2px" />
 
-            {/* Modal for Editing Event */}
-            <Modal isOpen={isEditOpen} onClose={onEditClose} size="2xl">
-            <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>Edit Kegiatan: {selectedEvent?.name}</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                <form id="edit-event-form" onSubmit={handleUpdate}>
-                    <VStack spacing={6} align="stretch">
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Nama Kegiatan</FormLabel>
-                        <Input
-                            name="event_name"
-                            value={formData.event_name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama kegiatan"
-                        />
-                        </FormControl>
-                        <FormControl flex={1}>
-                        <FormLabel>Nama Kegiatan (Mandarin)</FormLabel>
-                        <Input
-                            name="event_mandarin_name"
-                            value={formData.event_mandarin_name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama kegiatan (Mandarin)"
-                        />
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired>
-                        <FormLabel>Tanggal dan Waktu</FormLabel>
-                        <Input
-                            name="greg_occur_date"
-                            value={formData.greg_occur_date}
-                            onChange={handleChange}
-                            type="datetime-local"
-                            placeholder="Pilih tanggal dan waktu"
-                        />
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Nama Lokasi</FormLabel>
-                        <Input
-                            name="location_name"
-                            value={formData.location_name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama lokasi"
-                        />
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Jenis Kegiatan</FormLabel>
-                        <Select name="event_type" value={formData.event_type} onChange={handleChange}>
-                            <option value="Regular">Regular</option>
-                            <option value="Hari_Besar">Hari Besar</option>
-                            <option value="AdHoc">Ad-hoc</option>
-                            <option value="Anniversary">Anniversary</option>
-                            <option value="Peresmian">Peresmian</option>
-                            <option value="Seasonal">Seasonal</option>
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Provinsi</FormLabel>
-                        <Select
-                            name="provinceId"
-                            value={formData.provinceId}
-                            onChange={handleProvinceChange}
-                            placeholder={provinces.length === 0 ? "Memuat provinsi..." : "Pilih provinsi"}
-                            isDisabled={provinces.length === 0}
-                        >
-                            {provinces.map((province) => (
-                            <option key={province.id} value={province.id}>
-                                {province.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Kota</FormLabel>
-                        <Select
-                            name="cityId"
-                            value={formData.cityId}
-                            onChange={handleCityChange}
-                            placeholder={cities.length === 0 ? (formData.provinceId ? "Memuat kota..." : "Pilih provinsi terlebih dahulu") : "Pilih kota"}
-                            isDisabled={!formData.provinceId}
-                        >
-                            {cities.map((city) => (
-                            <option key={city.id} value={city.id}>
-                                {city.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Kecamatan</FormLabel>
-                        <Select
-                            name="districtId"
-                            value={formData.districtId}
-                            onChange={handleDistrictChange}
-                            placeholder={districts.length === 0 ? (formData.cityId ? "Memuat kecamatan..." : "Pilih kota terlebih dahulu") : "Pilih kecamatan"}
-                            isDisabled={!formData.cityId}
-                        >
-                            {districts.map((district) => (
-                            <option key={district.id} value={district.id}>
-                                {district.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Kelurahan</FormLabel>
-                        <Select
-                            name="localityId"
-                            value={formData.localityId}
-                            onChange={handleChange}
-                            placeholder={localities.length === 0 ? (formData.districtId ? "Memuat kelurahan..." : "Pilih kecamatan terlebih dahulu") : "Pilih kelurahan"}
-                            isDisabled={!formData.districtId || isLocalityLoading}
-                        >
-                            {localities.map((locality) => (
-                            <option key={locality.id} value={locality.id}>
-                                {locality.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Tahun Lunar (Sui Ci)</FormLabel>
-                        <Select
-                            name="lunar_sui_ci_year"
-                            value={formData.lunar_sui_ci_year}
-                            onChange={handleChange}
-                            placeholder="Pilih tahun lunar"
-                        >
-                            {lunarYears.map((year) => (
-                            <option key={year} value={year}>
-                                {year}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Bulan Lunar</FormLabel>
-                        <Select
-                            name="lunar_month"
-                            value={formData.lunar_month}
-                            onChange={handleChange}
-                            placeholder="Pilih bulan lunar"
-                        >
-                            {lunarMonths.map((month) => (
-                            <option key={month} value={month}>
-                                {month}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Hari Lunar</FormLabel>
-                        <Select
-                            name="lunar_day"
-                            value={formData.lunar_day}
-                            onChange={handleChange}
-                            placeholder="Pilih hari lunar"
-                        >
-                            {lunarDays.map((day) => (
-                            <option key={day} value={day}>
-                                {day}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <FormControl>
-                        <FormLabel>Deskripsi</FormLabel>
-                        <Textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        placeholder="Masukkan deskripsi kegiatan"
-                        />
-                    </FormControl>
-
-                    <FormControl isRequired>
-                        <FormLabel>Apakah kegiatan ini berulang?</FormLabel>
-                        <RadioGroup
-                        name="is_recurring"
-                        value={formData.is_recurring.toString()}
-                        onChange={handleIsRecurringChange}
-                        >
-                        <HStack spacing={4}>
-                            <Radio value="false">Tidak</Radio>
-                            <Radio value="true">Ya</Radio>
-                        </HStack>
-                        </RadioGroup>
-                    </FormControl>
+                {isLoading ? (
+                    <VStack h="70vh" justify="center" align="center">
+                        <Text fontSize="xl" textAlign="center">
+                            Loading...
+                        </Text>
                     </VStack>
-                </form>
-                </ModalBody>
-                <ModalFooter>
-                <Button colorScheme="blue" mr={3} type="submit" form="edit-event-form">
-                    Simpan Perubahan
-                </Button>
-                <Button variant="ghost" onClick={onEditClose}>
-                    Batal
-                </Button>
-                </ModalFooter>
-            </ModalContent>
-            </Modal>
-
-            {/* Modal for Adding New Event */}
-            <Modal isOpen={isAddOpen} onClose={onAddClose} size="2xl">
-            <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>Tambah Kegiatan Baru</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                <form id="add-event-form" onSubmit={handleSubmit}>
-                    <VStack spacing={6} align="stretch">
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Nama Kegiatan</FormLabel>
-                        <Input
-                            name="event_name"
-                            value={formData.event_name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama kegiatan"
-                        />
-                        </FormControl>
-                        <FormControl flex={1}>
-                        <FormLabel>Nama Kegiatan (Mandarin)</FormLabel>
-                        <Input
-                            name="event_mandarin_name"
-                            value={formData.event_mandarin_name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama kegiatan (Mandarin)"
-                        />
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired>
-                        <FormLabel>Tanggal dan Waktu</FormLabel>
-                        <Input
-                            name="greg_occur_date"
-                            value={formData.greg_occur_date}
-                            onChange={handleChange}
-                            type="datetime-local"
-                            placeholder="Pilih tanggal dan waktu"
-                        />
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Nama Lokasi</FormLabel>
-                        <Input
-                            name="location_name"
-                            value={formData.location_name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama lokasi"
-                        />
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Jenis Kegiatan</FormLabel>
-                        <Select name="event_type" value={formData.event_type} onChange={handleChange}>
-                            <option value="Regular">Regular</option>
-                            <option value="Hari_Besar">Hari Besar</option>
-                            <option value="AdHoc">Ad-hoc</option>
-                            <option value="Anniversary">Anniversary</option>
-                            <option value="Peresmian">Peresmian</option>
-                            <option value="Seasonal">Seasonal</option>
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Provinsi</FormLabel>
-                        <Select
-                            name="provinceId"
-                            value={formData.provinceId}
-                            onChange={handleProvinceChange}
-                            placeholder={provinces.length === 0 ? "Memuat provinsi..." : "Pilih provinsi"}
-                            isDisabled={provinces.length === 0}
-                        >
-                            {provinces.map((province) => (
-                            <option key={province.id} value={province.id}>
-                                {province.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Kota</FormLabel>
-                        <Select
-                            name="cityId"
-                            value={formData.cityId}
-                            onChange={handleCityChange}
-                            placeholder={cities.length === 0 ? (formData.provinceId ? "Memuat kota..." : "Pilih provinsi terlebih dahulu") : "Pilih kota"}
-                            isDisabled={!formData.provinceId}
-                        >
-                            {cities.map((city) => (
-                            <option key={city.id} value={city.id}>
-                                {city.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Kecamatan</FormLabel>
-                        <Select
-                            name="districtId"
-                            value={formData.districtId}
-                            onChange={handleDistrictChange}
-                            placeholder={districts.length === 0 ? (formData.cityId ? "Memuat kecamatan..." : "Pilih kota terlebih dahulu") : "Pilih kecamatan"}
-                            isDisabled={!formData.cityId}
-                        >
-                            {districts.map((district) => (
-                            <option key={district.id} value={district.id}>
-                                {district.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Kelurahan</FormLabel>
-                        <Select
-                            name="localityId"
-                            value={formData.localityId}
-                            onChange={handleChange}
-                            placeholder={localities.length === 0 ? (formData.districtId ? "Memuat kelurahan..." : "Pilih kecamatan terlebih dahulu") : "Pilih kelurahan"}
-                            isDisabled={!formData.districtId || isLocalityLoading}
-                        >
-                            {localities.map((locality) => (
-                            <option key={locality.id} value={locality.id}>
-                                {locality.name}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <HStack spacing={4}>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Tahun Lunar (Sui Ci)</FormLabel>
-                        <Select
-                            name="lunar_sui_ci_year"
-                            value={formData.lunar_sui_ci_year}
-                            onChange={handleChange}
-                            placeholder="Pilih tahun lunar"
-                        >
-                            {lunarYears.map((year) => (
-                            <option key={year} value={year}>
-                                {year}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Bulan Lunar</FormLabel>
-                        <Select
-                            name="lunar_month"
-                            value={formData.lunar_month}
-                            onChange={handleChange}
-                            placeholder="Pilih bulan lunar"
-                        >
-                            {lunarMonths.map((month) => (
-                            <option key={month} value={month}>
-                                {month}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                        <FormControl isRequired flex={1}>
-                        <FormLabel>Hari Lunar</FormLabel>
-                        <Select
-                            name="lunar_day"
-                            value={formData.lunar_day}
-                            onChange={handleChange}
-                            placeholder="Pilih hari lunar"
-                        >
-                            {lunarDays.map((day) => (
-                            <option key={day} value={day}>
-                                {day}
-                            </option>
-                            ))}
-                        </Select>
-                        </FormControl>
-                    </HStack>
-
-                    <FormControl>
-                        <FormLabel>Deskripsi</FormLabel>
-                        <Textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        placeholder="Masukkan deskripsi kegiatan"
-                        />
-                    </FormControl>
-
-                    <FormControl isRequired>
-                        <FormLabel>Apakah kegiatan ini berulang?</FormLabel>
-                        <RadioGroup
-                        name="is_recurring"
-                        value={formData.is_recurring.toString()}
-                        onChange={handleIsRecurringChange}
-                        >
-                        <HStack spacing={4}>
-                            <Radio value="false">Tidak</Radio>
-                            <Radio value="true">Ya</Radio>
-                        </HStack>
-                        </RadioGroup>
-                    </FormControl>
+                ) : error ? (
+                    <VStack h="70vh" justify="center" align="center">
+                        <Text fontSize="xl" textAlign="center">
+                            Error loading events: {error.message}
+                        </Text>
                     </VStack>
-                </form>
-                </ModalBody>
-                <ModalFooter>
-                <Button colorScheme="blue" mr={3} type="submit" form="add-event-form">
-                    Simpan Kegiatan
-                </Button>
-                <Button variant="ghost" onClick={onAddClose}>
-                    Batal
-                </Button>
-                </ModalFooter>
-            </ModalContent>
-            </Modal>
+                ) : filteredEvents.length === 0 ? (
+                    <VStack h="70vh" justify="center" align="center">
+                        <Text fontSize="xl" textAlign="center">
+                            Tidak ada kegiatan untuk saat ini
+                        </Text>
+                    </VStack>
+                ) : (
+                    filteredEvents.map((event, index) => (
+                        <Box
+                            key={`${event.id}-${event.occurrence_id}`} // Unique key for each occurrence
+                            bg="white"
+                            p={4}
+                            mb={4}
+                            borderRadius="md"
+                            boxShadow="sm"
+                            border="1px solid #e2e8f0"
+                            onClick={() => openActionPopup(event)}
+                            cursor="pointer"
+                            _hover={{ bg: "gray.50" }}
+                        >
+                            <Flex align="stretch" gap={4}>
+                                <Box
+                                    bg="gray.100"
+                                    p={4}
+                                    borderRadius="md"
+                                    minWidth="80px"
+                                    display="flex"
+                                    flexDirection="column"
+                                    justifyContent="flex-start"
+                                >
+                                    <Text fontWeight="bold" color="gray.600">
+                                        {event.date}
+                                    </Text>
+                                    <Text fontSize="sm" color="gray.500">
+                                        {event.day}
+                                    </Text>
+                                </Box>
+                                <Box flex="1">
+                                    <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">
+                                        {event.time}
+                                    </Text>
+                                    <Text mt={1}>{event.name}</Text>
+                                    <Text color="gray.500" mt={1}>
+                                        {event.location}
+                                    </Text>
+                                    <Flex mt={2} align="center" gap={2}>
+                                        <Tag size="sm" colorScheme="blue" borderRadius="full">
+                                            {event.type}
+                                        </Tag>
+                                        {event.is_recurring && (
+                                            <Tag size="sm" colorScheme="green" borderRadius="full">
+                                                Berulang
+                                            </Tag>
+                                        )}
+                                    </Flex>
+                                </Box>
+                            </Flex>
+                        </Box>
+                    ))
+                )}
 
-            {/* Modal for Delete Confirmation */}
-            <Modal isOpen={isConfirmOpen} onClose={onConfirmClose}>
-            <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>Konfirmasi Hapus</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                <Text>
-                    Yakin ingin menghapus kegiatan <strong>{selectedEvent?.name}</strong>?
-                </Text>
-                </ModalBody>
-                <ModalFooter>
-                <Button colorScheme="red" mr={3} onClick={confirmDelete}>
-                    Hapus
-                </Button>
-                <Button variant="ghost" onClick={onConfirmClose}>
-                    Batal
-                </Button>
-                </ModalFooter>
-            </ModalContent>
-            </Modal>
-        </Box>
+                {/* Modal for Event Details */}
+                <Modal isOpen={isDetailOpen} onClose={onDetailClose}>
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>{selectedEvent?.name || "Event Details"}</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody>
+                            <Text mb={2}>
+                                <strong>Tanggal:</strong> {selectedEvent?.day}, {selectedEvent?.date}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Tanggal Lunar:</strong> {selectedEvent?.lunar_sui_ci_year} {selectedEvent?.lunar_month}{" "}
+                                {selectedEvent?.lunar_day}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Waktu:</strong> {selectedEvent?.time}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Lokasi:</strong> {selectedEvent?.location}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Jenis:</strong> {selectedEvent?.type}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Berulang:</strong> {selectedEvent?.is_recurring ? "Ya" : "Tidak"}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Deskripsi:</strong> {selectedEvent?.description}
+                            </Text>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Flex w="100%" justifyContent="space-between">
+                                <Button
+                                    colorScheme="green"
+                                    leftIcon={<FiEdit />}
+                                    onClick={() => handleEdit(selectedEvent?.name)}
+                                    flex="1"
+                                    mr={2}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    colorScheme="red"
+                                    leftIcon={<FiTrash />}
+                                    onClick={() => handleDelete(selectedEvent?.id, selectedEvent?.name)}
+                                    flex="1"
+                                    ml={2}
+                                >
+                                    Hapus
+                                </Button>
+                            </Flex>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+
+                {/* Modal for Actions (Edit/Delete) */}
+                <Modal isOpen={isActionOpen} onClose={onActionClose}>
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>{selectedEvent?.name || "Event Actions"}</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody>
+                            <Text mb={2}>
+                                <strong>Tanggal:</strong> {selectedEvent?.day}, {selectedEvent?.date}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Tanggal Lunar:</strong> {selectedEvent?.lunar_sui_ci_year} {selectedEvent?.lunar_month}{" "}
+                                {selectedEvent?.lunar_day}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Waktu:</strong> {selectedEvent?.time}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Lokasi:</strong> {selectedEvent?.location}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Jenis:</strong> {selectedEvent?.type}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Berulang:</strong> {selectedEvent?.is_recurring ? "Ya" : "Tidak"}
+                            </Text>
+                            <Text my={2}>
+                                <strong>Deskripsi:</strong> {selectedEvent?.description}
+                            </Text>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Flex w="100%" justifyContent="space-between">
+                                <Button
+                                    colorScheme="green"
+                                    leftIcon={<FiEdit />}
+                                    onClick={() => handleEdit(selectedEvent?.name)}
+                                    flex="1"
+                                    mr={2}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    colorScheme="red"
+                                    leftIcon={<FiTrash />}
+                                    onClick={() => handleDelete(selectedEvent?.id, selectedEvent?.name)}
+                                    flex="1"
+                                    ml={2}
+                                >
+                                    Hapus
+                                </Button>
+                            </Flex>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+
+                {/* Modal for Editing Event */}
+                <Modal isOpen={isEditOpen} onClose={onEditClose} size="2xl">
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>Edit Kegiatan: {selectedEvent?.name}</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody>
+                            <form id="edit-event-form" onSubmit={handleUpdate}>
+                                <VStack spacing={6} align="stretch">
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Nama Kegiatan</FormLabel>
+                                            <Input
+                                                name="event_name"
+                                                value={formData.event_name}
+                                                onChange={handleChange}
+                                                placeholder="Masukkan nama kegiatan"
+                                            />
+                                        </FormControl>
+                                        <FormControl flex={1}>
+                                            <FormLabel>Nama Kegiatan (Mandarin)</FormLabel>
+                                            <Input
+                                                name="event_mandarin_name"
+                                                value={formData.event_mandarin_name}
+                                                onChange={handleChange}
+                                                placeholder="Masukkan nama kegiatan (Mandarin)"
+                                            />
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Tanggal dan Waktu Mulai</FormLabel>
+                                            <Input
+                                                name="greg_occur_date"
+                                                value={formData.greg_occur_date}
+                                                onChange={handleChange}
+                                                type="datetime-local"
+                                                placeholder="Pilih tanggal dan waktu mulai"
+                                            />
+                                        </FormControl>
+                                        <FormControl flex={1}>
+                                            <FormLabel>Tanggal dan Waktu Selesai</FormLabel>
+                                            <Input
+                                                name="greg_end_date"
+                                                value={formData.greg_end_date}
+                                                onChange={handleChange}
+                                                type="datetime-local"
+                                                placeholder="Pilih tanggal dan waktu selesai (opsional)"
+                                            />
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Nama Lokasi</FormLabel>
+                                            <Input
+                                                name="location_name"
+                                                value={formData.location_name}
+                                                onChange={handleChange}
+                                                placeholder="Masukkan nama lokasi"
+                                            />
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Jenis Kegiatan</FormLabel>
+                                            <Select name="event_type" value={formData.event_type} onChange={handleChange}>
+                                                <option value="Regular">Regular</option>
+                                                <option value="Hari_Besar">Hari Besar</option>
+                                                <option value="AdHoc">Ad-hoc</option>
+                                                <option value="Anniversary">Anniversary</option>
+                                                <option value="Peresmian">Peresmian</option>
+                                                <option value="Seasonal">Seasonal</option>
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Provinsi</FormLabel>
+                                            <Select
+                                                name="provinceId"
+                                                value={formData.provinceId}
+                                                onChange={handleProvinceChange}
+                                                placeholder={provinces.length === 0 ? "Memuat provinsi..." : "Pilih provinsi"}
+                                                isDisabled={provinces.length === 0}
+                                            >
+                                                {provinces.map((province) => (
+                                                    <option key={province.id} value={province.id}>
+                                                        {province.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Kota</FormLabel>
+                                            <Select
+                                                name="cityId"
+                                                value={formData.cityId}
+                                                onChange={handleCityChange}
+                                                placeholder={cities.length === 0 ? (formData.provinceId ? "Memuat kota..." : "Pilih provinsi terlebih dahulu") : "Pilih kota"}
+                                                isDisabled={cities.length === 0}
+                                            >
+                                                {cities.map((city) => (
+                                                    <option key={city.id} value={city.id}>
+                                                        {city.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Kecamatan</FormLabel>
+                                            <Select
+                                                name="districtId"
+                                                value={formData.districtId}
+                                                onChange={handleDistrictChange}
+                                                placeholder={districts.length === 0 ? (formData.cityId ? "Memuat kecamatan..." : "Pilih kota terlebih dahulu") : "Pilih kecamatan"}
+                                                isDisabled={districts.length === 0}
+                                            >
+                                                {districts.map((district) => (
+                                                    <option key={district.id} value={district.id}>
+                                                        {district.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Kelurahan</FormLabel>
+                                            <Select
+                                                name="localityId"
+                                                value={formData.localityId}
+                                                onChange={handleChange}
+                                                placeholder={localities.length === 0 ? (formData.districtId ? "Memuat kelurahan..." : "Pilih kecamatan terlebih dahulu") : "Pilih kelurahan"}
+                                                isDisabled={localities.length === 0 || isLocalityLoading}
+                                            >
+                                                {localities.map((locality) => (
+                                                    <option key={locality.id} value={locality.id}>
+                                                        {locality.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Tahun Lunar (Sui Ci)</FormLabel>
+                                            <Select
+                                                name="lunar_sui_ci_year"
+                                                value={formData.lunar_sui_ci_year}
+                                                onChange={handleChange}
+                                                placeholder="Pilih tahun lunar"
+                                            >
+                                                {lunarYears.map((year) => (
+                                                    <option key={year} value={year}>
+                                                        {year}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Bulan Lunar</FormLabel>
+                                            <Select
+                                                name="lunar_month"
+                                                value={formData.lunar_month}
+                                                onChange={handleChange}
+                                                placeholder="Pilih bulan lunar"
+                                            >
+                                                {lunarMonths.map((month) => (
+                                                    <option key={month} value={month}>
+                                                        {month}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Hari Lunar</FormLabel>
+                                            <Select
+                                                name="lunar_day"
+                                                value={formData.lunar_day}
+                                                onChange={handleChange}
+                                                placeholder="Pilih hari lunar"
+                                            >
+                                                {lunarDays.map((day) => (
+                                                    <option key={day} value={day}>
+                                                        {day}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <FormControl>
+                                        <FormLabel>Deskripsi</FormLabel>
+                                        <Textarea
+                                            name="description"
+                                            value={formData.description}
+                                            onChange={handleChange}
+                                            placeholder="Masukkan deskripsi kegiatan"
+                                        />
+                                    </FormControl>
+
+                                    <FormControl isRequired>
+                                        <FormLabel>Apakah kegiatan ini berulang?</FormLabel>
+                                        <RadioGroup
+                                            name="is_recurring"
+                                            value={formData.is_recurring.toString()}
+                                            onChange={handleIsRecurringChange}
+                                        >
+                                            <HStack spacing={4}>
+                                                <Radio value="false">Tidak</Radio>
+                                                <Radio value="true">Ya</Radio>
+                                            </HStack>
+                                        </RadioGroup>
+                                    </FormControl>
+                                </VStack>
+                            </form>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button colorScheme="blue" mr={3} type="submit" form="edit-event-form">
+                                Simpan Perubahan
+                            </Button>
+                            <Button variant="ghost" onClick={onEditClose}>
+                                Batal
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+
+                {/* Modal for Adding New Event */}
+                <Modal isOpen={isAddOpen} onClose={onAddClose} size="2xl">
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>Tambah Kegiatan Baru</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody>
+                            <form id="add-event-form" onSubmit={handleSubmit}>
+                                <VStack spacing={6} align="stretch">
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Nama Kegiatan</FormLabel>
+                                            <Input
+                                                name="event_name"
+                                                value={formData.event_name}
+                                                onChange={handleChange}
+                                                placeholder="Masukkan nama kegiatan"
+                                            />
+                                        </FormControl>
+                                        <FormControl flex={1}>
+                                            <FormLabel>Nama Kegiatan (Mandarin)</FormLabel>
+                                            <Input
+                                                name="event_mandarin_name"
+                                                value={formData.event_mandarin_name}
+                                                onChange={handleChange}
+                                                placeholder="Masukkan nama kegiatan (Mandarin)"
+                                            />
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Tanggal dan Waktu Mulai</FormLabel>
+                                            <Input
+                                                name="greg_occur_date"
+                                                value={formData.greg_occur_date}
+                                                onChange={handleChange}
+                                                type="datetime-local"
+                                                placeholder="Pilih tanggal dan waktu mulai"
+                                            />
+                                        </FormControl>
+                                        <FormControl flex={1}>
+                                            <FormLabel>Tanggal dan Waktu Selesai</FormLabel>
+                                            <Input
+                                                name="greg_end_date"
+                                                value={formData.greg_end_date}
+                                                onChange={handleChange}
+                                                type="datetime-local"
+                                                placeholder="Pilih tanggal dan waktu selesai (opsional)"
+                                            />
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Nama Lokasi</FormLabel>
+                                            <Input
+                                                name="location_name"
+                                                value={formData.location_name}
+                                                onChange={handleChange}
+                                                placeholder="Masukkan nama lokasi"
+                                            />
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Jenis Kegiatan</FormLabel>
+                                            <Select name="event_type" value={formData.event_type} onChange={handleChange}>
+                                                <option value="Regular">Regular</option>
+                                                <option value="Hari_Besar">Hari Besar</option>
+                                                <option value="AdHoc">Ad-hoc</option>
+                                                <option value="Anniversary">Anniversary</option>
+                                                <option value="Peresmian">Peresmian</option>
+                                                <option value="Seasonal">Seasonal</option>
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Provinsi</FormLabel>
+                                            <Select
+                                                name="provinceId"
+                                                value={formData.provinceId}
+                                                onChange={handleProvinceChange}
+                                                placeholder={provinces.length === 0 ? "Memuat provinsi..." : "Pilih provinsi"}
+                                                isDisabled={provinces.length === 0}
+                                            >
+                                                {provinces.map((province) => (
+                                                    <option key={province.id} value={province.id}>
+                                                        {province.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Kota</FormLabel>
+                                            <Select
+                                                name="cityId"
+                                                value={formData.cityId}
+                                                onChange={handleCityChange}
+                                                placeholder={cities.length === 0 ? (formData.provinceId ? "Memuat kota..." : "Pilih provinsi terlebih dahulu") : "Pilih kota"}
+                                                isDisabled={cities.length === 0}
+                                            >
+                                                {cities.map((city) => (
+                                                    <option key={city.id} value={city.id}>
+                                                        {city.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Kecamatan</FormLabel>
+                                            <Select
+                                                name="districtId"
+                                                value={formData.districtId}
+                                                onChange={handleDistrictChange}
+                                                placeholder={districts.length === 0 ? (formData.cityId ? "Memuat kecamatan..." : "Pilih kota terlebih dahulu") : "Pilih kecamatan"}
+                                                isDisabled={districts.length === 0}
+                                            >
+                                                {districts.map((district) => (
+                                                    <option key={district.id} value={district.id}>
+                                                        {district.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Kelurahan</FormLabel>
+                                            <Select
+                                                name="localityId"
+                                                value={formData.localityId}
+                                                onChange={handleChange}
+                                                placeholder={localities.length === 0 ? (formData.districtId ? "Memuat kelurahan..." : "Pilih kecamatan terlebih dahulu") : "Pilih kelurahan"}
+                                                isDisabled={localities.length === 0 || isLocalityLoading}
+                                            >
+                                                {localities.map((locality) => (
+                                                    <option key={locality.id} value={locality.id}>
+                                                        {locality.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <HStack spacing={4}>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Tahun Lunar (Sui Ci)</FormLabel>
+                                            <Select
+                                                name="lunar_sui_ci_year"
+                                                value={formData.lunar_sui_ci_year}
+                                                onChange={handleChange}
+                                                placeholder="Pilih tahun lunar"
+                                            >
+                                                {lunarYears.map((year) => (
+                                                    <option key={year} value={year}>
+                                                        {year}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Bulan Lunar</FormLabel>
+                                            <Select
+                                                name="lunar_month"
+                                                value={formData.lunar_month}
+                                                onChange={handleChange}
+                                                placeholder="Pilih bulan lunar"
+                                            >
+                                                {lunarMonths.map((month) => (
+                                                    <option key={month} value={month}>
+                                                        {month}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <FormControl isRequired flex={1}>
+                                            <FormLabel>Hari Lunar</FormLabel>
+                                            <Select
+                                                name="lunar_day"
+                                                value={formData.lunar_day}
+                                                onChange={handleChange}
+                                                placeholder="Pilih hari lunar"
+                                            >
+                                                {lunarDays.map((day) => (
+                                                    <option key={day} value={day}>
+                                                        {day}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                    </HStack>
+
+                                    <FormControl>
+                                        <FormLabel>Deskripsi</FormLabel>
+                                        <Textarea
+                                            name="description"
+                                            value={formData.description}
+                                            onChange={handleChange}
+                                            placeholder="Masukkan deskripsi kegiatan"
+                                        />
+                                    </FormControl>
+
+                                    <FormControl isRequired>
+                                        <FormLabel>Apakah kegiatan ini berulang?</FormLabel>
+                                        <RadioGroup
+                                            name="is_recurring"
+                                            value={formData.is_recurring.toString()}
+                                            onChange={handleIsRecurringChange}
+                                        >
+                                            <HStack spacing={4}>
+                                                <Radio value="false">Tidak</Radio>
+                                                <Radio value="true">Ya</Radio>
+                                            </HStack>
+                                        </RadioGroup>
+                                    </FormControl>
+                                </VStack>
+                            </form>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button colorScheme="blue" mr={3} type="submit" form="add-event-form">
+                                Simpan Kegiatan
+                            </Button>
+                            <Button variant="ghost" onClick={onAddClose}>
+                                Batal
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+
+                {/* Modal for Delete Confirmation */}
+                <Modal isOpen={isConfirmOpen} onClose={onConfirmClose}>
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>Konfirmasi Hapus</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody>
+                            <Text>
+                                Yakin ingin menghapus kegiatan <strong>{selectedEvent?.name}</strong>?
+                            </Text>
+                        </ModalBody>
+                        <ModalFooter>
+                            <Button colorScheme="red" mr={3} onClick={confirmDelete}>
+                                Hapus
+                            </Button>
+                            <Button variant="ghost" onClick={onConfirmClose}>
+                                Batal
+                            </Button>
+                        </ModalFooter>
+                    </ModalContent>
+                </Modal>
+            </Box>
         </Layout>
     );
 }

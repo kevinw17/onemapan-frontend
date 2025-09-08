@@ -61,66 +61,104 @@ export default function Layout({ children, title, showCalendar = false }) {
         console.log("Response status:", response.status);
         console.log("Response data:", response.data);
         if (!response.data || !Array.isArray(response.data)) {
-          const dummyEvents = [
-            {
-              event_id: "1",
-              event_name: "Kegiatan 3 September",
-              occurrences: [{ greg_occur_date: "2025-09-03T09:00:00Z" }],
-              location_name: "Vihara 1",
-              event_type: "Ad-hoc",
-            },
-            {
-              event_id: "2",
-              event_name: "Kegiatan 10 September",
-              occurrences: [{ greg_occur_date: "2025-09-10T14:00:00Z" }],
-              location_name: "Vihara 2",
-              event_type: "Hari Besar",
-            },
-          ].map((event) => {
-            const occurDate = event.occurrences[0]?.greg_occur_date || new Date().toISOString();
-            return {
-              id: event.event_id,
-              name: event.event_name,
-              time: new Date(occurDate).toLocaleTimeString("id-ID", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-                timeZone: "Asia/Jakarta",
-              }) + " WIB",
-              location: event.location_name || "All Vihara",
-              type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "Ad-hoc",
-              date: new Date(occurDate),
-              day: new Date(occurDate).toLocaleDateString("id-ID", { weekday: "long" }) || "Hari",
-              lunar_sui_ci_year: "Tahun Lunar",
-              lunar_month: "Bulan Lunar",
-              lunar_day: "Hari Lunar",
-              description: "Deskripsi belum tersedia",
-            };
-          });
-          setEvents(dummyEvents);
+          console.warn("No valid event data received from API");
+          setEvents([]);
           return;
         }
-        const fetchedEvents = response.data.map((event) => {
-          const occurDate = event.occurrences[0]?.greg_occur_date || new Date().toISOString();
-          return {
-            id: event.event_id,
-            name: event.event_name,
-            time: new Date(occurDate).toLocaleTimeString("id-ID", {
+        const fetchedEvents = response.data.flatMap((event) => {
+          if (!event.occurrences || !Array.isArray(event.occurrences)) {
+            console.warn(`Invalid occurrences for event ${event.event_id}:`, event.occurrences);
+            return [];
+          }
+          return event.occurrences.map((occ) => {
+            const startDate = new Date(occ.greg_occur_date);
+            const endDate = occ.greg_end_date ? new Date(occ.greg_end_date) : null;
+
+            // Check for valid start date
+            if (isNaN(startDate.getTime())) {
+              console.warn(`Invalid start date for event ${event.event_id}, occurrence ${occ.occurrence_id}: ${occ.greg_occur_date}`);
+              return null;
+            }
+
+            // Determine if same day
+            const isSameDay = endDate
+              ? startDate.getFullYear() === endDate.getFullYear() &&
+                startDate.getMonth() === endDate.getMonth() &&
+                startDate.getDate() === endDate.getDate()
+              : true;
+
+            // Check if same month and year
+            const isSameMonthYear = endDate
+              ? startDate.getFullYear() === endDate.getFullYear() &&
+                startDate.getMonth() === endDate.getMonth()
+              : false;
+
+            // Format date range
+            const startDay = startDate.toLocaleDateString("id-ID", { day: "numeric" });
+            const endDay = endDate && !isNaN(endDate.getTime())
+              ? endDate.toLocaleDateString("id-ID", { day: "numeric" })
+              : "TBD";
+            const monthYear = startDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+            const endMonthYear = endDate && !isNaN(endDate.getTime())
+              ? endDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
+              : "TBD";
+            const dateRangeString = isSameDay
+              ? `${startDay} ${monthYear}`
+              : isSameMonthYear
+              ? `${startDay} - ${endDay} ${monthYear}`
+              : `${startDay} ${monthYear} - ${endDay} ${endMonthYear}`;
+
+            // Generate date range for multi-day events
+            const dateRange = [];
+            if (endDate && !isSameDay && !isNaN(endDate.getTime())) {
+              let currentDate = new Date(startDate);
+              while (currentDate <= endDate) {
+                dateRange.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1);
+              }
+            } else {
+              dateRange.push(startDate);
+            }
+
+            // Format time display
+            const startTime = startDate.toLocaleTimeString("id-ID", {
               hour: "2-digit",
               minute: "2-digit",
               hour12: false,
               timeZone: "Asia/Jakarta",
-            }) + " WIB",
-            location: event.location_name || "All Vihara",
-            type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "Ad-hoc",
-            date: new Date(occurDate),
-            day: new Date(occurDate).toLocaleDateString("id-ID", { weekday: "long" }) || "Hari",
-            lunar_sui_ci_year: event.lunar_sui_ci_year || "Tahun Lunar",
-            lunar_month: event.lunar_month || "Bulan Lunar",
-            lunar_day: event.lunar_day || "Hari Lunar",
-            description: event.description || "Deskripsi belum tersedia",
-          };
+            });
+            const endTime = endDate && !isNaN(endDate.getTime())
+              ? endDate.toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                  timeZone: "Asia/Jakarta",
+                })
+              : "TBD";
+
+            return {
+              id: event.event_id,
+              occurrence_id: occ.occurrence_id,
+              name: event.event_name || "Unnamed Event",
+              date: startDate, // Primary date for sorting
+              dateRange, // Array of all dates for multi-day events
+              dateString: dateRangeString, // Formatted date string for display
+              time: isSameDay ? `${startTime} - ${endTime} WIB` : "", // Time set later in getEventsForDate
+              startTime: `${startTime} WIB`,
+              endTime: endTime !== "TBD" ? `${endTime} WIB` : "TBD",
+              isSameDay,
+              location: event.location?.location_name || "All Vihara",
+              type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "Ad-hoc",
+              day: startDate.toLocaleDateString("id-ID", { weekday: "long" }) || "Hari",
+              lunar_sui_ci_year: event.lunar_sui_ci_year || "Tahun Lunar",
+              lunar_month: event.lunar_month || "Bulan Lunar",
+              lunar_day: event.lunar_day || "Hari Lunar",
+              description: event.description || "Deskripsi belum tersedia",
+              is_recurring: event.is_recurring || false,
+            };
+          }).filter(event => event !== null);
         });
+        console.log("Fetched events:", fetchedEvents);
         setEvents(fetchedEvents);
       } catch (error) {
         console.error("API Error:", error);
@@ -154,37 +192,58 @@ export default function Layout({ children, title, showCalendar = false }) {
   // Fungsi untuk mendapatkan kegiatan di tanggal tertentu
   const getEventsForDate = (selectedDate) => {
     console.log("Checking date:", selectedDate);
-    const eventsForDate = events.filter((event) => {
-      const eventDate = new Date(event.date);
-      const isMatch = (
-        eventDate.getDate() === selectedDate.getDate() &&
-        eventDate.getMonth() === selectedDate.getMonth() &&
-        eventDate.getFullYear() === selectedDate.getFullYear()
-      );
-      console.log("Event:", event.name, "Date:", eventDate, "Match:", isMatch);
-      return isMatch;
-    }).sort((a, b) => {
-      const timeA = a.time.replace(" WIB", "").split(":");
-      const timeB = b.time.replace(" WIB", "").split(":");
-      return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
-    });
+    const eventsForDate = events
+      .filter((event) => {
+        if (!event.dateRange || !Array.isArray(event.dateRange)) {
+          console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
+          return false;
+        }
+        return event.dateRange.some((eventDate) => {
+          const isMatch = (
+            eventDate.getDate() === selectedDate.getDate() &&
+            eventDate.getMonth() === selectedDate.getMonth() &&
+            eventDate.getFullYear() === selectedDate.getFullYear()
+          );
+          if (isMatch) {
+            // Set time based on the selected date's position
+            if (event.isSameDay) {
+              event.time = event.startTime + (event.endTime !== "TBD" ? ` - ${event.endTime}` : "");
+            } else {
+              event.time = "";
+            }
+          }
+          return isMatch;
+        });
+      })
+      .sort((a, b) => {
+        const timeA = a.startTime.replace(" WIB", "").split(":");
+        const timeB = b.startTime.replace(" WIB", "").split(":");
+        return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
+      });
     console.log("Events for date:", eventsForDate);
     return eventsForDate;
   };
 
   // Fungsi untuk mendapatkan kegiatan di bulan aktif
   const getEventsForMonth = (selectedDate) => {
-    const eventsForMonth = events.filter((event) => {
-      const eventDate = new Date(event.date);
-      return (
-        eventDate.getMonth() === selectedDate.getMonth() &&
-        eventDate.getFullYear() === selectedDate.getFullYear()
-      );
-    }).sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateA - dateB;
-    });
+    const eventsForMonth = events
+      .filter((event) => {
+        if (!event.dateRange || !Array.isArray(event.dateRange)) {
+          console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
+          return false;
+        }
+        return event.dateRange.some((eventDate) => {
+          return (
+            eventDate.getMonth() === selectedDate.getMonth() &&
+            eventDate.getFullYear() === selectedDate.getFullYear()
+          );
+        });
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA - dateB;
+      });
     console.log("Events for month:", selectedDate.toLocaleString("id-ID", { month: "long", year: "numeric" }), eventsForMonth);
     return eventsForMonth;
   };
@@ -368,12 +427,17 @@ export default function Layout({ children, title, showCalendar = false }) {
                   const today = new Date();
                   const isToday = new Date(tileDate).toDateString() === new Date(today).toDateString();
                   const hasEvents = events.some((event) => {
-                    const eventDate = new Date(event.date);
-                    return (
-                      eventDate.getDate() === tileDate.getDate() &&
-                      eventDate.getMonth() === tileDate.getMonth() &&
-                      eventDate.getFullYear() === tileDate.getFullYear()
-                    );
+                    if (!event.dateRange || !Array.isArray(event.dateRange)) {
+                      console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
+                      return false;
+                    }
+                    return event.dateRange.some((eventDate) => {
+                      return (
+                        eventDate.getDate() === tileDate.getDate() &&
+                        eventDate.getMonth() === tileDate.getMonth() &&
+                        eventDate.getFullYear() === tileDate.getFullYear()
+                      );
+                    });
                   });
                   const classes = [];
                   if (isToday) classes.push("highlight");
@@ -387,7 +451,7 @@ export default function Layout({ children, title, showCalendar = false }) {
                   border: none;
                   font-family: inherit;
                   background: white;
-                  border-radius: 8px;
+                  borderRadius: 8px;
                   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
                 .react-calendar__tile {
@@ -436,22 +500,29 @@ export default function Layout({ children, title, showCalendar = false }) {
               <Box mt={4}>
                 {(viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).length > 0 ? (
                   (viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).map((event) => (
-                    <Flex key={event.id} justify="space-between" align="center" mb={2} p={2} bg="gray.50" borderRadius="md">
+                    <Flex key={`${event.id}-${event.occurrence_id}`} justify="space-between" align="center" mb={2} p={2} bg="gray.50" borderRadius="md">
                       <Box>
                         {viewMode === "month" ? (
                           <>
                             <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">
-                              {event.date.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
+                              {event.dateString}
                             </Text>
-                            <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                            {event.time && (
+                              <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                            )}
                           </>
                         ) : (
-                          <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                          event.time && (
+                            <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                          )
                         )}
                         <Text fontSize="md" fontWeight="bold">{event.name}</Text>
                         <Text fontSize="sm" color="gray.600">{event.location}</Text>
                         <HStack spacing={2} mt={1}>
                           <Tag size="sm" variant="solid" colorScheme="blue">{event.type}</Tag>
+                          {event.is_recurring && (
+                            <Tag size="sm" variant="solid" colorScheme="green">Berulang</Tag>
+                          )}
                         </HStack>
                       </Box>
                       <Menu>
@@ -489,9 +560,11 @@ export default function Layout({ children, title, showCalendar = false }) {
           <ModalBody>
             {selectedEvent && (
               <>
-                <Text mb={2}><strong>Tanggal:</strong> {selectedEvent.day}, {selectedEvent.date.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}</Text>
+                <Text mb={2}><strong>Tanggal:</strong> {selectedEvent.day}, {selectedEvent.dateString}</Text>
                 <Text my={2}><strong>Tanggal Lunar:</strong> {selectedEvent.lunar_sui_ci_year} {selectedEvent.lunar_month} {selectedEvent.lunar_day}</Text>
-                <Text my={2}><strong>Waktu:</strong> {selectedEvent.time}</Text>
+                {selectedEvent.time && (
+                  <Text my={2}><strong>Waktu:</strong> {selectedEvent.time}</Text>
+                )}
                 <Text my={2}><strong>Lokasi:</strong> {selectedEvent.location}</Text>
                 <Text my={2}><strong>Jenis:</strong> {selectedEvent.type}</Text>
                 <Text my={2}><strong>Deskripsi:</strong> {selectedEvent.description}</Text>
