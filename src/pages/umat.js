@@ -3,7 +3,8 @@ import {
     Box, useDisclosure, Button, Input, InputGroup, 
     InputLeftElement, InputRightElement, IconButton,
     useToast, Select, Checkbox, VStack, HStack,
-    FormControl, FormLabel, Collapse
+    FormControl, FormLabel, Collapse, Modal, ModalOverlay,
+    ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Text
 } from "@chakra-ui/react";
 import { useFetchUsers } from "@/features/user/useFetchUsers";
 import Layout from "../components/layout";
@@ -16,6 +17,30 @@ import { FiFilter, FiMinus, FiPlus, FiSearch, FiX } from "react-icons/fi";
 import UserDetailModal from "@/components/UserDetailModal";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import { useRouter } from "next/router";
+
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
+    <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
+        <ModalOverlay />
+        <ModalContent>
+            <ModalHeader>Konfirmasi Hapus</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+                <Text>Apakah Anda yakin ingin menghapus {selectedCount} data umat?</Text>
+            </ModalBody>
+            <ModalFooter>
+                <Button
+                    colorScheme="red"
+                    onClick={onConfirm}
+                    isLoading={isDeleting}
+                    size="sm"
+                >
+                    Hapus
+                </Button>
+                <Button variant="ghost" onClick={onClose} ml={3} size="sm">Batal</Button>
+            </ModalFooter>
+        </ModalContent>
+    </Modal>
+);
 
 export default function UmatPage() {
     const [page, setPage] = useState(1);
@@ -59,6 +84,7 @@ export default function UmatPage() {
     const total = users?.total || 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({});
     const [selectedUser, setSelectedUser] = useState(null);
@@ -143,6 +169,33 @@ export default function UmatPage() {
                 onClose();
             },
         });
+    };
+
+    const confirmBulkDelete = async () => {
+        try {
+            for (const id of selectedIds) {
+                await deleteUserMutation.mutateAsync(id);
+            }
+            toast({
+                title: "Berhasil dihapus",
+                description: `${selectedIds.length} data umat berhasil dihapus.`,
+                status: "success",
+                duration: 3000,
+                isClosable: true,
+            });
+            setSelectedIds([]);
+            setIsAllSelected(false);
+            refetchUsers();
+            onConfirmClose();
+        } catch (error) {
+            toast({
+                title: "Gagal menghapus",
+                description: "Terjadi kesalahan saat menghapus data.",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+        }
     };
 
     const handleSave = async () => {
@@ -509,7 +562,7 @@ export default function UmatPage() {
                     {total}
                 </Box>
             </Heading>
-            <Flex mb={4} justify="space-between" align="center" wrap="wrap" gap={4}>
+            <Flex mb={4} justify="space-between" align="center" wrap="nowrap" gap={2}>
                 <Box>
                     <Pagination
                         page={page}
@@ -533,25 +586,11 @@ export default function UmatPage() {
                         <Button
                             colorScheme="red"
                             borderRadius="full"
-                            size="sm"
-                            onClick={async () => {
-                                for (const id of selectedIds) {
-                                    await deleteUserMutation.mutateAsync(id);
-                                }
-
-                                toast({
-                                    title: "Berhasil dihapus",
-                                    status: "success",
-                                    duration: 3000,
-                                    isClosable: true,
-                                });
-
-                                setSelectedIds([]);
-                                setIsAllSelected(false);
-                                refetchUsers();
-                            }}
+                            size="xs"
+                            minW="100px"
+                            onClick={onConfirmOpen}
                         >
-                            Hapus {selectedIds.length} data
+                            Hapus {selectedIds.length} Data
                         </Button>
                     )}
 
@@ -559,10 +598,11 @@ export default function UmatPage() {
                         <Button
                             colorScheme="white"
                             textColor="gray.700"
-                            borderRadius={16}
+                            borderRadius="full"
                             borderWidth="1px"
                             borderColor="gray.400"
-                            size="sm"
+                            size="xs"
+                            minW="80px"
                             leftIcon={<FiFilter />}
                             onClick={() => setFilterOpen(!filterOpen)}
                         >
@@ -781,8 +821,8 @@ export default function UmatPage() {
                     </Box>
 
                     <Select
-                        size="sm"
-                        width="auto"
+                        size="xs"
+                        width="180px"
                         borderRadius="full"
                         value={searchField}
                         onChange={(e) => setSearchField(e.target.value)}
@@ -800,12 +840,12 @@ export default function UmatPage() {
                         <option value="id_card_location.city">Lokasi sesuai KTP (Kota)</option>
                     </Select>
 
-                    <InputGroup size="sm" width="200px">
+                    <InputGroup size="xs" width="160px">
                         <InputLeftElement pointerEvents="none">
                             <FiSearch color="black" />
                         </InputLeftElement>
                         <Input
-                            placeholder="Cari data umat disini..."
+                            placeholder="Cari data umat..."
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -835,7 +875,8 @@ export default function UmatPage() {
                     <Button
                         colorScheme="blue"
                         borderRadius="full"
-                        size="sm"
+                        size="xs"
+                        minW="100px"
                         leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
                         onClick={() => router.push("/umat/addUmat")}
                     >
@@ -845,11 +886,12 @@ export default function UmatPage() {
                     <Button
                         colorScheme="green"
                         borderRadius="full"
-                        size="sm"
+                        size="xs"
+                        minW="100px"
                         leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
                         onClick={handleImportUmat}
                     >
-                        Import Data Massal
+                        Import Data
                     </Button>
                 </Flex>
             </Flex>
@@ -1303,6 +1345,14 @@ export default function UmatPage() {
                 setFormData={setFormData}
                 handleSave={handleSave}
                 handleDelete={handleDelete}
+            />
+
+            <DeleteConfirmModal
+                isOpen={isConfirmOpen}
+                onClose={onConfirmClose}
+                onConfirm={confirmBulkDelete}
+                selectedCount={selectedIds.length}
+                isDeleting={deleteUserMutation.isLoading}
             />
 
             <input
