@@ -29,18 +29,19 @@ export const useFetchEvents = ({
                     const endDate = occ.greg_end_date ? new Date(occ.greg_end_date) : null;
 
                     if (isNaN(startDate.getTime())) {
+                        console.warn(`Invalid start date for event ${event.event_id}, occurrence ${occ.occurrence_id}: ${occ.greg_occur_date}`);
                         return null;
                     }
 
                     const isSameDay = endDate
                         ? startDate.getFullYear() === endDate.getFullYear() &&
-                        startDate.getMonth() === endDate.getMonth() &&
-                        startDate.getDate() === endDate.getDate()
+                          startDate.getMonth() === endDate.getMonth() &&
+                          startDate.getDate() === endDate.getDate()
                         : true;
 
                     const isSameMonthYear = endDate
                         ? startDate.getFullYear() === endDate.getFullYear() &&
-                        startDate.getMonth() === endDate.getMonth()
+                          startDate.getMonth() === endDate.getMonth()
                         : false;
 
                     const startDay = startDate.toLocaleDateString("id-ID", { day: "numeric" });
@@ -51,61 +52,72 @@ export const useFetchEvents = ({
                     const endMonthYear = endDate && !isNaN(endDate.getTime())
                         ? endDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
                         : "TBD";
-                    const dateRange = isSameDay
+                    const dateRangeString = isSameDay
                         ? `${startDay} ${monthYear}`
                         : isSameMonthYear
                         ? `${startDay} - ${endDay} ${monthYear}`
                         : `${startDay} ${monthYear} - ${endDay} ${endMonthYear}`;
 
-                    const startDayName = startDate.toLocaleDateString("id-ID", { weekday: "long" }).split(",")[0];
-                    const endDayName = endDate && !isNaN(endDate.getTime())
-                        ? endDate.toLocaleDateString("id-ID", { weekday: "long" }).split(",")[0]
-                        : "TBD";
-                    const dayRange = isSameDay ? startDayName : `${startDayName} - ${endDayName}`;
+                    const dateRange = [];
+                    if (endDate && !isSameDay && !isNaN(endDate.getTime())) {
+                        let currentDate = new Date(startDate);
+                        while (currentDate <= endDate) {
+                            dateRange.push(new Date(currentDate));
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                    } else {
+                        dateRange.push(startDate);
+                    }
 
-                    const startTime = startDate.toLocaleTimeString("en-US", {
+                    const startTime = startDate.toLocaleTimeString("id-ID", {
                         hour: "2-digit",
                         minute: "2-digit",
                         hour12: false,
+                        timeZone: "Asia/Jakarta",
                     }) + " WIB";
                     const endTime = endDate && !isNaN(endDate.getTime())
-                        ? endDate.toLocaleTimeString("en-US", {
+                        ? endDate.toLocaleTimeString("id-ID", {
                             hour: "2-digit",
                             minute: "2-digit",
                             hour12: false,
+                            timeZone: "Asia/Jakarta",
                         }) + " WIB"
                         : "TBD";
-                    const timeDisplay = isSameDay ? `${startTime} - ${endTime}` : startTime;
+
+                    let time = "";
+                    if (isSameDay || (dateRange.length > 0 && dateRange[0].toDateString() === startDate.toDateString())) {
+                        if (!event.is_recurring) {
+                            time = startTime; // Hanya startTime untuk event non-berulang di hari pertama
+                        } else {
+                            time = `${startTime} - ${endTime !== "TBD" ? endTime : "00:00 WIB"}`; // Start dan end time untuk event berulang di hari pertama
+                        }
+                    }
 
                     return {
                         id: event.event_id,
                         occurrence_id: occ.occurrence_id,
-                        date: dateRange,
-                        day: dayRange,
-                        time: timeDisplay,
+                        date: dateRangeString,
+                        dateRange,
+                        dateString: dateRangeString,
+                        time,
+                        startTime,
+                        endTime: endTime !== "TBD" ? endTime : "TBD",
                         isSameDay,
                         name: event.event_name || "Unnamed Event",
                         location: typeof event.location === 'object' && event.location?.location_name
                             ? event.location.location_name
-                            : event.location || "Unknown Location",
-                        localityId: event.location?.localityId || "",
-                        provinceId: event.location?.locality?.district?.city?.provinceId || "",
-                        cityId: event.location?.locality?.district?.city?.id || "",
-                        districtId: event.location?.locality?.district?.id || "",
-                        type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "Regular",
-                        description: event.description || "No description available",
-                        lunar_sui_ci_year: event.lunar_sui_ci_year || "",
-                        lunar_month: event.lunar_month || "",
-                        lunar_day: event.lunar_day || "",
+                            : event.location || "All Vihara",
+                        type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "Ad-hoc",
+                        day: startDate.toLocaleDateString("id-ID", { weekday: "long" }) || "Hari",
+                        lunar_sui_ci_year: event.lunar_sui_ci_year || "Tahun Lunar",
+                        lunar_month: event.lunar_month || "Bulan Lunar",
+                        lunar_day: event.lunar_day || "Hari Lunar",
+                        description: event.description || "Deskripsi belum tersedia",
                         is_recurring: event.is_recurring || false,
                         poster_s3_bucket_link: event.poster_s3_bucket_link || null,
                         rawDate: startDate,
                         rawEndDate: endDate,
-                        occurrences: event.occurrences.map((o) => ({
-                            occurrence_id: o.occurrence_id,
-                            greg_occur_date: new Date(o.greg_occur_date),
-                            greg_end_date: o.greg_end_date ? new Date(o.greg_end_date) : null,
-                        })),
+                        occurrences: event.occurrences,
                     };
                 }).filter(event => event !== null);
             });

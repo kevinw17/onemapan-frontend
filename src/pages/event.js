@@ -33,7 +33,7 @@ const lunarDays = [
 const eventTypes = ["Regular", "Hari_Besar", "AdHoc", "Anniversary", "Peresmian", "Seasonal"];
 
 const EventList = ({ events, isLoading, error, filter, onEventClick }) => {
-  const currentDate = new Date("2025-09-12T16:29:00+07:00"); // Updated to 04:29 PM WIB
+  const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
   const endOfNextMonth = new Date(currentYear, currentMonth + 2, 0);
@@ -392,7 +392,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   </Box>
                 )}
               </FormControl>
-              <FormControl isRequired>
+              <FormControl>
                 <FormLabel>Apakah kegiatan ini berulang?</FormLabel>
                 <RadioGroup
                   name="is_recurring"
@@ -491,7 +491,7 @@ export default function Event() {
   const { data: provinces = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const { data: cities = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId);
   const { data: districts = [], isLoading: isDistrictsLoading } = useFetchDistricts(formData.cityId);
-  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.districtId);
+  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.localityId);
 
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     event_type: eventTypeFilter,
@@ -659,11 +659,12 @@ export default function Event() {
       <Box p={2}>
         <Flex justify="space-between" align="center" mb={6}>
           <Heading size="md">
-            {new Date("2025-09-12").toLocaleDateString("id-ID", {
+            {new Date().toLocaleDateString("id-ID", {
               weekday: "long",
               day: "2-digit",
               month: "long",
               year: "numeric",
+              timeZone: "Asia/Jakarta",
             })}
           </Heading>
           <Flex gap={2} align="center">

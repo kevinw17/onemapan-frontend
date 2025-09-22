@@ -16,9 +16,10 @@ import EventDetailModal from "./event/EventDetailModal";
 import { logout } from "@/lib/auth/logout";
 import { isAuthenticated } from "@/lib/auth/checkAuth";
 import { useFetchEvents } from "@/features/event/useFetchEvents";
+import styles from "./css/event/eventCalendar.module.css";
 
 const Sidebar = ({ navItems, router }) => (
-  <Box width="240px" p={6} borderRight="4px solid #e2e8f0" overflow="auto">
+  <Box width="240px" p={6} borderRight="4px solid" borderColor="gray.200" overflow="auto">
     <Box mb={6}>
       <Image src="/Onemapan_ss.svg" alt="Logo" width={200} height={180} style={{ objectFit: "contain" }} />
     </Box>
@@ -102,7 +103,7 @@ const Header = ({ title, showBackButton, backPath, router, username, handleLogou
 
 const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelectedEvent }) => {
   const getEventsForDate = useMemo(() => (selectedDate) => {
-    const eventsForDate = events
+    return events
       .filter((event) => {
         if (!event.dateRange || !Array.isArray(event.dateRange)) {
           console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
@@ -114,28 +115,19 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
           eventDate.getFullYear() === selectedDate.getFullYear()
         ));
       })
-      .reduce((uniqueEvents, event) => {
-        const key = `${event.id}-${selectedDate.toDateString()}`;
-        if (!uniqueEvents.some(e => e.id === event.id)) {
-          uniqueEvents.push({
-            ...event,
-            time: event.isSameDay 
-              ? `${event.startTime || "00:00 WIB"} - ${event.endTime !== "TBD" ? event.endTime : "00:00 WIB"}`
-              : ""
-          });
-        }
-        return uniqueEvents;
-      }, [])
+      .map((event) => {
+        console.log(`getEventsForDate event ${event.id}:`, { startTime: event.startTime, endTime: event.endTime, isSameDay: event.isSameDay, time: event.time }); // Debug
+        return event; // Use event.time from useFetchEvents
+      })
       .sort((a, b) => {
         const timeA = (a.startTime || "00:00 WIB").replace(" WIB", "").split(":");
         const timeB = (b.startTime || "00:00 WIB").replace(" WIB", "").split(":");
         return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
       });
-    return eventsForDate;
   }, [events]);
 
   const getEventsForMonth = useMemo(() => (selectedDate) => {
-    const eventsForMonth = events
+    return events
       .filter((event) => {
         if (!event.dateRange || !Array.isArray(event.dateRange)) {
           console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
@@ -146,18 +138,15 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
           eventDate.getFullYear() === selectedDate.getFullYear()
         ));
       })
-      .reduce((uniqueEvents, event) => {
-        if (!uniqueEvents.some(e => e.id === event.id)) {
-          uniqueEvents.push(event);
-        }
-        return uniqueEvents;
-      }, [])
+      .map((event) => {
+        console.log(`getEventsForMonth event ${event.id}:`, { startTime: event.startTime, endTime: event.endTime, isSameDay: event.isSameDay, time: event.time }); // Debug
+        return event; // Use event.time from useFetchEvents
+      })
       .sort((a, b) => {
-        const dateA = a.dateRange[0] || new Date(a.rawDate);
-        const dateB = b.dateRange[0] || new Date(b.rawDate);
+        const dateA = a.dateRange[0] || new Date(a.rawDate || Date.now());
+        const dateB = b.dateRange[0] || new Date(b.rawDate || Date.now());
         return dateA - dateB;
       });
-    return eventsForMonth;
   }, [events]);
 
   const handleDateChange = (newDate) => {
@@ -171,12 +160,20 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
   };
 
   return (
-    <Box width="360px" bg="gray.50" borderLeft="4px solid #e2e8f0" p={4} overflowY="auto">
+    <Box 
+      width="360px" 
+      bg="gray.50" 
+      borderLeft="4px solid" 
+      borderColor="gray.200" 
+      p={4} 
+      overflowY="auto"
+    >
       <Calendar
         onChange={handleDateChange}
         onActiveStartDateChange={handleActiveDateChange}
         value={date}
         locale="id-ID"
+        className={styles.calendar}
         tileClassName={({ date: tileDate }) => {
           const today = new Date();
           const isToday = new Date(tileDate).toDateString() === new Date(today).toDateString();
@@ -191,61 +188,16 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
             ));
           });
           return [
-            isToday && "highlight",
-            hasEvents && "has-events"
+            isToday && styles.highlight,
+            hasEvents && styles.hasEvents
           ].filter(Boolean).join(" ");
         }}
       />
-      <style jsx>{`
-        .react-calendar {
-          width: 100%;
-          border: none;
-          font-family: inherit;
-          background: white;
-          borderRadius: 8px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .react-calendar__tile {
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 4px;
-          position: relative;
-          color: #2d3748;
-        }
-        .react-calendar__tile--now,
-        .react-calendar__tile:global(.highlight) {
-          background: #edf2f7;
-          color: #2b6cb0;
-        }
-        .react-calendar__tile:global(.has-events):after {
-          content: '';
-          width: 6px;
-          height: 6px;
-          background: #2b6cb0;
-          border-radius: 50%;
-          position: absolute;
-          bottom: 4px;
-        }
-        .react-calendar__navigation button {
-          color: #2b6cb0;
-          font-weight: bold;
-        }
-        .react-calendar__month-view__days__day--neighboringMonth {
-          color: #a0aec0;
-        }
-        .react-calendar__tile:hover,
-        .react-calendar__tile--active {
-          background-color: #e2e8f0;
-          color: #2d3748;
-        }
-      `}</style>
       <Box mt={4}>
         {(viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).length > 0 ? (
           (viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).map((event) => (
             <Flex 
-              key={`${event.id}-${event.occurrence_id}`} 
+              key={`${event.id}-${event.occurrence_id || event.id}`} 
               justify="space-between" 
               align="center" 
               mb={2} 
@@ -256,22 +208,22 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
               <Box>
                 {viewMode === "month" ? (
                   <>
-                    <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">
-                      {event.dateString || event.dateRange[0]?.toLocaleDateString("id-ID", { day: "numeric", month: "long" })}
+                    <Text fontSize="md" fontWeight="bold" color="blue.600">
+                      {event.dateString || event.dateRange[0]?.toLocaleDateString("id-ID", { day: "numeric", month: "long" }) || "Tanggal tidak tersedia"}
                     </Text>
-                    {event.time && (
-                      <Text fontSize="md" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                    {event.time && event.isSameDay && (
+                      <Text fontSize="md" fontWeight="bold" color="blue.600">{event.time}</Text>
                     )}
                   </>
                 ) : (
-                  event.time && (
-                    <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
+                  event.time && event.isSameDay && (
+                    <Text fontSize="lg" fontWeight="bold" color="blue.600">{event.time}</Text>
                   )
                 )}
-                <Text fontSize="md" fontWeight="bold">{event.name}</Text>
-                <Text fontSize="sm" color="gray.600">{event.location}</Text>
+                <Text fontSize="md" fontWeight="bold">{event.name || "Nama acara tidak tersedia"}</Text>
+                <Text fontSize="sm" color="gray.600">{event.location || "Lokasi tidak tersedia"}</Text>
                 <HStack spacing={2} mt={1}>
-                  <Tag size="sm" variant="solid" colorScheme="blue">{event.type}</Tag>
+                  <Tag size="sm" variant="solid" colorScheme="blue">{event.type || "Tipe tidak tersedia"}</Tag>
                   {event.is_recurring && (
                     <Tag size="sm" variant="solid" colorScheme="green">Berulang</Tag>
                   )}
@@ -352,28 +304,8 @@ export default function Layout({ children, title, showCalendar = false }) {
   });
 
   useEffect(() => {
-    const transformedEvents = fetchedEvents.map((event) => {
-      const dateRanges = [];
-      event.occurrences.forEach((occ) => {
-        const startDate = new Date(occ.greg_occur_date);
-        const endDate = occ.greg_end_date ? new Date(occ.greg_end_date) : startDate;
-        const dates = [];
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-          dates.push(new Date(d));
-        }
-        if (event.is_recurring) {
-          dates.forEach((date) => {
-            if (!dateRanges.some(d => d.toDateString() === date.toDateString())) {
-              dateRanges.push(date);
-            }
-          });
-        } else {
-          dateRanges.push(...dates);
-        }
-      });
-      return { ...event, dateRange: dateRanges };
-    });
-    setEvents(transformedEvents);
+    console.log("Raw fetchedEvents:", fetchedEvents); // Debug raw data
+    setEvents(fetchedEvents); // Use fetchedEvents directly
   }, [fetchedEvents]);
 
   if (isCheckingAuth) {
