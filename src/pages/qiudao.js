@@ -3,7 +3,9 @@ import {
   Table, Tbody, Thead, Tr, Th, Td, Spinner, Box,
   useDisclosure, Button, Input, useToast, Flex,
   InputGroup, InputLeftElement, InputRightElement,
-  IconButton, Select, Checkbox, Heading
+  IconButton, Select, Checkbox, Heading, Modal,
+  ModalOverlay, ModalContent, ModalHeader, ModalBody,
+  ModalFooter, ModalCloseButton, Text
 } from "@chakra-ui/react";
 import { useFetchQiudaos } from "@/features/qiudao/useFetchQiudaos";
 import { useState, useRef } from "react";
@@ -14,6 +16,30 @@ import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import QiudaoDetailModal from "@/components/QiudaoDetailModal";
 import { useDeleteQiudao } from "@/features/qiudao/useDeleteQiudao";
 import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
+
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
+    <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
+        <ModalOverlay />
+        <ModalContent>
+            <ModalHeader>Konfirmasi Hapus</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+                <Text>Apakah Anda yakin ingin menghapus {selectedCount} data qiudao?</Text>
+            </ModalBody>
+            <ModalFooter>
+                <Button
+                    colorScheme="red"
+                    onClick={onConfirm}
+                    isLoading={isDeleting}
+                    size="sm"
+                >
+                    Hapus
+                </Button>
+                <Button variant="ghost" onClick={onClose} ml={3} size="sm">Batal</Button>
+            </ModalFooter>
+        </ModalContent>
+    </Modal>
+);
 
 export default function QiudaoPage() {
   const tableHeaders = [
@@ -39,6 +65,7 @@ export default function QiudaoPage() {
   const total = qiudaos?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const [selectedQiudao, setSelectedQiudao] = useState(null);
   const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
@@ -47,7 +74,7 @@ export default function QiudaoPage() {
   const updateLocationMutation = useUpdateLocation();
   const updateQiudaoMutation = useUpdateQiudao();
   const deleteQiudaoMutation = useDeleteQiudao();
-  const fileInputRef = useRef(null); // Ref untuk input file
+  const fileInputRef = useRef(null);
 
   const handleRowClick = (qiudao) => {
     setSelectedQiudao(qiudao);
@@ -70,6 +97,33 @@ export default function QiudaoPage() {
         onClose();
       },
     });
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      for (const id of selectedIds) {
+        await deleteQiudaoMutation.mutateAsync(id);
+      }
+      toast({
+        title: "Berhasil dihapus",
+        description: `${selectedIds.length} data qiudao berhasil dihapus.`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+      setSelectedIds([]);
+      setIsAllSelected(false);
+      refetchQiudaos();
+      onConfirmClose();
+    } catch (error) {
+      toast({
+        title: "Gagal menghapus",
+        description: "Terjadi kesalahan saat menghapus data.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -189,129 +243,113 @@ export default function QiudaoPage() {
           {total}
         </Box>
       </Heading>
-      <Flex justify="space-between" align="center" mb={4}>
+      <Flex justify="space-between" align="center" mb={4} wrap="nowrap" gap={2}>
+        <Box>
           <Pagination
-              page={page}
-              totalPages={totalPages}
-              limit={limit}
-              onLimitChange={(val) => {
-                setLimit(val);
-                setPage(1);
-              }}
-              onPageChange={(val) => setPage(val)}
-              search={searchQuery}
-              onSearchChange={(val) => {
-                setSearchQuery(val);
-                setPage(1);
-              }}
+            page={page}
+            totalPages={totalPages}
+            limit={limit}
+            onLimitChange={(val) => {
+              setLimit(val);
+              setPage(1);
+            }}
+            onPageChange={(val) => setPage(val)}
+            search={searchQuery}
+            onSearchChange={(val) => {
+              setSearchQuery(val);
+              setPage(1);
+            }}
           />
+        </Box>
 
-          <Flex gap={2} align="center" flexWrap="nowrap" flexShrink={0}>
-            {selectedIds.length > 0 && (
-              <Button
-                  colorScheme="red"
-                  borderRadius="full"
-                  size="sm"
-                  onClick={async () => {
-                      const confirm = window.confirm(
-                        `Yakin ingin menghapus ${selectedIds.length} data umat ini?`
-                      );
-                      if (!confirm) return;
+        <Flex gap={2} align="center" flexWrap="nowrap" flexShrink={0}>
+          {selectedIds.length > 0 && (
+            <Button
+              colorScheme="red"
+              borderRadius="full"
+              size="xs"
+              minW="100px"
+              onClick={onConfirmOpen}
+            >
+              Hapus {selectedIds.length} Data
+            </Button>
+          )}
 
-                      for (const id of selectedIds) {
-                        await deleteQiudaoMutation.mutateAsync(id);
-                      }
+          <Select
+            size="xs"
+            width="240px"
+            borderRadius="full"
+            value={searchField}
+            onChange={(e) => setSearchField(e.target.value)}
+          >
+            <option value="qiu_dao_mandarin_name">Nama Mandarin Qiudao</option>
+            <option value="qiu_dao_name">Nama Qiudao</option>
+            <option value="dian_chuan_shi_name">Nama Pandita</option>
+            <option value="dian_chuan_shi_mandarin_name">Nama Mandarin Pandita</option>
+            <option value="yin_shi_qd_name">Nama Guru Pengajak</option>
+            <option value="yin_shi_qd_mandarin_name">Nama Mandarin Guru Pengajak</option>
+            <option value="bao_shi_qd_name">Nama Guru Penanggung</option>
+            <option value="bao_shi_qd_mandarin_name">Nama Mandarin Guru Penanggung</option>
+            <option value="lunar_sui_ci_year">Tahun Lunar</option>
+            <option value="lunar_month">Bulan Lunar</option>
+            <option value="lunar_day">Tanggal Lunar</option>
+            <option value="lunar_shi_chen_time">Waktu Lunar</option>
+          </Select>
 
-                      toast({
-                        title: "Berhasil dihapus",
-                        status: "success",
-                        duration: 3000,
-                        isClosable: true,
-                      });
-
-                      setSelectedIds([]);
-                      setIsAllSelected(false);
-                      refetchQiudaos();
+          <InputGroup size="xs" width="180px">
+            <InputLeftElement pointerEvents="none">
+              <FiSearch color="black" />
+            </InputLeftElement>
+            <Input
+              placeholder="Cari data qiudao..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              borderRadius="full"
+            />
+            {searchQuery && (
+              <InputRightElement>
+                <IconButton
+                  size="xs"
+                  variant="ghost"
+                  aria-label="Clear search"
+                  icon={<FiX />}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setPage(1);
                   }}
-              >
-              Hapus {selectedIds.length} data
-              </Button>
-            )}
-
-            <Select
-                    size="sm"
-                    width="auto"
-                    borderRadius="full"
-                    value={searchField}
-                    onChange={(e) => setSearchField(e.target.value)}
-                >
-                    <option value="qiu_dao_mandarin_name">Nama Mandarin Qiudao</option>
-                    <option value="qiu_dao_name">Nama Qiudao</option>
-                    <option value="dian_chuan_shi_name">Nama Pandita</option>
-                    <option value="dian_chuan_shi_mandarin_name">Nama Mandarin Pandita</option>
-                    <option value="yin_shi_qd_name">Nama Guru Pengajak</option>
-                    <option value="yin_shi_qd_mandarin_name">Nama Mandarin Guru Pengajak</option>
-                    <option value="bao_shi_qd_name">Nama Guru Penanggung</option>
-                    <option value="bao_shi_qd_mandarin_name">Nama Mandarin Guru Penanggung</option>
-                    <option value="lunar_sui_ci_year">Tahun Lunar</option>
-                    <option value="lunar_month">Bulan Lunar</option>
-                    <option value="lunar_day">Tanggal Lunar</option>
-                    <option value="lunar_shi_chen_time">Waktu Lunar</option>
-            </Select>
-
-            <InputGroup size="sm" width="200px">
-                <InputLeftElement pointerEvents="none">
-                    <FiSearch color="black" />
-                </InputLeftElement>
-                <Input
-                    placeholder="Cari data umat disini..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setPage(1);
-                    }}
-                    borderRadius="full"
+                  _hover={{ bg: "transparent" }}
+                  _active={{ bg: "transparent" }}
+                  _focus={{ boxShadow: "none" }}
                 />
+              </InputRightElement>
+            )}
+          </InputGroup>
 
-                {searchQuery && (
-                    <InputRightElement>
-                        <IconButton
-                            size="xs"
-                            variant="ghost"
-                            aria-label="Clear search"
-                            icon={<FiX />}
-                            onClick={() => {
-                                setSearchQuery("");
-                                setPage(1);
-                            }}
-                            _hover={{ bg: "transparent" }}
-                            _active={{ bg: "transparent" }}
-                            _focus={{ boxShadow: "none" }}
-                        />
-                    </InputRightElement>
-                )}
-            </InputGroup>
+          <Button
+            colorScheme="blue"
+            borderRadius="full"
+            size="xs"
+            minW="100px"
+            leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
+            onClick={() => router.push("/qiudao/addQiudao")}
+          >
+            Tambah Qiudao
+          </Button>
 
-            <Button
-              colorScheme="blue"
-              borderRadius="full"
-              size="sm"
-              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
-              onClick={() => router.push("/qiudao/addQiudao")}
-            >
-              Tambah Qiudao
-            </Button>
-
-            <Button
-              colorScheme="green"
-              borderRadius="full"
-              size="sm"
-              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
-              onClick={handleImportQiudao}
-            >
-              Import Data Massal
-            </Button>
-          </Flex>
+          <Button
+            colorScheme="green"
+            borderRadius="full"
+            size="xs"
+            minW="100px"
+            leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
+            onClick={handleImportQiudao}
+          >
+            Import Data
+          </Button>
+        </Flex>
       </Flex>
 
       <Box overflowX="auto" minH="80vh">
@@ -357,55 +395,55 @@ export default function QiudaoPage() {
               </Tr>
             </Thead>
             <Tbody>
-                {qiudaosList.map(qiudao => (
-                  <Tr 
-                    key={qiudao.qiu_dao_id}
-                    cursor="pointer"
-                    _hover={{ bg: "gray.50" }}
-                    onClick={() => handleRowClick(qiudao)}
-                  >
-                    <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
-                      <Flex align="center" justify="center" gap={2}>
-                        <Checkbox
-                          size="sm"
-                          isChecked={selectedIds.includes(qiudao.qiu_dao_id)}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            if (checked) {
-                              setSelectedIds((prev) => [...prev, qiudao.qiu_dao_id]);
-                            } else {
-                              setSelectedIds((prev) => prev.filter(id => id !== qiudao.qiu_dao_id));
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          sx={{
-                            ".chakra-checkbox__control": {
-                              borderColor: "gray.500",
-                              borderWidth: "1px",
-                            }
-                          }}
-                        />
-                        <Box>{qiudao.qiu_dao_id}</Box>
-                      </Flex>
-                    </Td>
-                    <Td textAlign="center">{qiudao.qiu_dao_name?.trim() || "-"}</Td>
-                    <Td textAlign="center">{qiudao.qiu_dao_mandarin_name}</Td>
-                    <Td textAlign="center">{qiudao.qiu_dao_location?.location_name || "-"}</Td>
-                    <Td textAlign="center">{qiudao.qiu_dao_location?.location_mandarin_name || "-"}</Td>
-                    <Td textAlign="center">{qiudao.dian_chuan_shi?.name || "-"}</Td>
-                    <Td textAlign="center">{qiudao.dian_chuan_shi?.mandarin_name || "-"}</Td>
-                    <Td textAlign="center">{qiudao.yin_shi_qd_name?.trim() || "-"}</Td>
-                    <Td textAlign="center">{qiudao.yin_shi_qd_mandarin_name?.trim() || "-"}</Td>
-                    <Td textAlign="center">{qiudao.bao_shi_qd_name?.trim() || "-"}</Td>
-                    <Td textAlign="center">{qiudao.bao_shi_qd_mandarin_name?.trim() || "-"}</Td>
-                    <Td textAlign="center">{dateFormat(qiudao)}</Td>
-                  </Tr>
-                )
-              )}
+              {qiudaosList.map(qiudao => (
+                <Tr 
+                  key={qiudao.qiu_dao_id}
+                  cursor="pointer"
+                  _hover={{ bg: "gray.50" }}
+                  onClick={() => handleRowClick(qiudao)}
+                >
+                  <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
+                    <Flex align="center" justify="center" gap={2}>
+                      <Checkbox
+                        size="sm"
+                        isChecked={selectedIds.includes(qiudao.qiu_dao_id)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          if (checked) {
+                            setSelectedIds((prev) => [...prev, qiudao.qiu_dao_id]);
+                          } else {
+                            setSelectedIds((prev) => prev.filter(id => id !== qiudao.qiu_dao_id));
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{
+                          ".chakra-checkbox__control": {
+                            borderColor: "gray.500",
+                            borderWidth: "1px",
+                          }
+                        }}
+                      />
+                      <Box>{qiudao.qiu_dao_id}</Box>
+                    </Flex>
+                  </Td>
+                  <Td textAlign="center">{qiudao.qiu_dao_name?.trim() || "-"}</Td>
+                  <Td textAlign="center">{qiudao.qiu_dao_mandarin_name}</Td>
+                  <Td textAlign="center">{qiudao.qiu_dao_location?.location_name || "-"}</Td>
+                  <Td textAlign="center">{qiudao.qiu_dao_location?.location_mandarin_name || "-"}</Td>
+                  <Td textAlign="center">{qiudao.dian_chuan_shi?.name || "-"}</Td>
+                  <Td textAlign="center">{qiudao.dian_chuan_shi?.mandarin_name || "-"}</Td>
+                  <Td textAlign="center">{qiudao.yin_shi_qd_name?.trim() || "-"}</Td>
+                  <Td textAlign="center">{qiudao.yin_shi_qd_mandarin_name?.trim() || "-"}</Td>
+                  <Td textAlign="center">{qiudao.bao_shi_qd_name?.trim() || "-"}</Td>
+                  <Td textAlign="center">{qiudao.bao_shi_qd_mandarin_name?.trim() || "-"}</Td>
+                  <Td textAlign="center">{dateFormat(qiudao)}</Td>
+                </Tr>
+              ))}
             </Tbody>
           </Table>
         )}
       </Box>
+
       <QiudaoDetailModal
         isOpen={isOpen}
         onClose={handleClose}
@@ -416,6 +454,14 @@ export default function QiudaoPage() {
         setFormData={setFormData}
         handleSave={handleSave}
         handleDelete={handleDelete}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={onConfirmClose}
+        onConfirm={confirmBulkDelete}
+        selectedCount={selectedIds.length}
+        isDeleting={deleteQiudaoMutation.isLoading}
       />
 
       <input
