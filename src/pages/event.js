@@ -3,16 +3,18 @@ import {
   Tag, VStack, Divider, Modal, ModalOverlay, ModalContent,
   ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
   FormControl, FormLabel, Input, Select, Textarea, HStack,
-  Menu, MenuButton, MenuList, MenuItem, Collapse, Checkbox,
-  Radio, RadioGroup, Image, Spinner,
-  useDisclosure
+  Checkbox, Radio, RadioGroup, Image, Spinner, useDisclosure,
+  InputGroup, InputRightElement, Collapse
 } from "@chakra-ui/react";
-import { FiEdit, FiTrash, FiPlus, FiChevronDown, FiFilter, FiMinus, FiPlus as FiPlusIcon } from "react-icons/fi";
+import { FiEdit, FiTrash, FiPlus, FiFilter, FiMinus, FiPlus as FiPlusIcon, FiCalendar } from "react-icons/fi";
 import Layout from "@/components/layout";
 import { useState, useCallback, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, addDays } from "date-fns";
 import { useFetchEvents } from "@/features/event/useFetchEvents";
 import { useDeleteEvent } from "@/features/event/useDeleteEvent";
 import { useFetchProvinces, useFetchCities, useFetchDistricts, useFetchLocalities } from "@/features/location/useFetchLocations";
@@ -32,26 +34,217 @@ const lunarDays = [
 ];
 const eventTypes = ["Regular", "Hari_Besar", "AdHoc", "Anniversary", "Peresmian", "Seasonal"];
 
-const EventList = ({ events, isLoading, error, filter, onEventClick }) => {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-  const endOfNextMonth = new Date(currentYear, currentMonth + 2, 0);
+const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) => {
+  const today = new Date();
+  const [daysBefore, setDaysBefore] = useState("-");
+  const [daysAfter, setDaysAfter] = useState("-");
+  const formatDate = (date) => format(date, "dd-MM-yyyy");
 
+  const handleFilterClick = (filter) => {
+    let startDate, endDate;
+    // Check if daysBefore or daysAfter is a valid number
+    const before = daysBefore !== "-" && !isNaN(parseInt(daysBefore)) && parseInt(daysBefore) >= 0 ? parseInt(daysBefore) : null;
+    const after = daysAfter !== "-" && !isNaN(parseInt(daysAfter)) && parseInt(daysAfter) >= 0 ? parseInt(daysAfter) : null;
+
+    if (before !== null && after !== null) {
+      // Both are filled: combine ranges (today - before to today + after)
+      startDate = subDays(today, before);
+      endDate = addDays(today, after);
+      setDateRange({ startDate, endDate });
+      return;
+    } else if (before !== null) {
+      // Only daysBefore is filled
+      startDate = subDays(today, before);
+      endDate = today;
+      setDateRange({ startDate, endDate });
+      return;
+    } else if (after !== null) {
+      // Only daysAfter is filled
+      startDate = today;
+      endDate = addDays(today, after);
+      setDateRange({ startDate, endDate });
+      return;
+    }
+
+    // Fallback to button filters if no valid daysBefore or daysAfter
+    switch (filter) {
+      case "today":
+        startDate = today;
+        endDate = today;
+        break;
+      case "yesterday":
+        startDate = subDays(today, 1);
+        endDate = subDays(today, 1);
+        break;
+      case "thisWeek":
+        startDate = startOfWeek(today, { weekStartsOn: 1 });
+        endDate = endOfWeek(today, { weekStartsOn: 1 });
+        break;
+      case "lastWeek":
+        startDate = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        endDate = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        break;
+      case "thisMonth":
+        startDate = startOfMonth(today);
+        endDate = endOfMonth(today);
+        break;
+      case "lastMonth":
+        startDate = startOfMonth(subMonths(today, 1));
+        endDate = endOfMonth(subMonths(today, 1));
+        break;
+      default:
+        startDate = today;
+        endDate = today;
+    }
+    setDateRange({ startDate, endDate });
+  };
+
+  const handleDaysBeforeChange = (e) => {
+    const value = e.target.value;
+    if (value === "" || value === "-") {
+      setDaysBefore("-");
+    } else if (!isNaN(value) && parseInt(value) >= 0) {
+      setDaysBefore(value);
+    }
+  };
+
+  const handleDaysAfterChange = (e) => {
+    const value = e.target.value;
+    if (value === "" || value === "-") {
+      setDaysAfter("-");
+    } else if (!isNaN(value) && parseInt(value) >= 0) {
+      setDaysAfter(value);
+    }
+  };
+
+  const handleApply = () => {
+    const before = daysBefore !== "-" && !isNaN(parseInt(daysBefore)) && parseInt(daysBefore) >= 0 ? parseInt(daysBefore) : null;
+    const after = daysAfter !== "-" && !isNaN(parseInt(daysAfter)) && parseInt(daysAfter) >= 0 ? parseInt(daysAfter) : null;
+
+    if (before !== null && after !== null) {
+      // Both are filled: combine ranges
+      setDateRange({
+        startDate: subDays(today, before),
+        endDate: addDays(today, after),
+      });
+    } else if (before !== null) {
+      // Only daysBefore is filled
+      setDateRange({
+        startDate: subDays(today, before),
+        endDate: today,
+      });
+    } else if (after !== null) {
+      // Only daysAfter is filled
+      setDateRange({
+        startDate: today,
+        endDate: addDays(today, after),
+      });
+    }
+    onApply();
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="xl">
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Pilih Rentang Tanggal</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <Flex direction={{ base: "column", md: "row" }} gap={4}>
+            {/* Left Column: Filters */}
+            <VStack align="start" spacing={2} w={{ base: "100%", md: "200px" }}>
+              <Button size="sm" variant="outline" onClick={() => handleFilterClick("today")}>Hari Ini</Button>
+              <Button size="sm" variant="outline" onClick={() => handleFilterClick("yesterday")}>Kemarin</Button>
+              <Button size="sm" variant="outline" onClick={() => handleFilterClick("thisWeek")}>Minggu Ini</Button>
+              <Button size="sm" variant="outline" onClick={() => handleFilterClick("lastWeek")}>Minggu Lalu</Button>
+              <Button size="sm" variant="outline" onClick={() => handleFilterClick("thisMonth")}>Bulan Ini</Button>
+              <Button size="sm" variant="outline" onClick={() => handleFilterClick("lastMonth")}>Bulan Lalu</Button>
+              <HStack spacing={2} align="center">
+                <Input
+                  size="xs"
+                  w="50px"
+                  value={daysBefore}
+                  onChange={handleDaysBeforeChange}
+                  placeholder="-"
+                  type="number"
+                  min="0"
+                />
+                <Text fontSize="sm">days up to today</Text>
+              </HStack>
+              <HStack spacing={2} align="center">
+                <Input
+                  size="xs"
+                  w="50px"
+                  value={daysAfter}
+                  onChange={handleDaysAfterChange}
+                  placeholder="-"
+                  type="number"
+                  min="0"
+                />
+                <Text fontSize="sm">days starting today</Text>
+              </HStack>
+            </VStack>
+            {/* Vertical Divider */}
+            <Divider
+              orientation="vertical"
+              borderColor="gray.300"
+              borderWidth="2px"
+              height="100%"
+              minH="400px"
+              display={{ base: "none", md: "block" }}
+            />
+            {/* Right Column: Calendar */}
+            <VStack align="start" spacing={2} flex="1">
+              <HStack spacing={2}>
+                <FormControl>
+                  <FormLabel>Start Date</FormLabel>
+                  <Input value={dateRange.startDate ? formatDate(dateRange.startDate) : ""} isReadOnly />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>End Date</FormLabel>
+                  <Input value={dateRange.endDate ? formatDate(dateRange.endDate) : ""} isReadOnly />
+                </FormControl>
+              </HStack>
+              <Calendar
+                onChange={(value) => {
+                  if (Array.isArray(value)) {
+                    setDateRange({ startDate: value[0], endDate: value[1] });
+                    setDaysBefore("-");
+                    setDaysAfter("-");
+                  } else {
+                    setDateRange({ startDate: value, endDate: value });
+                    setDaysBefore("-");
+                    setDaysAfter("-");
+                  }
+                }}
+                value={[dateRange.startDate, dateRange.endDate]}
+                selectRange={true}
+                returnValue="range"
+              />
+            </VStack>
+          </Flex>
+          <Divider
+            orientation="horizontal"
+            borderColor="gray.300"
+            borderWidth="2px"
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button colorScheme="blue" onClick={handleApply}>Terapkan</Button>
+          <Button variant="ghost" onClick={onClose} ml={3}>Batal</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
   const filteredEvents = events
     .filter((event) => {
-      const eventMonth = event.rawDate.getMonth();
-      const eventYear = event.rawDate.getFullYear();
-      if (filter === "Bulan lalu") {
-        return eventYear < currentYear || (eventYear === currentYear && eventMonth < currentMonth);
-      }
-      if (filter === "Bulan ini") {
-        return eventYear === currentYear && eventMonth === currentMonth;
-      }
-      if (filter === "Bulan depan") {
-        return eventYear === currentYear && eventMonth === currentMonth + 1;
-      }
-      return event.rawDate <= endOfNextMonth;
+      if (!dateRange.startDate || !dateRange.endDate) return true;
+      const eventDate = event.rawDate;
+      return eventDate >= dateRange.startDate && eventDate <= dateRange.endDate;
     })
     .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
 
@@ -75,7 +268,7 @@ const EventList = ({ events, isLoading, error, filter, onEventClick }) => {
   if (filteredEvents.length === 0) {
     return (
       <VStack h="70vh" justify="center" align="center">
-        <Text fontSize="xl" textAlign="center">Tidak ada kegiatan untuk saat ini</Text>
+        <Text fontSize="xl" textAlign="center">Tidak ada kegiatan untuk rentang tanggal ini</Text>
       </VStack>
     );
   }
@@ -454,7 +647,9 @@ export default function Event() {
   const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose } = useDisclosure();
   const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
+  const { isOpen: isDateRangeOpen, onOpen: onDateRangeOpen, onClose: onDateRangeClose } = useDisclosure();
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
   const queryClient = useQueryClient();
 
   const { formData, setFormData, isSubmitting, handleChange, handleIsRecurringChange, handleSubmit, handleUpdate, validateForm } = useEventForm({
@@ -486,7 +681,7 @@ export default function Event() {
   });
   const deleteMutation = useDeleteEvent();
   const { image, setImage, previewImage, setPreviewImage, isImageLoaded, cropperRef, handleImageChange } = useImageUpload();
-  const { filterOpen, setFilterOpen, eventTypeFilter, provinceFilter, tempEventTypeFilter, tempProvinceFilter, isEventTypeFilterOpen, setIsEventTypeFilterOpen, isProvinceFilterOpen, setIsProvinceFilterOpen, filter, setFilter, handleEventTypeFilterChange, handleProvinceFilterChange, applyFilters, clearFilters } = useEventFilter();
+  const { filterOpen, setFilterOpen, eventTypeFilter, provinceFilter, tempEventTypeFilter, tempProvinceFilter, isEventTypeFilterOpen, setIsEventTypeFilterOpen, isProvinceFilterOpen, setIsProvinceFilterOpen, handleEventTypeFilterChange, handleProvinceFilterChange, applyFilters, clearFilters } = useEventFilter();
 
   const { data: provinces = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const { data: cities = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId);
@@ -496,11 +691,13 @@ export default function Event() {
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     event_type: eventTypeFilter,
     provinceId: provinceFilter,
+    startDate: dateRange.startDate ? format(dateRange.startDate, "yyyy-MM-dd") : undefined,
+    endDate: dateRange.endDate ? format(dateRange.endDate, "yyyy-MM-dd") : undefined,
   });
 
   useEffect(() => {
     refetch();
-  }, [eventTypeFilter, provinceFilter, refetch]);
+  }, [eventTypeFilter, provinceFilter, dateRange, refetch]);
 
   useEffect(() => {
     if (error) {
@@ -654,10 +851,22 @@ export default function Event() {
     }
   }, [toast, onDetailOpen]);
 
+  const formatDateRange = () => {
+    if (!dateRange.startDate) return "";
+    if (dateRange.startDate.getTime() === dateRange.endDate?.getTime()) {
+      return format(dateRange.startDate, "dd-MM-yyyy");
+    }
+    return `${format(dateRange.startDate, "dd-MM-yyyy")} - ${format(dateRange.endDate, "dd-MM-yyyy")}`;
+  };
+
+  const handleApplyDateRange = () => {
+    refetch();
+  };
+
   return (
     <Layout title="Kegiatan">
       <Box p={2}>
-        <Flex justify="space-between" align="center" mb={6}>
+        <Flex justify="space-between" align="center" mb={6} flexWrap="nowrap" gap={2}>
           <Heading size="md">
             {new Date().toLocaleDateString("id-ID", {
               weekday: "long",
@@ -667,15 +876,16 @@ export default function Event() {
               timeZone: "Asia/Jakarta",
             })}
           </Heading>
-          <Flex gap={2} align="center">
+          <Flex gap={2} align="center" flexShrink={0}>
             <Box position="relative">
               <Button
                 colorScheme="white"
                 textColor="gray.700"
-                borderRadius={16}
+                borderRadius="full"
                 borderWidth="1px"
                 borderColor="gray.400"
-                size="sm"
+                size="xs"
+                minW="100px"
                 leftIcon={<FiFilter />}
                 onClick={() => setFilterOpen(!filterOpen)}
               >
@@ -690,7 +900,7 @@ export default function Event() {
                   boxShadow="md"
                   zIndex={10}
                   align="stretch"
-                  w="300px"
+                  w="250px"
                   position="absolute"
                   top="100%"
                   left={0}
@@ -749,16 +959,19 @@ export default function Event() {
                     </Collapse>
                   </FormControl>
                   <HStack justify="flex-end" spacing={2}>
-                    <Button size="sm" onClick={clearFilters}>Reset</Button>
-                    <Button size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
-                    <Button size="sm" colorScheme="blue" onClick={applyFilters}>Terapkan</Button>
+                    <Button size="xs" onClick={clearFilters}>Reset</Button>
+                    <Button size="xs" onClick={() => setFilterOpen(false)}>Cancel</Button>
+                    <Button size="xs" colorScheme="blue" onClick={applyFilters}>Terapkan</Button>
                   </HStack>
                 </VStack>
               )}
             </Box>
             <Button
               colorScheme="blue"
-              leftIcon={<FiPlus />}
+              borderRadius="full"
+              size="xs"
+              minW="150px"
+              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
               onClick={() => {
                 setFormData({
                   event_name: "",
@@ -782,21 +995,34 @@ export default function Event() {
                 setPreviewImage(null);
                 onAddOpen();
               }}
-              size="sm"
             >
-              Buat Kegiatan Baru
+              Tambah Kegiatan
             </Button>
-            <Menu>
-              <MenuButton as={Button} rightIcon={<FiChevronDown />} variant="outline" size="sm">
-                Show: {filter}
-              </MenuButton>
-              <MenuList>
-                <MenuItem onClick={() => setFilter("Bulan depan")}>Bulan depan</MenuItem>
-                <MenuItem onClick={() => setFilter("Bulan ini")}>Bulan ini</MenuItem>
-                <MenuItem onClick={() => setFilter("Bulan lalu")}>Bulan lalu</MenuItem>
-                <MenuItem onClick={() => setFilter("Semua")}>Semua</MenuItem>
-              </MenuList>
-            </Menu>
+            <FormControl display="flex" alignItems="center">
+              <Text mr={2}>Tanggal:</Text>
+              <InputGroup size="xs" width="180px">
+                <Input
+                  value={formatDateRange()}
+                  isReadOnly
+                  placeholder="Pilih tanggal..."
+                  onClick={onDateRangeOpen}
+                  cursor="pointer"
+                  borderRadius="full"
+                />
+                <InputRightElement>
+                  <IconButton
+                    size="xs"
+                    variant="ghost"
+                    aria-label="Open calendar"
+                    icon={<FiCalendar />}
+                    onClick={onDateRangeOpen}
+                    _hover={{ bg: "transparent" }}
+                    _active={{ bg: "transparent" }}
+                    _focus={{ boxShadow: "none" }}
+                  />
+                </InputRightElement>
+              </InputGroup>
+            </FormControl>
           </Flex>
         </Flex>
         <Divider borderBottomWidth="2px" />
@@ -804,8 +1030,15 @@ export default function Event() {
           events={events}
           isLoading={isLoading}
           error={error}
-          filter={filter}
+          dateRange={dateRange}
           onEventClick={openEventDetail}
+        />
+        <DateRangeModal
+          isOpen={isDateRangeOpen}
+          onClose={onDateRangeClose}
+          onApply={handleApplyDateRange}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
         />
         <EventDetailModal
           isOpen={isDetailOpen}
