@@ -28,9 +28,15 @@ const Sidebar = ({ navItems, router }) => (
         <NavItem key={item.href} item={item} isActive={router.pathname === item.href} />
       ))}
       <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>
-        Management Umat
+        Manajemen Umat
       </Text>
-      {navItems.slice(3).map((item) => (
+      {navItems.slice(3, 5).map((item) => (
+        <NavItem key={item.href} item={item} isActive={router.pathname === item.href} />
+      ))}
+      <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>
+        Manajemen Akun
+      </Text>
+      {navItems.slice(5).map((item) => (
         <NavItem key={item.href} item={item} isActive={router.pathname === item.href} />
       ))}
     </Flex>
@@ -270,6 +276,9 @@ export default function Layout({ children, title, showCalendar = false }) {
     { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
     { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
     { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
+    { label: "Peran", href: "/role", iconSrc: "/role_icon.svg" },
+    { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
+    { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
   ], []);
 
   const showBackButton = useMemo(() => 

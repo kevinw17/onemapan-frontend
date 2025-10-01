@@ -42,31 +42,26 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
 
   const handleFilterClick = (filter) => {
     let startDate, endDate;
-    // Check if daysBefore or daysAfter is a valid number
     const before = daysBefore !== "-" && !isNaN(parseInt(daysBefore)) && parseInt(daysBefore) >= 0 ? parseInt(daysBefore) : null;
     const after = daysAfter !== "-" && !isNaN(parseInt(daysAfter)) && parseInt(daysAfter) >= 0 ? parseInt(daysAfter) : null;
 
     if (before !== null && after !== null) {
-      // Both are filled: combine ranges (today - before to today + after)
       startDate = subDays(today, before);
       endDate = addDays(today, after);
       setDateRange({ startDate, endDate });
       return;
     } else if (before !== null) {
-      // Only daysBefore is filled
       startDate = subDays(today, before);
       endDate = today;
       setDateRange({ startDate, endDate });
       return;
     } else if (after !== null) {
-      // Only daysAfter is filled
       startDate = today;
       endDate = addDays(today, after);
       setDateRange({ startDate, endDate });
       return;
     }
 
-    // Fallback to button filters if no valid daysBefore or daysAfter
     switch (filter) {
       case "today":
         startDate = today;
@@ -122,19 +117,16 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
     const after = daysAfter !== "-" && !isNaN(parseInt(daysAfter)) && parseInt(daysAfter) >= 0 ? parseInt(daysAfter) : null;
 
     if (before !== null && after !== null) {
-      // Both are filled: combine ranges
       setDateRange({
         startDate: subDays(today, before),
         endDate: addDays(today, after),
       });
     } else if (before !== null) {
-      // Only daysBefore is filled
       setDateRange({
         startDate: subDays(today, before),
         endDate: today,
       });
     } else if (after !== null) {
-      // Only daysAfter is filled
       setDateRange({
         startDate: today,
         endDate: addDays(today, after),
@@ -152,7 +144,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
         <ModalCloseButton />
         <ModalBody>
           <Flex direction={{ base: "column", md: "row" }} gap={4}>
-            {/* Left Column: Filters */}
             <VStack align="start" spacing={2} w={{ base: "100%", md: "200px" }}>
               <Button size="sm" variant="outline" onClick={() => handleFilterClick("today")}>Hari Ini</Button>
               <Button size="sm" variant="outline" onClick={() => handleFilterClick("yesterday")}>Kemarin</Button>
@@ -185,7 +176,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
                 <Text fontSize="sm">days starting today</Text>
               </HStack>
             </VStack>
-            {/* Vertical Divider */}
             <Divider
               orientation="vertical"
               borderColor="gray.300"
@@ -194,7 +184,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
               minH="400px"
               display={{ base: "none", md: "block" }}
             />
-            {/* Right Column: Calendar */}
             <VStack align="start" spacing={2} flex="1">
               <HStack spacing={2}>
                 <FormControl>
@@ -686,7 +675,7 @@ export default function Event() {
   const { data: provinces = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const { data: cities = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId);
   const { data: districts = [], isLoading: isDistrictsLoading } = useFetchDistricts(formData.cityId);
-  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.localityId);
+  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.districtId);
 
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     event_type: eventTypeFilter,
@@ -721,7 +710,10 @@ export default function Event() {
       districtId: "",
       localityId: "",
     }));
-  }, [setFormData]);
+    if (provinceId) {
+      queryClient.invalidateQueries(['cities', provinceId]);
+    }
+  }, [setFormData, queryClient]);
 
   const handleCityChange = useCallback((e) => {
     const cityId = e.target.value;
@@ -731,7 +723,10 @@ export default function Event() {
       districtId: "",
       localityId: "",
     }));
-  }, [setFormData]);
+    if (cityId) {
+      queryClient.invalidateQueries(['districts', cityId]);
+    }
+  }, [setFormData, queryClient]);
 
   const handleDistrictChange = useCallback((e) => {
     const districtId = e.target.value;
@@ -740,7 +735,10 @@ export default function Event() {
       districtId,
       localityId: "",
     }));
-  }, [setFormData]);
+    if (districtId) {
+      queryClient.invalidateQueries(['localities', districtId]);
+    }
+  }, [setFormData, queryClient]);
 
   const handleEdit = useCallback(async (event) => {
     const localDateTime = event.rawDate.toLocaleString("sv-SE", {
@@ -765,29 +763,66 @@ export default function Event() {
         }).replace(" ", "T")
       : "";
 
-    setFormData({
-      event_name: event.name || "",
-      event_mandarin_name: event.event_mandarin_name || "",
-      greg_occur_date: localDateTime,
-      greg_end_date: localEndDateTime,
-      provinceId: event.provinceId ? event.provinceId.toString() : "",
-      cityId: event.cityId ? event.cityId.toString() : "",
-      districtId: event.districtId ? event.districtId.toString() : "",
-      localityId: event.localityId ? event.localityId.toString() : "",
-      location_name: event.location || "",
-      event_type: event.type === "Hari Besar" ? "Hari_Besar" : event.type || "Regular",
-      description: event.description || "",
-      lunar_sui_ci_year: event.lunar_sui_ci_year || "",
-      lunar_month: event.lunar_month || "",
-      lunar_day: event.lunar_day || "",
-      is_recurring: event.is_recurring || false,
-      poster_s3_bucket_link: event.poster_s3_bucket_link || null,
-    });
+    // Fetch event details to ensure we have the full location hierarchy
+    try {
+      const response = await axiosInstance.get(`/event/${event.id}`);
+      const eventData = response.data;
+      console.log("Event API response:", eventData); // Debug API response
 
-    setImage(null);
-    setPreviewImage(event.poster_s3_bucket_link || null);
-    onEditOpen();
-  }, [setFormData, setImage, setPreviewImage, onEditOpen]);
+      const location = eventData.location || {};
+      const locality = location.locality || {};
+      const district = locality.district || {};
+      const city = district.city || {};
+      const province = city.province || {};
+
+      // Map eventData fields, accounting for possible API field name variations
+      const newFormData = {
+        event_name: eventData.event_name || eventData.name || event.name || "",
+        event_mandarin_name: eventData.event_mandarin_name || event.event_mandarin_name || "",
+        greg_occur_date: localDateTime,
+        greg_end_date: localEndDateTime,
+        provinceId: province.id ? province.id.toString() : "",
+        cityId: city.id ? city.id.toString() : "",
+        districtId: district.id ? district.id.toString() : "",
+        localityId: locality.id ? locality.id.toString() : "",
+        location_name: eventData.location?.location_name || event.location || "",
+        event_type: eventData.type === "Hari Besar" ? "Hari_Besar" : eventData.type || event.type || "Regular",
+        description: eventData.description || event.description || "",
+        lunar_sui_ci_year: eventData.lunar_sui_ci_year || event.lunar_sui_ci_year || "",
+        lunar_month: eventData.lunar_month || event.lunar_month || "",
+        lunar_day: eventData.lunar_day || event.lunar_day || "",
+        is_recurring: eventData.is_recurring ?? event.is_recurring ?? false,
+        poster_s3_bucket_link: eventData.poster_s3_bucket_link || event.poster_s3_bucket_link || null,
+      };
+
+      setFormData(newFormData);
+      console.log("FormData after set:", newFormData); // Debug formData
+
+      // Trigger fetches for dependent locations
+      if (province.id) {
+        queryClient.invalidateQueries(['cities', province.id.toString()]);
+      }
+      if (city.id) {
+        queryClient.invalidateQueries(['districts', city.id.toString()]);
+      }
+      if (district.id) {
+        queryClient.invalidateQueries(['localities', district.id.toString()]);
+      }
+
+      setImage(null);
+      setPreviewImage(eventData.poster_s3_bucket_link || event.poster_s3_bucket_link || null);
+      onEditOpen();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal memuat detail kegiatan untuk pengeditan.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      console.error("Error in handleEdit:", error);
+    }
+  }, [setFormData, setImage, setPreviewImage, onEditOpen, queryClient, toast]);
 
   const handleDelete = useCallback((event) => {
     setSelectedEvent(event);
