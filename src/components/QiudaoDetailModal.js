@@ -10,15 +10,14 @@ import {
     Text,
     Button,
     Box,
-    Collapse,
-    IconButton,
     Flex,
     useDisclosure,
     Spinner,
+    IconButton,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { axiosInstance } from "@/lib/axios";
-import { FiEdit, FiTrash2, FiX } from "react-icons/fi";
+import { FiEdit, FiX } from "react-icons/fi";
 import { useRouter } from "next/router";
 import { useToast } from "@chakra-ui/react";
 
@@ -26,12 +25,8 @@ export default function QiudaoDetailModal({
     isOpen,
     onClose,
     selectedQiudao,
-    isEditing,
-    setIsEditing,
-    formData,
-    setFormData,
-    handleSave,
     handleDelete,
+    canEdit,
 }) {
     const [dianChuanList, setDianChuanList] = useState([]);
     const [templeLocations, setTempleLocations] = useState([]);
@@ -44,15 +39,15 @@ export default function QiudaoDetailModal({
     const [qiudaoIdToDelete, setQiudaoIdToDelete] = useState(null);
 
     useEffect(() => {
-    if (isOpen) {
-        console.log("Selected Qiudao:", selectedQiudao);
-        setIsLoading(true);
-        Promise.all([
-            axiosInstance.get("/dianchuanshi").then(res => setDianChuanList(res.data)).catch(err => console.error("Gagal ambil Dian Chuan Shi:", err)),
-            axiosInstance.get("/fotang").then(res => setTempleLocations(res.data || [])).catch(err => console.error("Gagal ambil lokasi vihara:", err)),
-        ]).finally(() => setIsLoading(false));
-    }
-}, [isOpen, selectedQiudao]);
+        if (isOpen) {
+            console.log("Selected Qiudao:", selectedQiudao);
+            setIsLoading(true);
+            Promise.all([
+                axiosInstance.get("/dianchuanshi").then(res => setDianChuanList(res.data)).catch(err => console.error("Gagal ambil Dian Chuan Shi:", err)),
+                axiosInstance.get("/fotang").then(res => setTempleLocations(res.data || [])).catch(err => console.error("Gagal ambil lokasi vihara:", err)),
+            ]).finally(() => setIsLoading(false));
+        }
+    }, [isOpen, selectedQiudao]);
 
     // Fungsi untuk menangani konfirmasi hapus
     const handleConfirmDelete = async () => {
@@ -95,35 +90,22 @@ export default function QiudaoDetailModal({
                     <Flex align="center" justify="space-between" w="100%">
                         <Text>Detail Qiudao</Text>
                         <Flex align="center">
-                            {!isEditing && (
-                                <>
-                                    <IconButton
-                                        icon={<FiEdit />}
-                                        aria-label="Edit"
-                                        variant="solid"
-                                        colorScheme="blue"
-                                        onClick={() => {
-                                            router.push({
-                                                pathname: "/qiudao/editQiudao",
-                                                query: { qiuDaoId: selectedQiudao.qiu_dao_id },
-                                            });
-                                        }}
-                                        size="sm"
-                                        mr={2}
-                                    />
-                                    <IconButton
-                                        icon={<FiTrash2 />}
-                                        aria-label="Delete"
-                                        variant="solid"
-                                        colorScheme="red"
-                                        onClick={() => {
-                                            setQiudaoIdToDelete(selectedQiudao.qiu_dao_id);
-                                            onConfirmOpen();
-                                        }}
-                                        size="sm"
-                                        mr={2}
-                                    />
-                                </>
+                            {canEdit && (
+                                <Button
+                                    aria-label="Edit"
+                                    variant="solid"
+                                    colorScheme="blue"
+                                    onClick={() => {
+                                        router.push({
+                                            pathname: "/qiudao/editQiudao",
+                                            query: { qiuDaoId: selectedQiudao.qiu_dao_id },
+                                        });
+                                    }}
+                                    size="sm"
+                                    mr={2}
+                                >
+                                    Edit
+                                </Button>
                             )}
                             <IconButton
                                 icon={<FiX />}
@@ -195,25 +177,6 @@ export default function QiudaoDetailModal({
                     )}
                 </ModalBody>
                 <ModalFooter w="100%">
-                    <Box w="100%">
-                        {isEditing ? (
-                            <Box display="flex" gap={4}>
-                                <Button
-                                    colorScheme="gray"
-                                    flex="1"
-                                    onClick={() => {
-                                        setIsEditing(false);
-                                        setFormData(selectedQiudao);
-                                    }}
-                                >
-                                    Batal
-                                </Button>
-                                <Button colorScheme="blue" flex="1" onClick={handleSave}>
-                                    Simpan
-                                </Button>
-                            </Box>
-                        ) : null}
-                    </Box>
                 </ModalFooter>
             </ModalContent>
 

@@ -217,7 +217,7 @@ export default function Dashboard() {
                   <Text>Tidak ada data umat per provinsi untuk wilayah ini</Text>
                 )}
               </ChartCard>
-              <ChartCard title={`Total Umat Wilayah ${selectedArea.replace("Korwil_", "")}`}>
+              <ChartCard title={`Total Umat Aktif Wilayah ${selectedArea.replace("Korwil_", "")}`}>
                 {stats?.userUmatByGender?.some((entry) => entry.value > 0) ? (
                   <PieChart width={300} height={300}>
                     <Pie

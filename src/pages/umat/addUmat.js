@@ -574,7 +574,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed} isRequired>
                                 <FormLabel>Status Pernikahan</FormLabel>
                                 <Select name="marital_status" value={values.marital_status} onChange={handleChange} w="100%" placeholder="Pilihan">
                                 <option value="Not_Married">Belum menikah</option>
@@ -582,7 +582,7 @@ export default function AddUmatPage() {
                                 </Select>
                             </FormControl>
 
-                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed} isRequired>
                                 <FormLabel>Pekerjaan</FormLabel>
                                 <Select
                                     name="job_name"
@@ -605,7 +605,7 @@ export default function AddUmatPage() {
                         </HStack>
 
                         <HStack spacing={4} w="100%">
-                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed} isRequired>
                                 <FormLabel>Pendidikan Terakhir</FormLabel>
                                 <Select
                                 name="last_education_level"
@@ -627,13 +627,13 @@ export default function AddUmatPage() {
                                 </Select>
                             </FormControl>
                             
-                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed}>
+                            <FormControl flex={1} isDisabled={!isQiuDaoConfirmed} isRequired>
                                 <FormLabel>Jurusan</FormLabel>
                                 <Input name="education_major" value={values.education_major} onChange={handleChange} placeholder="Masukkan jurusan pendidikan"/>
                             </FormControl>
                         </HStack>
 
-                        <FormControl w="100%" isDisabled={!isQiuDaoConfirmed}>
+                        <FormControl w="100%" isDisabled={!isQiuDaoConfirmed} isRequired>
                             <FormLabel>Tempat Lahir</FormLabel>
                             <Input name="place_of_birth" value={values.place_of_birth} onChange={handleChange} placeholder="Masukkan tempat lahir"/>
                             {touched.place_of_birth && errors.place_of_birth && (

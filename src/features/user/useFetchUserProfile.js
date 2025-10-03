@@ -1,17 +1,18 @@
-// src/features/user/useFetchUserProfile.js
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
 
 export const useFetchUserProfile = (userId) => {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ["userProfile", userId],
     queryFn: async () => {
       if (!userId) {
         throw new Error("User ID tidak ditemukan");
       }
-      console.log("Fetching profile for userId:", userId); // Debug
+      console.log("Fetching profile for userId:", userId);
       const response = await axiosInstance.get(`/profile/user/${userId}`);
-      console.log("User profile API response:", response.data); // Debug
+      console.log("User profile API response:", response.data);
       return response.data;
     },
     enabled: !!userId,
@@ -23,6 +24,12 @@ export const useFetchUserProfile = (userId) => {
         status: error.response?.status,
         data: error.response?.data,
       });
+    },
+    // Tambahkan invalidasi cache saat queryKey berubah
+    onSettled: () => {
+      if (!userId) {
+        queryClient.invalidateQueries(["userProfile"]);
+      }
     },
   });
 };

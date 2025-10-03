@@ -19,6 +19,7 @@ import UserDetailModal from "@/components/UserDetailModal";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import { useRouter } from "next/router";
 import { jwtDecode } from "jwt-decode";
+import { useQueryClient } from "@tanstack/react-query";
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
   <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
@@ -142,22 +143,26 @@ export default function UmatPage() {
   const updateLocationMutation = useUpdateLocation();
   const router = useRouter();
   const fileInputRef = useRef(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const id = localStorage.getItem("userId");
+      // Bersihkan cache React Query untuk memastikan tidak ada data lama
+      queryClient.invalidateQueries(["userProfile"]);
+      queryClient.invalidateQueries(["users"]);
+
       const token = localStorage.getItem("token");
+      const storedUserId = localStorage.getItem("userId");
       const storedRole = localStorage.getItem("role");
-      if (id && token) {
-        setUserId(parseInt(id));
-        setUserRole(storedRole || "User");
-        console.log("User ID, token, and role fetched:", { userId: id, token, role: storedRole });
-      } else if (token) {
+
+      if (token) {
         try {
           const decoded = jwtDecode(token);
           const decodedUserId = parseInt(decoded.user_info_id);
           const decodedRole = decoded.role || "User";
-          if (decodedUserId) {
+
+          if (decodedUserId && !isNaN(decodedUserId)) {
+            // Perbarui localStorage dengan userId dan role dari token
             localStorage.setItem("userId", decodedUserId.toString());
             localStorage.setItem("role", decodedRole);
             setUserId(decodedUserId);
@@ -173,6 +178,7 @@ export default function UmatPage() {
               duration: 3000,
               isClosable: true,
             });
+            router.push("/login");
           }
         } catch (error) {
           console.error("Failed to decode token:", error);
@@ -184,9 +190,10 @@ export default function UmatPage() {
             duration: 3000,
             isClosable: true,
           });
+          router.push("/login");
         }
       } else {
-        console.warn("Missing userId or token in localStorage", { userId: id, token });
+        console.warn("Missing token in localStorage", { userId: storedUserId, token });
         toast({
           id: "auth-error",
           title: "Autentikasi Gagal",
@@ -198,7 +205,7 @@ export default function UmatPage() {
         router.push("/login");
       }
     }
-  }, [toast, router]);
+  }, [toast, router, queryClient]);
 
   useEffect(() => {
     if (userProfile?.role) {
