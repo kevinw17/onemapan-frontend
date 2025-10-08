@@ -1,21 +1,35 @@
 import Layout from "@/components/layout";
-import { Box, Heading, Text, Stat, StatLabel, StatNumber, SimpleGrid, VStack, Select, Flex } from "@chakra-ui/react";
+import {
+  Box,
+  Heading,
+  Text,
+  Stat,
+  StatLabel,
+  StatNumber,
+  SimpleGrid,
+  VStack,
+  Select,
+  Flex,
+} from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import { Line } from "react-chartjs-2";
 import { useDashboardData } from "@/features/dashboard/useDashboardData";
 import { AREA_OPTIONS } from "@/features/dashboard/dashboardConstants";
+import { jwtDecode } from "jwt-decode";
+import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
+import { useRouter } from "next/router";
+import { useToast } from "@chakra-ui/react";
 
 Chart.register(ChartDataLabels);
 
 const COLORS = ["#160ee7ff", "#e331c8ff"];
 
 const StatCard = ({ label, value }) => (
-  <Box bg="blue.100" borderRadius={16}>
-    <Stat textAlign="center" py={2}>
+  <Box bg="blue.100" borderRadius={16} p={2}>
+    <Stat textAlign="center">
       <StatLabel>{label}</StatLabel>
       <StatNumber>{Math.round(value || 0)}</StatNumber>
     </Stat>
@@ -23,14 +37,22 @@ const StatCard = ({ label, value }) => (
 );
 
 const ChartCard = ({ title, children }) => (
-  <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
+  <Box
+    bg="gray.100"
+    borderRadius={16}
+    p={4}
+    display="flex"
+    flexDirection="column"
+    alignItems="center"
+    width="100%"
+  >
     <Text fontWeight="bold" mb={4}>{title}</Text>
     {children}
   </Box>
 );
 
 const EventTileContent = ({ date, events }) => {
-  const formattedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const formattedDate = new Date(date);
   const eventsOnDate = events
     .filter((event) => {
       const eventDate = new Date(event.date);
@@ -56,27 +78,134 @@ const EventTileContent = ({ date, events }) => {
 export default function Dashboard() {
   const [username, setUsername] = useState("");
   const [selectedArea, setSelectedArea] = useState("Nasional");
+  const [userId, setUserId] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [userArea, setUserArea] = useState(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
   const { data: stats, isLoading, error } = useDashboardData(selectedArea);
+  const router = useRouter();
+  const toast = useToast();
 
+  // Load userId from token
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        setUsername(JSON.parse(userStr).username);
-      } catch (e) {
-        console.error("Gagal parsing user:", e);
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          const decodedUserId = parseInt(decoded.user_info_id);
+          if (decodedUserId && !isNaN(decodedUserId)) {
+            setUserId(decodedUserId);
+            console.log("DEBUG: Decoded userId:", decodedUserId);
+          } else {
+            throw new Error("Invalid user_info_id in token");
+          }
+        } catch (err) {
+          console.error("Failed to decode token:", err);
+          toast({
+            title: "Gagal memproses token",
+            description: "Token tidak valid atau tidak dapat diproses.",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+          router.push("/login");
+        }
+      } else {
+        toast({
+          title: "Autentikasi Gagal",
+          description: "Silakan login kembali.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        router.push("/login");
+      }
+      setIsUserLoaded(true);
+    }
+  }, [toast, router]);
+
+  // Fetch user profile
+  const { data: userProfile, isLoading: isProfileLoading, error: profileError } =
+    useFetchUserProfile(userId);
+
+  // Set role and area from profile
+  useEffect(() => {
+    if (userProfile) {
+      setUserRole(userProfile.role?.toLowerCase() || "user");
+      setUserArea(userProfile.qiudao?.qiu_dao_location?.area || null);
+      setUsername(userProfile.username || userProfile.full_name || "");
+      console.log("DEBUG: User Profile:", {
+        userId,
+        role: userProfile.role,
+        userArea: userProfile.qiudao?.qiu_dao_location?.area,
+        username: userProfile.username || userProfile.full_name,
+      });
+    }
+  }, [userProfile, userId]);
+
+  // Handle profile error
+  useEffect(() => {
+    if (profileError) {
+      console.error("Profile fetch error:", profileError);
+      toast({
+        title: "Gagal memuat profil pengguna",
+        description:
+          profileError?.message ||
+          "Terjadi kesalahan saat memuat data profil. Silakan login kembali.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      router.push("/login");
+    }
+  }, [profileError, toast, router]);
+
+  // Automatically set selectedArea based on role
+  useEffect(() => {
+    if (userRole && isUserLoaded) {
+      if (userRole === "user" || userRole === "admin") {
+        if (userArea && AREA_OPTIONS.some((opt) => opt.value === userArea)) {
+          setSelectedArea(userArea);
+          console.log("DEBUG: Set selectedArea to userArea:", userArea);
+        } else {
+          toast({
+            title: "Wilayah Tidak Valid",
+            description:
+              "Wilayah Anda tidak ditemukan. Menampilkan data Nasional sebagai fallback.",
+            status: "warning",
+            duration: 3000,
+            isClosable: true,
+          });
+          setSelectedArea("Nasional");
+        }
+      } else if (userRole === "super admin") {
+        setSelectedArea("Nasional");
+        console.log("DEBUG: Set selectedArea to Nasional for super admin");
       }
     }
-  }, []);
+  }, [userRole, userArea, isUserLoaded, toast]);
+
+  // Debug stats data
+  useEffect(() => {
+    if (stats) {
+      console.log("DEBUG: Dashboard Stats Data:", JSON.stringify(stats, null, 2));
+    }
+  }, [stats]);
 
   const barData = {
-    labels: stats?.qiudaoUmatByKorwil?.map((item) => {
-      const areaOption = AREA_OPTIONS.find((opt) => opt.value === item.korwil);
-      return areaOption ? areaOption.label : item.korwil;
-    }) || [],
+    labels: selectedArea === "Nasional" 
+      ? (stats?.qiudaoUmatByKorwil?.map((item) => 
+          item.korwil.startsWith("Korwil_") 
+            ? `Wilayah ${item.korwil.replace("Korwil_", "")}` 
+            : item.korwil
+        ) || []) 
+      : (stats?.qiudaoUmatByProvince?.map((item) => item.province) || []),
     datasets: [
       {
-        data: stats?.qiudaoUmatByKorwil?.map((item) => Math.round(item.umat) || 0) || [],
+        data: selectedArea === "Nasional"
+          ? (stats?.qiudaoUmatByKorwil?.map((item) => Math.round(item.umat) || 0) || [])
+          : (stats?.qiudaoUmatByProvince?.map((item) => Math.round(item.umat) || 0) || []),
         backgroundColor: "#216ceeff",
         borderColor: "#216ceeff",
         borderWidth: 1,
@@ -101,154 +230,126 @@ export default function Dashboard() {
     },
     scales: {
       x: { grid: { display: false } },
-      y: { beginAtZero: true, ticks: { callback: (value) => Math.round(value), stepSize: 1 }, grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        ticks: { callback: (value) => Math.round(value), stepSize: 1 },
+        grid: { display: false },
+      },
     },
     animation: false,
   };
 
-  const provinceBarData = {
-    labels: stats?.qiudaoUmatByProvince?.map((item) => item.province) || [],
-    datasets: [
-      {
-        data: stats?.qiudaoUmatByProvince?.map((item) => Math.round(item.umat) || 0) || [],
-        backgroundColor: "#216ceeff",
-        borderColor: "#216ceeff",
-        borderWidth: 1,
-      },
-    ],
-  };
+  const pieData = stats?.userUmatByGender?.map((entry) => ({
+    name: entry.gender || "Unknown",
+    value: Math.round(entry.value) || 0,
+  })) || [];
 
-  const provinceBarOptions = {
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { enabled: false },
-      datalabels: {
-        display: true,
-        color: "#fff",
-        anchor: "end",
-        align: "top",
-        offset: -25,
-        font: { size: 14, weight: "bold" },
-        formatter: (value) => Math.round(value) || 0,
-      },
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: { beginAtZero: true, ticks: { callback: (value) => Math.round(value), stepSize: 1 }, grid: { display: false } },
-    },
-    animation: false,
-  };
+  if (!isUserLoaded || isProfileLoading) {
+    return (
+      <VStack h="100vh" justify="center">
+        <Text>Loading user data...</Text>
+      </VStack>
+    );
+  }
 
-  const lineData = {
-    labels: Array.isArray(stats?.activeUsersByMonth) ? stats.activeUsersByMonth.map((item) => item.month) : [],
-    datasets: [
-      {
-        label: "Umat Aktif",
-        data: Array.isArray(stats?.activeUsersByMonth) ? stats.activeUsersByMonth.map((item) => item.count) : [],
-        fill: false,
-        borderColor: "#216ceeff",
-        tension: 0.1,
-      },
-    ],
-  };
+  if (isLoading) {
+    return (
+      <VStack h="100vh" justify="center">
+        <Text>Loading dashboard...</Text>
+      </VStack>
+    );
+  }
 
-  const lineOptions = {
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: true },
-      tooltip: { enabled: true, callbacks: { label: (tooltipItem) => Math.round(tooltipItem.raw) } },
-    },
-    scales: {
-      x: { title: { display: true, text: "Bulan" } },
-      y: { beginAtZero: true, title: { display: true, text: "Jumlah Umat Aktif" }, ticks: { callback: (value) => Math.round(value), stepSize: 1 } },
-    },
-  };
+  if (error) {
+    return (
+      <VStack h="100vh" justify="center">
+        <Text>Error loading data: {error.message}</Text>
+      </VStack>
+    );
+  }
 
-  if (isLoading) return <VStack h="100vh" justify="center"><Text>Loading...</Text></VStack>;
-  if (error) return <VStack h="100vh" justify="center"><Text>Error loading data: {error.message}</Text></VStack>;
+  const areaLabel = AREA_OPTIONS.find((opt) => opt.value === selectedArea)?.label || selectedArea;
 
   return (
-    <Layout title="Dashboard" showCalendar={true} tileContent={(props) => <EventTileContent {...props} events={stats?.events || []} />}>
-      <VStack spacing={6} align="stretch" p={2}>
+    <Layout
+      title="Dashboard"
+      showCalendar={true}
+      tileContent={(props) => <EventTileContent {...props} events={stats?.events || []} />}
+    >
+      <VStack spacing={6} align="stretch" p={4}>
         <Flex align="center" justify="space-between" mb={4}>
           <Box>
-            <Heading size="lg" mb={2}>Halo, {username}</Heading>
+            <Heading size="lg" mb={2}>
+              Halo, {username || "User"}
+            </Heading>
             <Text fontSize="md">Dapatkan gambaran lengkap komunitas dalam sekejap.</Text>
           </Box>
-          <Select value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} width="200px">
-            {AREA_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </Select>
+          {userRole === "super admin" ? (
+            <Select
+              value={selectedArea}
+              onChange={(e) => setSelectedArea(e.target.value)}
+              width="200px"
+            >
+              {AREA_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Text fontWeight="bold" width="200px" textAlign="right">
+              {areaLabel}
+            </Text>
+          )}
         </Flex>
 
-        <SimpleGrid columns={{ base: 1, md: 3, lg: 3 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
           <StatCard label="Total Vihara" value={stats?.totalVihara} />
           <StatCard label="Total FY,TZ,DCS" value={stats?.totalFYTZDCS} />
           <StatCard label="Total Biarawan/Biarawati" value={stats?.totalMonksNuns} />
         </SimpleGrid>
 
-        <SimpleGrid columns={{ base: 1, md: selectedArea === "Nasional" ? 2 : 2 }} spacing={6}>
-          {selectedArea === "Nasional" && stats?.qiudaoUmatByKorwil?.length > 0 && (
-            <ChartCard title="Total Umat per Wilayah">
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+          <ChartCard
+            title={selectedArea === "Nasional" 
+              ? "Total Umat per Wilayah" 
+              : `Total Umat per Provinsi Wilayah ${areaLabel.replace("Korwil ", "")}`}
+          >
+            {(selectedArea === "Nasional" ? stats?.qiudaoUmatByKorwil?.length > 0 : stats?.qiudaoUmatByProvince?.length > 0) &&
+             (selectedArea === "Nasional" ? stats.qiudaoUmatByKorwil?.some((item) => item.umat > 0) : stats.qiudaoUmatByProvince?.some((item) => item.umat > 0)) ? (
               <Box width="100%" height="300px">
                 <Bar data={barData} options={barOptions} />
               </Box>
-            </ChartCard>
-          )}
-          {selectedArea === "Nasional" ? (
-            <ChartCard title="Umat Aktif">
-              <Stat textAlign="center" mb={4}>
-                <StatNumber>{Math.round(stats?.totalActiveUsers || 0)}</StatNumber>
-              </Stat>
-              <Box width="100%" height="250px">
-                <Line data={lineData} options={lineOptions} />
-              </Box>
-            </ChartCard>
-          ) : (
-            <>
-              <ChartCard title={`Total Umat per Provinsi Wilayah ${selectedArea.replace("Korwil_", "")}`}>
-                {stats?.qiudaoUmatByProvince?.length > 0 ? (
-                  <Box width="100%" height="300px">
-                    <Bar data={provinceBarData} options={provinceBarOptions} />
-                  </Box>
-                ) : (
-                  <Text>Tidak ada data umat per provinsi untuk wilayah ini</Text>
-                )}
-              </ChartCard>
-              <ChartCard title={`Total Umat Aktif Wilayah ${selectedArea.replace("Korwil_", "")}`}>
-                {stats?.userUmatByGender?.some((entry) => entry.value > 0) ? (
-                  <PieChart width={300} height={300}>
-                    <Pie
-                      data={stats.userUmatByGender}
-                      dataKey="value"
-                      nameKey="gender"
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ value }) => Math.round(value)}
-                    >
-                      {stats.userUmatByGender.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => Math.round(value)} />
-                    <Legend />
-                  </PieChart>
-                ) : (
-                  <Text>Tidak ada data umat untuk wilayah ini</Text>
-                )}
-              </ChartCard>
-            </>
-          )}
+            ) : (
+              <Text>Tidak ada data umat untuk {areaLabel}</Text>
+            )}
+          </ChartCard>
+          <ChartCard
+            title={`Total Umat Aktif${selectedArea === "Nasional" ? "" : ` Wilayah ${areaLabel.replace("Korwil ", "")}`}`}
+          >
+            {pieData.some((entry) => entry.value > 0) ? (
+              <PieChart width={300} height={300}>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ value }) => (value > 0 ? Math.round(value) : "")}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => Math.round(value)} />
+                <Legend />
+              </PieChart>
+            ) : (
+              <Text>Tidak ada data umat aktif untuk {areaLabel}</Text>
+            )}
+          </ChartCard>
         </SimpleGrid>
-
-        <Box>
-          <Text fontSize="sm" color="gray.500">
-            Update terakhir: {stats?.lastUpdated || "N/A"}
-          </Text>
-        </Box>
       </VStack>
     </Layout>
   );
