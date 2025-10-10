@@ -1,3 +1,4 @@
+// src/pages/qiudao.js
 import Layout from "../components/layout";
 import {
   Table,
@@ -123,26 +124,22 @@ export default function QiudaoPage() {
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
 
-  // Flag untuk cek bukan scope "self"
   const isNotSelfScope = userScope !== "self";
 
-  // Load user data dari localStorage hanya untuk mendapatkan userId
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
       if (token) {
         try {
           const decoded = jwtDecode(token);
-          console.log("DEBUG: Decoded token:", decoded);
+          console.log("DEBUG: Decoded JWT in qiudao.js:", decoded);
           const decodedUserId = parseInt(decoded.user_info_id);
-
-          if (decodedUserId && !isNaN(decodedUserId)) {
-            setUserId(decodedUserId);
-            localStorage.setItem("userId", decodedUserId.toString());
-            console.log("DEBUG: User ID from token:", { userId: decodedUserId });
-          } else {
-            throw new Error("Invalid user_info_id in token");
-          }
+          setUserId(decodedUserId);
+          setUserScope(decoded.scope);
+          setUserArea(decoded.area || null);
+          localStorage.setItem("userId", decodedUserId.toString());
+          localStorage.setItem("scope", decoded.scope);
+          localStorage.setItem("area", decoded.area || "");
         } catch (error) {
           console.error("Failed to decode token:", error);
           toast({
@@ -171,75 +168,34 @@ export default function QiudaoPage() {
     }
   }, [toast, router]);
 
-  // Fetch user profile dan determine scope from role
   const { data: userProfile, isLoading: isProfileLoading, error: profileError, refetch: refetchProfile } = useFetchUserProfile(userId);
 
-  // Determine scope from user profile role
-  const determinedScope = useMemo(() => {
-    if (!userProfile?.role) return null;
-    console.log("DEBUG: Determining scope from role:", userProfile.role);
-    switch (userProfile.role.toLowerCase()) {
-      case "user":
-        return "self";
-      case "admin":
-        return "wilayah";
-      case "super admin":
-        return "nasional";
-      default:
-        return "self";
-    }
-  }, [userProfile?.role]);
-
-  // Update userScope and column visibility when profile loads
   useEffect(() => {
-    if (determinedScope) {
-      setUserScope(determinedScope);
-      localStorage.setItem("scope", determinedScope);
-      console.log("DEBUG: Set userScope from profile:", determinedScope);
-      // Set column visibility based on scope
-      if (determinedScope === "self") {
-        setColumnVisibility({
-          qiu_dao_id: true,
-          qiu_dao_name: true,
-          qiu_dao_mandarin_name: false,
-          location_name: true,
-          location_mandarin_name: false,
-          dian_chuan_shi_name: true,
-          dian_chuan_shi_mandarin_name: false,
-          yin_shi_qd_name: true,
-          yin_shi_qd_mandarin_name: false,
-          bao_shi_qd_name: true,
-          bao_shi_qd_mandarin_name: false,
-          date: true,
-        });
-      } else {
-        setColumnVisibility({
-          qiu_dao_id: true,
-          qiu_dao_name: true,
-          qiu_dao_mandarin_name: true,
-          location_name: true,
-          location_mandarin_name: true,
-          dian_chuan_shi_name: true,
-          dian_chuan_shi_mandarin_name: true,
-          yin_shi_qd_name: true,
-          yin_shi_qd_mandarin_name: true,
-          bao_shi_qd_name: true,
-          bao_shi_qd_mandarin_name: true,
-          date: true,
-        });
-      }
-    }
-    console.log("DEBUG: Full userProfile:", userProfile);
     if (userProfile?.area) {
       setUserArea(userProfile.area);
       localStorage.setItem("area", userProfile.area);
       console.log("DEBUG: Set userArea from profile:", userProfile.area);
-    } else if (determinedScope === "wilayah") {
+    } else if (userScope === "wilayah") {
       console.warn("DEBUG: userProfile.area is missing:", userProfile);
     }
-  }, [determinedScope, userProfile, toast, router]);
+    if (userScope) {
+      setColumnVisibility({
+        qiu_dao_id: true,
+        qiu_dao_name: true,
+        qiu_dao_mandarin_name: userScope !== "self",
+        location_name: true,
+        location_mandarin_name: userScope !== "self",
+        dian_chuan_shi_name: true,
+        dian_chuan_shi_mandarin_name: userScope !== "self",
+        yin_shi_qd_name: true,
+        yin_shi_qd_mandarin_name: userScope !== "self",
+        bao_shi_qd_name: true,
+        bao_shi_qd_mandarin_name: userScope !== "self",
+        date: true,
+      });
+    }
+  }, [userProfile, userScope]);
 
-  // Invalidate queries and refetch profile on mount
   useEffect(() => {
     if (userId && typeof window !== "undefined") {
       queryClient.invalidateQueries(["userProfile"]);
@@ -264,7 +220,6 @@ export default function QiudaoPage() {
     }
   }, [profileError, lastError, toast, router]);
 
-  // Params untuk fetch, sesuaikan dengan scope
   const fetchParams = useMemo(() => {
     const params = {
       page: isNotSelfScope ? page : undefined,
@@ -278,7 +233,6 @@ export default function QiudaoPage() {
     return params;
   }, [page, limit, searchQuery, searchField, userScope, userArea, userId, isNotSelfScope]);
 
-  // Fetch qiudao data
   const { data: qiudaos, isLoading, error, refetch: refetchQiudaos } = useFetchQiudaos(fetchParams);
   const qiudaosList = useMemo(() => {
     const rawQiudaos = qiudaos?.data || [];
@@ -296,26 +250,23 @@ export default function QiudaoPage() {
   const total = isNotSelfScope ? qiudaos?.total || 0 : qiudaosList.length;
   const totalPages = isNotSelfScope ? Math.max(1, Math.ceil(total / limit)) : 1;
 
-  // Handle error 403 atau lainnya
   useEffect(() => {
     if (error && error.message !== lastError) {
       console.error("Qiudao fetch error:", error);
       toast({
         id: `fetch-error-${error?.message || "unknown"}`,
         title: "Gagal memuat data Qiudao",
-        description: error?.message || "Terjadi kesalahan saat memuat data.",
+        description: error?.response?.status === 403
+          ? "Akses ditolak: Anda tidak memiliki izin untuk melihat data ini."
+          : error?.message || "Terjadi kesalahan saat memuat data.",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
       setLastError(error?.message || null);
-      if (error?.response?.status === 403) {
-        router.push("/login");
-      }
     }
-  }, [error, lastError, toast, router]);
+  }, [error, lastError, toast]);
 
-  // Handle row click dengan validasi scope
   const handleRowClick = (qiudao) => {
     console.log("DEBUG: handleRowClick:", {
       userScope,
