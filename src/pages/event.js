@@ -14,7 +14,7 @@ import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, addDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, addDays, isValid } from "date-fns";
 import { useDeleteEvent } from "@/features/event/useDeleteEvent";
 import { useEventForm } from "@/features/event/useEventForm";
 import { useEventFilter } from "@/features/event/useEventFilter";
@@ -672,7 +672,13 @@ export default function Event() {
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const { isOpen: isDateRangeOpen, onOpen: onDateRangeOpen, onClose: onDateRangeClose } = useDisclosure();
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    return {
+      startDate: startOfMonth(today),
+      endDate: endOfMonth(today),
+    };
+  });
   const [userArea, setUserArea] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const queryClient = useQueryClient();
@@ -692,7 +698,6 @@ export default function Event() {
     }
   }, []);
 
-  // Filter jangkauanOptions based on userArea
   const filteredJangkauanOptions = useMemo(() => {
     if (userRole === "Super Admin") {
       return jangkauanOptions;
@@ -747,24 +752,82 @@ export default function Event() {
   const { data: provinces = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const { data: cities = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId);
   const { data: districts = [], isLoading: isDistrictsLoading } = useFetchDistricts(formData.cityId);
-  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.districtId);
+  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.localityId);
 
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     event_type: eventTypeFilter,
     provinceId: provinceFilter,
     area: jangkauanFilter,
-    startDate: dateRange.startDate ? format(dateRange.startDate, "yyyy-MM-dd") : undefined,
-    endDate: dateRange.endDate ? format(dateRange.endDate, "yyyy-MM-dd") : undefined,
+    startDate: format(dateRange.startDate, "yyyy-MM-dd"),
+    endDate: format(dateRange.endDate, "yyyy-MM-dd"),
   });
 
+  // Sort events by greg_occur_date and filter by dateRange
+  const sortedEvents = useMemo(() => {
+    console.log("DEBUG: Raw events before processing:", events.map(e => ({
+      id: e.id,
+      name: e.name,
+      rawDate: e.rawDate,
+      date: e.date,
+      is_recurring: e.is_recurring,
+    })));
+    const filtered = events.filter(event => {
+      if (!event.rawDate) {
+        console.warn("Missing rawDate for event:", event);
+        return false;
+      }
+      const eventDate = new Date(event.rawDate);
+      if (!isValid(eventDate)) {
+        console.warn("Invalid rawDate for event:", event);
+        return false;
+      }
+      const inRange = eventDate >= dateRange.startDate && eventDate <= dateRange.endDate;
+      if (!inRange) {
+        console.log("Event filtered out due to date range:", {
+          eventId: event.id,
+          eventName: event.name,
+          eventDate: event.rawDate,
+          startDate: format(dateRange.startDate, "yyyy-MM-dd"),
+          endDate: format(dateRange.endDate, "yyyy-MM-dd"),
+        });
+      }
+      return inRange;
+    });
+    const sorted = filtered.sort((a, b) => {
+      const dateA = new Date(a.rawDate);
+      const dateB = new Date(b.rawDate);
+      if (!isValid(dateA) || !isValid(dateB)) {
+        console.warn("Invalid date comparison:", { a: a.rawDate, b: b.rawDate });
+        return 0;
+      }
+      return dateA - dateB;
+    });
+    console.log("DEBUG: Sorted and filtered events:", sorted.map(e => ({
+      id: e.id,
+      name: e.name,
+      rawDate: e.rawDate,
+      date: e.date,
+    })));
+    return sorted;
+  }, [events, dateRange.startDate, dateRange.endDate]);
+
   // Ensure events are valid before passing to Layout
-  const validEvents = events.filter(event => 
+  const validEvents = sortedEvents.filter(event => 
     event && 
     event.id && 
     event.date && 
     event.day && 
     event.name
   );
+
+  // Refetch events when dateRange or filters change
+  useEffect(() => {
+    console.log("DEBUG: dateRange changed:", {
+      startDate: format(dateRange.startDate, "yyyy-MM-dd"),
+      endDate: format(dateRange.endDate, "yyyy-MM-dd"),
+    });
+    refetch();
+  }, [dateRange, eventTypeFilter, provinceFilter, jangkauanFilter, refetch]);
 
   useEffect(() => {
     if (error) {

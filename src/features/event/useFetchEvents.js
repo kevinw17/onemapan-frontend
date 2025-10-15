@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 
 export const useFetchEvents = ({
   event_type = [],
@@ -34,10 +35,11 @@ export const useFetchEvents = ({
     const params = {
       event_type: event_type.length ? event_type.join(",") : undefined,
       provinceId: provinceId.length ? provinceId.join(",") : undefined,
-      area: area.length ? area.map(a => a === "nasional" ? "null" : a).join(",") : undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
+      area: area.length ? area.join(",") : undefined,
+      startDate: startDate ? format(new Date(startDate), "yyyy-MM-dd") : undefined,
+      endDate: endDate ? format(new Date(endDate), "yyyy-MM-dd") : undefined,
     };
+    console.log("DEBUG: useFetchEvents params:", params);
     return params;
   }, [event_type, provinceId, area, startDate, endDate]);
 
@@ -50,6 +52,8 @@ export const useFetchEvents = ({
         console.error("Error fetching events:", error.response?.data || error.message);
         return { data: [] };
       });
+
+      console.log("DEBUG: useFetchEvents response:", response.data);
 
       if (!response.data || !Array.isArray(response.data)) {
         console.warn("No events returned from API");
@@ -166,9 +170,11 @@ export const useFetchEvents = ({
             is_recurring: event.is_recurring || false,
             poster_s3_bucket_link: event.poster_s3_bucket_link || null,
             jangkauan: event.area === null ? "nasional" : event.area || "",
+            rawDate: occ.greg_occur_date,
+            rawEndDate: occ.greg_end_date || null,
           };
 
-          const requiredProps = ["id", "occurrence_id", "date", "day", "time", "name", "location", "type"];
+          const requiredProps = ["id", "occurrence_id", "date", "name"];
           const missingProps = requiredProps.filter((prop) => !eventData[prop]);
           if (missingProps.length > 0) {
             console.warn(
@@ -188,9 +194,9 @@ export const useFetchEvents = ({
       return flattenedEvents;
     },
     enabled: true,
-    keepPreviousData: true,
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    keepPreviousData: false,
+    staleTime: 0,
+    cacheTime: 0,
     retry: 1,
     refetchOnWindowFocus: false,
   });

@@ -1,4 +1,3 @@
-// features/event/useEventForm.js
 import { useState, useCallback } from "react";
 import { useToast } from "@chakra-ui/react";
 import { axiosInstance } from "@/lib/axios";
