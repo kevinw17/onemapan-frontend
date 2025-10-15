@@ -8,20 +8,21 @@ import {
 } from "@chakra-ui/react";
 import { FiEdit, FiTrash, FiPlus, FiFilter, FiMinus, FiPlus as FiPlusIcon, FiCalendar } from "react-icons/fi";
 import Layout from "@/components/layout";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, addDays } from "date-fns";
-import { useFetchEvents } from "@/features/event/useFetchEvents";
 import { useDeleteEvent } from "@/features/event/useDeleteEvent";
-import { useFetchProvinces, useFetchCities, useFetchDistricts, useFetchLocalities } from "@/features/location/useFetchLocations";
 import { useEventForm } from "@/features/event/useEventForm";
 import { useEventFilter } from "@/features/event/useEventFilter";
 import { useImageUpload } from "@/features/event/useImageUpload";
 import { axiosInstance } from "@/lib/axios";
+import { useFetchEvents } from "@/features/event/useFetchEvents";
+import { useFetchCities, useFetchDistricts, useFetchLocalities, useFetchProvinces } from "@/features/location/useFetchLocations";
+import { jwtDecode } from "jwt-decode";
 
 const lunarYears = ["乙巳年"];
 const lunarMonths = [
@@ -33,6 +34,15 @@ const lunarDays = [
   "二十一日", "二十二日", "二十三日", "二十四日", "二十五日", "二十六日", "二十七日", "二十八日", "二十九日", "三十日",
 ];
 const eventTypes = ["Regular", "Hari_Besar", "AdHoc", "Anniversary", "Peresmian", "Seasonal"];
+const jangkauanOptions = [
+  { value: "nasional", label: "Nasional" },
+  { value: "Korwil_1", label: "Wilayah 1" },
+  { value: "Korwil_2", label: "Wilayah 2" },
+  { value: "Korwil_3", label: "Wilayah 3" },
+  { value: "Korwil_4", label: "Wilayah 4" },
+  { value: "Korwil_5", label: "Wilayah 5" },
+  { value: "Korwil_6", label: "Wilayah 6" },
+];
 
 const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) => {
   const today = new Date();
@@ -229,13 +239,10 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
 };
 
 const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
-  const filteredEvents = events
-    .filter((event) => {
-      if (!dateRange.startDate || !dateRange.endDate) return true;
-      const eventDate = event.rawDate;
-      return eventDate >= dateRange.startDate && eventDate <= dateRange.endDate;
-    })
-    .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+  const getJangkauanLabel = (value) => {
+    const option = jangkauanOptions.find((opt) => opt.value === value);
+    return option ? option.label : "-";
+  };
 
   if (isLoading) {
     return (
@@ -254,7 +261,7 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
     );
   }
 
-  if (filteredEvents.length === 0) {
+  if (!events || events.length === 0) {
     return (
       <VStack h="70vh" justify="center" align="center">
         <Text fontSize="xl" textAlign="center">Tidak ada kegiatan untuk rentang tanggal ini</Text>
@@ -262,52 +269,65 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
     );
   }
 
-  return filteredEvents.map((event) => (
-    <Box
-      key={`${event.id}-${event.occurrence_id}`}
-      bg="white"
-      p={4}
-      mb={4}
-      borderRadius="md"
-      boxShadow="sm"
-      border="1px solid #e2e8f0"
-      onClick={() => onEventClick(event)}
-      cursor="pointer"
-      _hover={{ bg: "gray.50" }}
-    >
-      <Flex align="stretch" gap={4}>
-        <Box
-          bg="gray.100"
-          p={4}
-          borderRadius="md"
-          minWidth="80px"
-          display="flex"
-          flexDirection="column"
-          justifyContent="flex-start"
-        >
-          <Text fontWeight="bold" color="gray.600">{event.date}</Text>
-          <Text fontSize="sm" color="gray.500">{event.day}</Text>
-        </Box>
-        <Box flex="1">
-          <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">{event.time}</Text>
-          <Text mt={1}>{event.name}</Text>
-          <Text color="gray.500" mt={1}>{event.location || "Unknown Location"}</Text>
-          <Flex mt={2} align="center" gap={2}>
-            <Tag size="sm" colorScheme="blue" borderRadius="full">{event.type}</Tag>
-            {event.is_recurring && (
-              <Tag size="sm" colorScheme="green" borderRadius="full">Berulang</Tag>
-            )}
-          </Flex>
-        </Box>
-      </Flex>
-    </Box>
-  ));
+  return events.map((event, index) => {
+    // Validasi event sebelum render
+    if (!event || !event.id || !event.date || !event.day) {
+      console.warn(`Invalid event data at index ${index}:`, { event, timestamp: new Date().toISOString() });
+      return null;
+    }
+
+    return (
+      <Box
+        key={`${event.id}-${event.occurrence_id}`}
+        bg="white"
+        p={4}
+        mb={4}
+        borderRadius="md"
+        border="1px solid #e2e8f0"
+        onClick={() => onEventClick(event)}
+        cursor="pointer"
+        _hover={{ bg: "gray.50" }}
+      >
+        <Flex align="stretch" gap={4}>
+          <Box
+            bg="gray.100"
+            p={4}
+            borderRadius="md"
+            minWidth="80px"
+            display="flex"
+            flexDirection="column"
+            justifyContent="flex-start"
+          >
+            <Text fontWeight="bold" color="gray.600">{event.date || "Tanggal Tidak Tersedia"}</Text>
+            <Text fontSize="sm" color="gray.500">{event.day || "Hari Tidak Tersedia"}</Text>
+          </Box>
+          <Box flex="1">
+            <Text fontSize="lg" fontWeight="bold" color="#2e05e8ff">{event.time || "Waktu Tidak Tersedia"}</Text>
+            <Text mt={1}>{event.name || "Nama Tidak Tersedia"}</Text>
+            <Text color="gray.500" mt={1}>{event.location || "Unknown Location"}</Text>
+            <Flex mt={2} align="center" gap={2}>
+              <Tag size="sm" colorScheme="blue" borderRadius="full">{event.type || "Tipe Tidak Diketahui"}</Tag>
+              <Tag size="sm" colorScheme="purple" borderRadius="full">{getJangkauanLabel(event.jangkauan)}</Tag>
+              {event.is_recurring && (
+                <Tag size="sm" colorScheme="green" borderRadius="full">Berulang</Tag>
+              )}
+            </Flex>
+          </Box>
+        </Flex>
+      </Box>
+    );
+  }).filter((event) => event !== null);
 };
 
 const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl }) => {
   const toast = useToast();
+  const getJangkauanLabel = (value) => {
+    const option = jangkauanOptions.find((opt) => opt.value === value);
+    return option ? option.label : "-";
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
+    <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{event?.name || "Detail Kegiatan"}</ModalHeader>
@@ -317,7 +337,7 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl }
             <Box mb={4} display="flex" justifyContent="center">
               <Image
                 src={imageUrl}
-                alt={`Poster untuk ${event.name}`}
+                alt={`Poster untuk ${event.name || "Kegiatan"}`}
                 fallbackSrc="https://via.placeholder.com/400"
                 style={{
                   width: "auto",
@@ -330,7 +350,7 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl }
                 onError={() => {
                   toast({
                     title: "Gagal Memuat Gambar",
-                    description: `Tidak dapat memuat poster untuk ${event.name}.`,
+                    description: `Tidak dapat memuat poster untuk ${event.name || "kegiatan"}.`,
                     status: "warning",
                     duration: 3000,
                     isClosable: true,
@@ -339,13 +359,14 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl }
               />
             </Box>
           )}
-          <Text mb={2}><strong>Tanggal:</strong> {event?.day}, {event?.date}</Text>
-          <Text my={2}><strong>Tanggal Lunar:</strong> {event?.lunar_sui_ci_year} {event?.lunar_month} {event?.lunar_day}</Text>
-          <Text my={2}><strong>Waktu:</strong> {event?.time}</Text>
+          <Text mb={2}><strong>Tanggal:</strong> {event?.day || "Hari Tidak Tersedia"}, {event?.date || "Tanggal Tidak Tersedia"}</Text>
+          <Text my={2}><strong>Tanggal Lunar:</strong> {event?.lunar_sui_ci_year || "-"} {event?.lunar_month || "-"} {event?.lunar_day || "-"}</Text>
+          <Text my={2}><strong>Waktu:</strong> {event?.time || "Waktu Tidak Tersedia"}</Text>
           <Text my={2}><strong>Lokasi:</strong> {event?.location || "Unknown Location"}</Text>
-          <Text my={2}><strong>Jenis:</strong> {event?.type}</Text>
+          <Text my={2}><strong>Jenis:</strong> {event?.type || "Tipe Tidak Diketahui"}</Text>
+          <Text my={2}><strong>Jangkauan:</strong> {getJangkauanLabel(event?.jangkauan)}</Text>
           <Text my={2}><strong>Berulang:</strong> {event?.is_recurring ? "Ya" : "Tidak"}</Text>
-          <Text my={2}><strong>Deskripsi:</strong> {event?.description}</Text>
+          <Text my={2}><strong>Deskripsi:</strong> {event?.description || "Deskripsi Tidak Tersedia"}</Text>
         </ModalBody>
         <ModalFooter>
           <Flex w="100%" justifyContent="space-between">
@@ -389,7 +410,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Nama Kegiatan</FormLabel>
                   <Input
                     name="event_name"
-                    value={formData.event_name}
+                    value={formData.event_name || ""}
                     onChange={handleChange}
                     placeholder="Masukkan nama kegiatan"
                   />
@@ -398,7 +419,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Nama Kegiatan (Mandarin)</FormLabel>
                   <Input
                     name="event_mandarin_name"
-                    value={formData.event_mandarin_name}
+                    value={formData.event_mandarin_name || ""}
                     onChange={handleChange}
                     placeholder="Masukkan nama kegiatan (Mandarin)"
                   />
@@ -409,7 +430,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Tanggal dan Waktu Mulai</FormLabel>
                   <Input
                     name="greg_occur_date"
-                    value={formData.greg_occur_date}
+                    value={formData.greg_occur_date || ""}
                     onChange={handleChange}
                     type="datetime-local"
                     placeholder="Pilih tanggal dan waktu mulai"
@@ -419,7 +440,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Tanggal dan Waktu Selesai</FormLabel>
                   <Input
                     name="greg_end_date"
-                    value={formData.greg_end_date}
+                    value={formData.greg_end_date || ""}
                     onChange={handleChange}
                     type="datetime-local"
                     placeholder="Pilih tanggal dan waktu selesai (opsional)"
@@ -431,14 +452,14 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Nama Lokasi</FormLabel>
                   <Input
                     name="location_name"
-                    value={formData.location_name}
+                    value={formData.location_name || ""}
                     onChange={handleChange}
                     placeholder="Masukkan nama lokasi"
                   />
                 </FormControl>
                 <FormControl isRequired flex={1}>
                   <FormLabel>Jenis Kegiatan</FormLabel>
-                  <Select name="event_type" value={formData.event_type} onChange={handleChange}>
+                  <Select name="event_type" value={formData.event_type || "Regular"} onChange={handleChange}>
                     {eventTypes.map((type) => (
                       <option key={type} value={type}>{type === "Hari_Besar" ? "Hari Besar" : type}</option>
                     ))}
@@ -450,7 +471,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Provinsi</FormLabel>
                   <Select
                     name="provinceId"
-                    value={formData.provinceId}
+                    value={formData.provinceId || ""}
                     onChange={handleProvinceChange}
                     placeholder={isProvincesLoading ? "Memuat provinsi..." : "Pilih provinsi"}
                     isDisabled={isProvincesLoading}
@@ -464,7 +485,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Kota</FormLabel>
                   <Select
                     name="cityId"
-                    value={formData.cityId}
+                    value={formData.cityId || ""}
                     onChange={handleCityChange}
                     placeholder={isCitiesLoading ? "Memuat kota..." : formData.provinceId ? "Pilih kota" : "Pilih provinsi terlebih dahulu"}
                     isDisabled={isCitiesLoading || !formData.provinceId}
@@ -480,7 +501,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Kecamatan</FormLabel>
                   <Select
                     name="districtId"
-                    value={formData.districtId}
+                    value={formData.districtId || ""}
                     onChange={handleDistrictChange}
                     placeholder={isDistrictsLoading ? "Memuat kecamatan..." : formData.cityId ? "Pilih kecamatan" : "Pilih kota terlebih dahulu"}
                     isDisabled={isDistrictsLoading || !formData.cityId}
@@ -494,7 +515,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Kelurahan</FormLabel>
                   <Select
                     name="localityId"
-                    value={formData.localityId}
+                    value={formData.localityId || ""}
                     onChange={handleChange}
                     placeholder={isLocalitiesLoading ? "Memuat kelurahan..." : formData.districtId ? "Pilih kelurahan" : "Pilih kecamatan terlebih dahulu"}
                     isDisabled={isLocalitiesLoading || !formData.districtId}
@@ -505,12 +526,25 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   </Select>
                 </FormControl>
               </HStack>
+              <FormControl isRequired>
+                <FormLabel>Jangkauan</FormLabel>
+                <Select
+                  name="jangkauan"
+                  value={formData.jangkauan || ""}
+                  onChange={handleChange}
+                  placeholder="Pilih jangkauan"
+                >
+                  {jangkauanOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </Select>
+              </FormControl>
               <HStack spacing={4}>
                 <FormControl isRequired flex={1}>
                   <FormLabel>Tahun Lunar (Sui Ci)</FormLabel>
                   <Select
                     name="lunar_sui_ci_year"
-                    value={formData.lunar_sui_ci_year}
+                    value={formData.lunar_sui_ci_year || ""}
                     onChange={handleChange}
                     placeholder="Pilih tahun lunar"
                   >
@@ -523,7 +557,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Bulan Lunar</FormLabel>
                   <Select
                     name="lunar_month"
-                    value={formData.lunar_month}
+                    value={formData.lunar_month || ""}
                     onChange={handleChange}
                     placeholder="Pilih bulan lunar"
                   >
@@ -536,7 +570,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                   <FormLabel>Hari Lunar</FormLabel>
                   <Select
                     name="lunar_day"
-                    value={formData.lunar_day}
+                    value={formData.lunar_day || ""}
                     onChange={handleChange}
                     placeholder="Pilih hari lunar"
                   >
@@ -550,7 +584,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                 <FormLabel>Deskripsi</FormLabel>
                 <Textarea
                   name="description"
-                  value={formData.description}
+                  value={formData.description || ""}
                   onChange={handleChange}
                   placeholder="Masukkan deskripsi kegiatan"
                 />
@@ -578,7 +612,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                 <FormLabel>Apakah kegiatan ini berulang?</FormLabel>
                 <RadioGroup
                   name="is_recurring"
-                  value={formData.is_recurring.toString()}
+                  value={formData.is_recurring?.toString() || "false"}
                   onChange={handleIsRecurringChange}
                 >
                   <HStack spacing={4}>
@@ -608,13 +642,13 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
 };
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, eventName, isDeleting }) => (
-  <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
+  <Modal isOpen={isOpen} onClose={onClose} size="xl">
     <ModalOverlay />
     <ModalContent>
       <ModalHeader>Konfirmasi Hapus</ModalHeader>
       <ModalCloseButton />
       <ModalBody>
-        <Text>Apakah Anda yakin ingin menghapus kegiatan {eventName}?</Text>
+        <Text>Apakah Anda yakin ingin menghapus kegiatan {eventName || "ini"}?</Text>
       </ModalBody>
       <ModalFooter>
         <Button
@@ -639,9 +673,36 @@ export default function Event() {
   const { isOpen: isDateRangeOpen, onOpen: onDateRangeOpen, onClose: onDateRangeClose } = useDisclosure();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [dateRange, setDateRange] = useState({ startDate: null, endDate: null });
+  const [userArea, setUserArea] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const queryClient = useQueryClient();
 
-  const { formData, setFormData, isSubmitting, handleChange, handleIsRecurringChange, handleSubmit, handleUpdate, validateForm } = useEventForm({
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          setUserRole(decoded.role || null);
+          setUserArea(decoded.area === null ? "nasional" : decoded.area || null);
+        } catch (error) {
+          console.error("Failed to decode token:", error);
+        }
+      }
+    }
+  }, []);
+
+  // Filter jangkauanOptions based on userArea
+  const filteredJangkauanOptions = useMemo(() => {
+    if (userRole === "Super Admin") {
+      return jangkauanOptions;
+    }
+    return jangkauanOptions.filter(option => 
+      option.value === "nasional" || option.value === userArea
+    );
+  }, [userRole, userArea]);
+
+  const { formData, setFormData, isSubmitting, handleChange, handleIsRecurringChange, handleSubmit, handleUpdate } = useEventForm({
     onAddClose,
     onEditClose,
     selectedEvent,
@@ -663,14 +724,25 @@ export default function Event() {
         lunar_day: "",
         is_recurring: false,
         poster_s3_bucket_link: null,
+        jangkauan: "",
       });
       setImage(null);
       setPreviewImage(null);
     }
   });
+
   const deleteMutation = useDeleteEvent();
   const { image, setImage, previewImage, setPreviewImage, isImageLoaded, cropperRef, handleImageChange } = useImageUpload();
-  const { filterOpen, setFilterOpen, eventTypeFilter, provinceFilter, tempEventTypeFilter, tempProvinceFilter, isEventTypeFilterOpen, setIsEventTypeFilterOpen, isProvinceFilterOpen, setIsProvinceFilterOpen, handleEventTypeFilterChange, handleProvinceFilterChange, applyFilters, clearFilters } = useEventFilter();
+  const { 
+    filterOpen, setFilterOpen, 
+    eventTypeFilter, provinceFilter, jangkauanFilter, 
+    tempEventTypeFilter, tempProvinceFilter, tempJangkauanFilter, 
+    setTempJangkauanFilter, isEventTypeFilterOpen, setIsEventTypeFilterOpen, 
+    isProvinceFilterOpen, setIsProvinceFilterOpen, isJangkauanFilterOpen, 
+    setIsJangkauanFilterOpen, handleEventTypeFilterChange, 
+    handleProvinceFilterChange, handleJangkauanFilterChange, 
+    applyFilters, clearFilters 
+  } = useEventFilter();
 
   const { data: provinces = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const { data: cities = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId);
@@ -680,13 +752,19 @@ export default function Event() {
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     event_type: eventTypeFilter,
     provinceId: provinceFilter,
+    area: jangkauanFilter,
     startDate: dateRange.startDate ? format(dateRange.startDate, "yyyy-MM-dd") : undefined,
     endDate: dateRange.endDate ? format(dateRange.endDate, "yyyy-MM-dd") : undefined,
   });
 
-  useEffect(() => {
-    refetch();
-  }, [eventTypeFilter, provinceFilter, dateRange, refetch]);
+  // Ensure events are valid before passing to Layout
+  const validEvents = events.filter(event => 
+    event && 
+    event.id && 
+    event.date && 
+    event.day && 
+    event.name
+  );
 
   useEffect(() => {
     if (error) {
@@ -697,6 +775,7 @@ export default function Event() {
         duration: 5000,
         isClosable: true,
       });
+      console.error("Error fetching events:", error);
       refetch();
     }
   }, [error, refetch, toast]);
@@ -741,15 +820,28 @@ export default function Event() {
   }, [setFormData, queryClient]);
 
   const handleEdit = useCallback(async (event) => {
-    const localDateTime = event.rawDate.toLocaleString("sv-SE", {
-      timeZone: "Asia/Jakarta",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).replace(" ", "T");
+    if (!event?.id) {
+      toast({
+        title: "Error",
+        description: "Kegiatan tidak valid untuk pengeditan.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    const localDateTime = event.rawDate && !isNaN(event.rawDate.getTime())
+      ? event.rawDate.toLocaleString("sv-SE", {
+          timeZone: "Asia/Jakarta",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).replace(" ", "T")
+      : "";
 
     const localEndDateTime = event.rawEndDate && !isNaN(event.rawEndDate.getTime())
       ? event.rawEndDate.toLocaleString("sv-SE", {
@@ -763,11 +855,9 @@ export default function Event() {
         }).replace(" ", "T")
       : "";
 
-    // Fetch event details to ensure we have the full location hierarchy
     try {
       const response = await axiosInstance.get(`/event/${event.id}`);
       const eventData = response.data;
-      console.log("Event API response:", eventData); // Debug API response
 
       const location = eventData.location || {};
       const locality = location.locality || {};
@@ -775,9 +865,8 @@ export default function Event() {
       const city = district.city || {};
       const province = city.province || {};
 
-      // Map eventData fields, accounting for possible API field name variations
       const newFormData = {
-        event_name: eventData.event_name || eventData.name || event.name || "",
+        event_name: eventData.event_name || event.name || "",
         event_mandarin_name: eventData.event_mandarin_name || event.event_mandarin_name || "",
         greg_occur_date: localDateTime,
         greg_end_date: localEndDateTime,
@@ -785,30 +874,21 @@ export default function Event() {
         cityId: city.id ? city.id.toString() : "",
         districtId: district.id ? district.id.toString() : "",
         localityId: locality.id ? locality.id.toString() : "",
-        location_name: eventData.location?.location_name || event.location || "",
-        event_type: eventData.type === "Hari Besar" ? "Hari_Besar" : eventData.type || event.type || "Regular",
+        location_name: location.location_name || event.location || "",
+        event_type: eventData.event_type === "Hari_Besar" ? "Hari_Besar" : eventData.event_type || event.type || "Regular",
         description: eventData.description || event.description || "",
         lunar_sui_ci_year: eventData.lunar_sui_ci_year || event.lunar_sui_ci_year || "",
         lunar_month: eventData.lunar_month || event.lunar_month || "",
         lunar_day: eventData.lunar_day || event.lunar_day || "",
         is_recurring: eventData.is_recurring ?? event.is_recurring ?? false,
         poster_s3_bucket_link: eventData.poster_s3_bucket_link || event.poster_s3_bucket_link || null,
+        jangkauan: eventData.area === null ? "nasional" : eventData.area || event.jangkauan || "",
       };
 
       setFormData(newFormData);
-      console.log("FormData after set:", newFormData); // Debug formData
-
-      // Trigger fetches for dependent locations
-      if (province.id) {
-        queryClient.invalidateQueries(['cities', province.id.toString()]);
-      }
-      if (city.id) {
-        queryClient.invalidateQueries(['districts', city.id.toString()]);
-      }
-      if (district.id) {
-        queryClient.invalidateQueries(['localities', district.id.toString()]);
-      }
-
+      if (province.id) queryClient.invalidateQueries(['cities', province.id.toString()]);
+      if (city.id) queryClient.invalidateQueries(['districts', city.id.toString()]);
+      if (district.id) queryClient.invalidateQueries(['localities', district.id.toString()]);
       setImage(null);
       setPreviewImage(eventData.poster_s3_bucket_link || event.poster_s3_bucket_link || null);
       onEditOpen();
@@ -825,53 +905,79 @@ export default function Event() {
   }, [setFormData, setImage, setPreviewImage, onEditOpen, queryClient, toast]);
 
   const handleDelete = useCallback((event) => {
+    if (!event?.id) {
+      toast({
+        title: "Error",
+        description: "Kegiatan tidak valid untuk penghapusan.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
     setSelectedEvent(event);
     onConfirmOpen();
-  }, [onConfirmOpen]);
+  }, [onConfirmOpen, toast]);
 
   const confirmDelete = useCallback(() => {
-    if (selectedEvent) {
-      deleteMutation.mutate(selectedEvent.id, {
-        onSuccess: () => {
-          toast({
-            title: "Kegiatan Dihapus",
-            description: "Kegiatan berhasil dihapus.",
-            status: "success",
-            duration: 3000,
-            isClosable: true,
-          });
-          onConfirmClose();
-          onDetailClose();
-          refetch();
-          setSelectedEvent(null);
-        },
-        onError: (error) => {
-          toast({
-            title: "Error",
-            description: error.message,
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-          });
-        },
+    if (!selectedEvent?.id) {
+      toast({
+        title: "Error",
+        description: "Kegiatan tidak valid untuk penghapusan.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
       });
+      return;
     }
+    deleteMutation.mutate(selectedEvent.id, {
+      onSuccess: () => {
+        toast({
+          title: "Kegiatan Dihapus",
+          description: "Kegiatan berhasil dihapus.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+        onConfirmClose();
+        onDetailClose();
+        refetch();
+        setSelectedEvent(null);
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      },
+    });
   }, [selectedEvent, toast, onConfirmClose, onDetailClose, refetch, deleteMutation]);
 
   const openEventDetail = useCallback(async (event) => {
-    try {
-      const response = await axiosInstance.get(`/event/${event.id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    if (!event?.id) {
+      toast({
+        title: "Error",
+        description: "Kegiatan tidak valid untuk dilihat detailnya.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
       });
+      return;
+    }
+    try {
+      const response = await axiosInstance.get(`/event/${event.id}`);
+      const eventData = response.data;
       setSelectedEvent({
         ...event,
-        ...response.data,
-        location: typeof response.data.location === 'object' && response.data.location?.location_name
-          ? response.data.location.location_name
-          : response.data.location || "Unknown Location",
-        poster_s3_bucket_link: response.data.poster_s3_bucket_link || null,
+        ...eventData,
+        location: typeof eventData.location === 'object' && eventData.location?.location_name
+          ? eventData.location.location_name
+          : eventData.location || "Unknown Location",
+        poster_s3_bucket_link: eventData.poster_s3_bucket_link || null,
+        jangkauan: eventData.area === null ? "nasional" : eventData.area || event.jangkauan || "",
       });
       onDetailOpen();
     } catch (error) {
@@ -887,8 +993,8 @@ export default function Event() {
   }, [toast, onDetailOpen]);
 
   const formatDateRange = () => {
-    if (!dateRange.startDate) return "";
-    if (dateRange.startDate.getTime() === dateRange.endDate?.getTime()) {
+    if (!dateRange.startDate || !dateRange.endDate) return "";
+    if (dateRange.startDate.getTime() === dateRange.endDate.getTime()) {
       return format(dateRange.startDate, "dd-MM-yyyy");
     }
     return `${format(dateRange.startDate, "dd-MM-yyyy")} - ${format(dateRange.endDate, "dd-MM-yyyy")}`;
@@ -899,9 +1005,9 @@ export default function Event() {
   };
 
   return (
-    <Layout title="Kegiatan">
+    <Layout title="Kegiatan" events={validEvents}>
       <Box p={2}>
-        <Flex justify="space-between" align="center" mb={6} flexWrap="nowrap" gap={2}>
+        <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={2}>
           <Heading size="md">
             {new Date().toLocaleDateString("id-ID", {
               weekday: "long",
@@ -993,6 +1099,32 @@ export default function Event() {
                       </VStack>
                     </Collapse>
                   </FormControl>
+                  <FormControl>
+                    <Flex align="center" justify="space-between">
+                      <FormLabel mb={0}>Jangkauan</FormLabel>
+                      <IconButton
+                        size="xs"
+                        variant="ghost"
+                        aria-label={isJangkauanFilterOpen ? "Hide jangkauan filter" : "Show jangkauan filter"}
+                        icon={isJangkauanFilterOpen ? <FiMinus /> : <FiPlusIcon />}
+                        onClick={() => setIsJangkauanFilterOpen(!isJangkauanFilterOpen)}
+                        _hover={{ bg: "transparent" }}
+                      />
+                    </Flex>
+                    <Collapse in={isJangkauanFilterOpen} animateOpacity>
+                      <VStack align="start" spacing={1}>
+                        {filteredJangkauanOptions.map((option) => (
+                          <Checkbox
+                            key={option.value}
+                            isChecked={tempJangkauanFilter.includes(option.value)}
+                            onChange={() => handleJangkauanFilterChange(option.value)}
+                          >
+                            {option.label}
+                          </Checkbox>
+                        ))}
+                      </VStack>
+                    </Collapse>
+                  </FormControl>
                   <HStack justify="flex-end" spacing={2}>
                     <Button size="xs" onClick={clearFilters}>Reset</Button>
                     <Button size="xs" onClick={() => setFilterOpen(false)}>Cancel</Button>
@@ -1025,6 +1157,7 @@ export default function Event() {
                   lunar_day: "",
                   is_recurring: false,
                   poster_s3_bucket_link: null,
+                  jangkauan: "",
                 });
                 setImage(null);
                 setPreviewImage(null);
@@ -1062,7 +1195,7 @@ export default function Event() {
         </Flex>
         <Divider borderBottomWidth="2px" />
         <EventList
-          events={events}
+          events={validEvents}
           isLoading={isLoading}
           error={error}
           dateRange={dateRange}
