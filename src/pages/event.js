@@ -14,7 +14,7 @@ import Cropper from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, addDays, isValid } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, addDays, isValid, parse } from "date-fns";
 import { useDeleteEvent } from "@/features/event/useDeleteEvent";
 import { useEventForm } from "@/features/event/useEventForm";
 import { useEventFilter } from "@/features/event/useEventFilter";
@@ -42,6 +42,10 @@ const jangkauanOptions = [
   { value: "Korwil_4", label: "Wilayah 4" },
   { value: "Korwil_5", label: "Wilayah 5" },
   { value: "Korwil_6", label: "Wilayah 6" },
+];
+const isRecurringOptions = [
+  { value: "true", label: "Berulang" },
+  { value: "false", label: "Tidak Berulang" },
 ];
 
 const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) => {
@@ -276,6 +280,8 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
       return null;
     }
 
+    console.log("DEBUG: EventList - Rendering event:", { id: event.id, name: event.name, rawDate: event.rawDate });
+
     return (
       <Box
         key={`${event.id}-${event.occurrence_id}`}
@@ -284,7 +290,10 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
         mb={4}
         borderRadius="md"
         border="1px solid #e2e8f0"
-        onClick={() => onEventClick(event)}
+        onClick={() => {
+          console.log("DEBUG: EventList - Clicking event:", { id: event.id, name: event.name });
+          onEventClick(event);
+        }}
         cursor="pointer"
         _hover={{ bg: "gray.50" }}
       >
@@ -325,6 +334,8 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl }
     const option = jangkauanOptions.find((opt) => opt.value === value);
     return option ? option.label : "-";
   };
+
+  console.log("DEBUG: EventDetailModal - isOpen:", isOpen, "event:", event);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
@@ -530,7 +541,7 @@ const EventForm = ({ isOpen, onClose, onSubmit, formData, handleChange, handlePr
                 <FormLabel>Jangkauan</FormLabel>
                 <Select
                   name="jangkauan"
-                  value={formData.jangkauan || ""}
+                  value={formData.area || ""}
                   onChange={handleChange}
                   placeholder="Pilih jangkauan"
                 >
@@ -710,6 +721,7 @@ export default function Event() {
   const { formData, setFormData, isSubmitting, handleChange, handleIsRecurringChange, handleSubmit, handleUpdate } = useEventForm({
     onAddClose,
     onEditClose,
+    onDetailClose,
     selectedEvent,
     resetFormData: () => {
       setFormData({
@@ -729,7 +741,7 @@ export default function Event() {
         lunar_day: "",
         is_recurring: false,
         poster_s3_bucket_link: null,
-        jangkauan: "",
+        area: "",
       });
       setImage(null);
       setPreviewImage(null);
@@ -740,27 +752,34 @@ export default function Event() {
   const { image, setImage, previewImage, setPreviewImage, isImageLoaded, cropperRef, handleImageChange } = useImageUpload();
   const { 
     filterOpen, setFilterOpen, 
-    eventTypeFilter, provinceFilter, jangkauanFilter, 
-    tempEventTypeFilter, tempProvinceFilter, tempJangkauanFilter, 
+    eventTypeFilter, jangkauanFilter, isRecurringFilter, 
+    tempEventTypeFilter, tempJangkauanFilter, tempIsRecurringFilter, 
     setTempJangkauanFilter, isEventTypeFilterOpen, setIsEventTypeFilterOpen, 
-    isProvinceFilterOpen, setIsProvinceFilterOpen, isJangkauanFilterOpen, 
-    setIsJangkauanFilterOpen, handleEventTypeFilterChange, 
-    handleProvinceFilterChange, handleJangkauanFilterChange, 
+    isJangkauanFilterOpen, setIsJangkauanFilterOpen, isIsRecurringFilterOpen, 
+    setIsIsRecurringFilterOpen, handleEventTypeFilterChange, 
+    handleJangkauanFilterChange, handleIsRecurringFilterChange, 
     applyFilters, clearFilters 
   } = useEventFilter();
 
   const { data: provinces = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const { data: cities = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId);
   const { data: districts = [], isLoading: isDistrictsLoading } = useFetchDistricts(formData.cityId);
-  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.localityId);
+  const { data: localities = [], isLoading: isLocalitiesLoading } = useFetchLocalities(formData.districtId);
 
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     event_type: eventTypeFilter,
-    provinceId: provinceFilter,
     area: jangkauanFilter,
+    is_recurring: isRecurringFilter,
     startDate: format(dateRange.startDate, "yyyy-MM-dd"),
     endDate: format(dateRange.endDate, "yyyy-MM-dd"),
   });
+
+  // Debug log untuk memeriksa data kelurahan
+  useEffect(() => {
+    console.log("DEBUG: formData.districtId:", formData.districtId);
+    console.log("DEBUG: localities:", localities);
+    console.log("DEBUG: isLocalitiesLoading:", isLocalitiesLoading);
+  }, [formData.districtId, localities, isLocalitiesLoading]);
 
   // Sort events by greg_occur_date and filter by dateRange
   const sortedEvents = useMemo(() => {
@@ -776,7 +795,7 @@ export default function Event() {
         console.warn("Missing rawDate for event:", event);
         return false;
       }
-      const eventDate = new Date(event.rawDate);
+      const eventDate = typeof event.rawDate === 'string' ? new Date(event.rawDate) : event.rawDate;
       if (!isValid(eventDate)) {
         console.warn("Invalid rawDate for event:", event);
         return false;
@@ -794,8 +813,8 @@ export default function Event() {
       return inRange;
     });
     const sorted = filtered.sort((a, b) => {
-      const dateA = new Date(a.rawDate);
-      const dateB = new Date(b.rawDate);
+      const dateA = typeof a.rawDate === 'string' ? new Date(a.rawDate) : a.rawDate;
+      const dateB = typeof b.rawDate === 'string' ? new Date(b.rawDate) : b.rawDate;
       if (!isValid(dateA) || !isValid(dateB)) {
         console.warn("Invalid date comparison:", { a: a.rawDate, b: b.rawDate });
         return 0;
@@ -827,7 +846,7 @@ export default function Event() {
       endDate: format(dateRange.endDate, "yyyy-MM-dd"),
     });
     refetch();
-  }, [dateRange, eventTypeFilter, provinceFilter, jangkauanFilter, refetch]);
+  }, [dateRange, eventTypeFilter, jangkauanFilter, isRecurringFilter, refetch]);
 
   useEffect(() => {
     if (error) {
@@ -894,33 +913,81 @@ export default function Event() {
       return;
     }
 
-    const localDateTime = event.rawDate && !isNaN(event.rawDate.getTime())
-      ? event.rawDate.toLocaleString("sv-SE", {
-          timeZone: "Asia/Jakarta",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }).replace(" ", "T")
-      : "";
-
-    const localEndDateTime = event.rawEndDate && !isNaN(event.rawEndDate.getTime())
-      ? event.rawEndDate.toLocaleString("sv-SE", {
-          timeZone: "Asia/Jakarta",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }).replace(" ", "T")
-      : "";
+    console.log("DEBUG: handleEdit - Input event:", {
+      id: event.id,
+      name: event.name,
+      rawDate: event.rawDate,
+      rawEndDate: event.rawEndDate,
+      date: event.date,
+      time: event.time,
+    });
 
     try {
+      queryClient.invalidateQueries(["event", event.id]);
       const response = await axiosInstance.get(`/event/${event.id}`);
       const eventData = response.data;
+      console.log("DEBUG: handleEdit - eventData from API:", {
+        id: eventData.id,
+        event_name: eventData.event_name,
+        rawDate: eventData.rawDate,
+        rawEndDate: eventData.rawEndDate,
+      });
+
+      if (!eventData || typeof eventData !== 'object') {
+        throw new Error("Invalid event data from API: response is empty or not an object");
+      }
+
+      let apiRawDate = eventData.rawDate ? (typeof eventData.rawDate === 'string' ? new Date(eventData.rawDate) : eventData.rawDate) : null;
+      let apiRawEndDate = eventData.rawEndDate ? (typeof eventData.rawEndDate === 'string' ? new Date(eventData.rawEndDate) : eventData.rawEndDate) : null;
+
+      let rawDate = apiRawDate || (event.rawDate ? (typeof event.rawDate === 'string' ? new Date(event.rawDate) : event.rawDate) : null);
+      let rawEndDate = apiRawEndDate || (event.rawEndDate ? (typeof event.rawEndDate === 'string' ? new Date(event.rawEndDate) : event.rawEndDate) : null);
+
+      if (!rawDate && event.date && event.time) {
+        const timeStr = event.time.replace(" WIB", "");
+        const dateTimeStr = `${event.date} ${timeStr}`;
+        rawDate = parse(dateTimeStr, "d MMMM yyyy HH.mm", new Date(), { locale: require('date-fns/locale/id') });
+        console.log("DEBUG: handleEdit - Fallback parsed rawDate:", rawDate);
+      }
+
+      const isRawDateValid = rawDate && isValid(rawDate);
+      const isRawEndDateValid = rawEndDate && isValid(rawEndDate);
+
+      console.log("DEBUG: handleEdit - Date validation:", {
+        rawDate,
+        isRawDateValid,
+        rawEndDate,
+        isRawEndDateValid,
+      });
+
+      const localDateTime = isRawDateValid
+        ? rawDate.toLocaleString("sv-SE", {
+            timeZone: "Asia/Jakarta",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).replace(" ", "T")
+        : "";
+
+      const localEndDateTime = isRawEndDateValid
+        ? rawEndDate.toLocaleString("sv-SE", {
+            timeZone: "Asia/Jakarta",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).replace(" ", "T")
+        : "";
+
+      console.log("DEBUG: handleEdit - Formatted dates:", {
+        localDateTime,
+        localEndDateTime,
+      });
 
       const location = eventData.location || {};
       const locality = location.locality || {};
@@ -929,7 +996,7 @@ export default function Event() {
       const province = city.province || {};
 
       const newFormData = {
-        event_name: eventData.event_name || event.name || "",
+        event_name: eventData.event_name || event.name || "Kegiatan Tanpa Nama",
         event_mandarin_name: eventData.event_mandarin_name || event.event_mandarin_name || "",
         greg_occur_date: localDateTime,
         greg_end_date: localEndDateTime,
@@ -937,7 +1004,7 @@ export default function Event() {
         cityId: city.id ? city.id.toString() : "",
         districtId: district.id ? district.id.toString() : "",
         localityId: locality.id ? locality.id.toString() : "",
-        location_name: location.location_name || event.location || "",
+        location_name: location.location_name || event.location || "Unknown Location",
         event_type: eventData.event_type === "Hari_Besar" ? "Hari_Besar" : eventData.event_type || event.type || "Regular",
         description: eventData.description || event.description || "",
         lunar_sui_ci_year: eventData.lunar_sui_ci_year || event.lunar_sui_ci_year || "",
@@ -945,8 +1012,10 @@ export default function Event() {
         lunar_day: eventData.lunar_day || event.lunar_day || "",
         is_recurring: eventData.is_recurring ?? event.is_recurring ?? false,
         poster_s3_bucket_link: eventData.poster_s3_bucket_link || event.poster_s3_bucket_link || null,
-        jangkauan: eventData.area === null ? "nasional" : eventData.area || event.jangkauan || "",
+        area: eventData.area === null ? "nasional" : eventData.area || event.jangkauan || "",
       };
+
+      console.log("DEBUG: handleEdit - Setting formData:", newFormData);
 
       setFormData(newFormData);
       if (province.id) queryClient.invalidateQueries(['cities', province.id.toString()]);
@@ -958,7 +1027,7 @@ export default function Event() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Gagal memuat detail kegiatan untuk pengeditan.",
+        description: "Gagal memuat detail kegiatan untuk pengeditan: " + error.message,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -1020,6 +1089,8 @@ export default function Event() {
   }, [selectedEvent, toast, onConfirmClose, onDetailClose, refetch, deleteMutation]);
 
   const openEventDetail = useCallback(async (event) => {
+    console.log("DEBUG: openEventDetail - Input event:", { id: event.id, name: event.name, rawDate: event.rawDate, date: event.date, time: event.time });
+
     if (!event?.id) {
       toast({
         title: "Error",
@@ -1030,30 +1101,85 @@ export default function Event() {
       });
       return;
     }
+
     try {
+      queryClient.invalidateQueries(["event", event.id]);
       const response = await axiosInstance.get(`/event/${event.id}`);
       const eventData = response.data;
-      setSelectedEvent({
-        ...event,
-        ...eventData,
-        location: typeof eventData.location === 'object' && eventData.location?.location_name
+      console.log("DEBUG: openEventDetail - eventData from API:", eventData);
+
+      if (!eventData || typeof eventData !== 'object') {
+        throw new Error("Invalid event data from API: response is empty or not an object");
+      }
+
+      let apiRawDate = eventData.rawDate ? (typeof eventData.rawDate === 'string' ? new Date(eventData.rawDate) : eventData.rawDate) : null;
+      let apiRawEndDate = eventData.rawEndDate ? (typeof eventData.rawEndDate === 'string' ? new Date(eventData.rawEndDate) : eventData.rawEndDate) : null;
+
+      let rawDate = apiRawDate || (event.rawDate ? (typeof event.rawDate === 'string' ? new Date(event.rawDate) : event.rawDate) : null);
+      let rawEndDate = apiRawEndDate || (event.rawEndDate ? (typeof event.rawEndDate === 'string' ? new Date(event.rawEndDate) : event.rawEndDate) : null);
+
+      if (!rawDate && event.date && event.time) {
+        const timeStr = event.time.replace(" WIB", "");
+        const dateTimeStr = `${event.date} ${timeStr}`;
+        rawDate = parse(dateTimeStr, "d MMMM yyyy HH.mm", new Date(), { locale: require('date-fns/locale/id') });
+        console.log("DEBUG: openEventDetail - Fallback parsed rawDate:", rawDate);
+      }
+
+      if (rawDate && !isValid(rawDate)) {
+        console.warn("Invalid rawDate:", rawDate);
+        rawDate = null;
+      }
+      if (rawEndDate && !isValid(rawEndDate)) {
+        console.warn("Invalid rawEndDate:", rawEndDate);
+        rawEndDate = null;
+      }
+
+      console.log("DEBUG: openEventDetail - Processed dates:", { rawDate, rawEndDate });
+
+      const safeEventData = {
+        id: eventData.id || event.id || null,
+        name: eventData.event_name || event.name || "Kegiatan Tanpa Nama",
+        rawDate: rawDate,
+        rawEndDate: rawEndDate,
+        event_mandarin_name: eventData.event_mandarin_name || event.event_mandarin_name || "",
+        location: eventData.location && typeof eventData.location === 'object' && eventData.location.location_name
           ? eventData.location.location_name
-          : eventData.location || "Unknown Location",
-        poster_s3_bucket_link: eventData.poster_s3_bucket_link || null,
+          : eventData.location || event.location || "Unknown Location",
+        type: eventData.event_type || event.type || "Regular",
         jangkauan: eventData.area === null ? "nasional" : eventData.area || event.jangkauan || "",
+        is_recurring: eventData.is_recurring ?? event.is_recurring ?? false,
+        description: eventData.description || event.description || "",
+        lunar_sui_ci_year: eventData.lunar_sui_ci_year || event.lunar_sui_ci_year || "",
+        lunar_month: eventData.lunar_month || event.lunar_month || "",
+        lunar_day: eventData.lunar_day || event.lunar_day || "",
+        poster_s3_bucket_link: eventData.poster_s3_bucket_link || event.poster_s3_bucket_link || null,
+        date: eventData.date || event.date || (rawDate && isValid(rawDate) ? format(rawDate, "dd-MM-yyyy") : "Tanggal Tidak Tersedia"),
+        day: eventData.day || event.day || (rawDate && isValid(rawDate) ? format(rawDate, "EEEE", { locale: require('date-fns/locale/id') }) : "Hari Tidak Tersedia"),
+        time: eventData.time || event.time || (rawDate && isValid(rawDate) ? format(rawDate, "HH:mm") : "Waktu Tidak Tersedia"),
+      };
+
+      console.log("DEBUG: openEventDetail - Setting selectedEvent:", {
+        id: safeEventData.id,
+        name: safeEventData.name,
+        rawDate: safeEventData.rawDate,
+        rawEndDate: safeEventData.rawEndDate,
+        date: safeEventData.date,
+        time: safeEventData.time,
       });
+
+      setSelectedEvent(safeEventData);
       onDetailOpen();
     } catch (error) {
+      console.error("Error in openEventDetail:", error);
       toast({
         title: "Error",
-        description: "Gagal memuat detail kegiatan. Periksa apakah endpoint API benar atau coba lagi nanti.",
+        description: `Gagal memuat detail kegiatan: ${error.message}. Silakan coba lagi.`,
         status: "error",
         duration: 5000,
         isClosable: true,
       });
-      console.error("Error fetching event details:", error.response ? error.response.data : error.message);
     }
-  }, [toast, onDetailOpen]);
+  }, [toast, onDetailOpen, queryClient]);
 
   const formatDateRange = () => {
     if (!dateRange.startDate || !dateRange.endDate) return "";
@@ -1065,6 +1191,7 @@ export default function Event() {
 
   const handleApplyDateRange = () => {
     refetch();
+    onDateRangeClose();
   };
 
   return (
@@ -1136,51 +1263,53 @@ export default function Event() {
                       </VStack>
                     </Collapse>
                   </FormControl>
+                  {userRole === "Super Admin" && (
+                    <FormControl>
+                      <Flex align="center" justify="space-between">
+                        <FormLabel mb={0}>Jangkauan</FormLabel>
+                        <IconButton
+                          size="xs"
+                          variant="ghost"
+                          aria-label={isJangkauanFilterOpen ? "Hide jangkauan filter" : "Show jangkauan filter"}
+                          icon={isJangkauanFilterOpen ? <FiMinus /> : <FiPlusIcon />}
+                          onClick={() => setIsJangkauanFilterOpen(!isJangkauanFilterOpen)}
+                          _hover={{ bg: "transparent" }}
+                        />
+                      </Flex>
+                      <Collapse in={isJangkauanFilterOpen} animateOpacity>
+                        <VStack align="start" spacing={1}>
+                          {filteredJangkauanOptions.map((option) => (
+                            <Checkbox
+                              key={option.value}
+                              isChecked={(tempJangkauanFilter || []).includes(option.value)}
+                              onChange={() => handleJangkauanFilterChange(option.value)}
+                            >
+                              {option.label}
+                            </Checkbox>
+                          ))}
+                        </VStack>
+                      </Collapse>
+                    </FormControl>
+                  )}
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Provinsi</FormLabel>
+                      <FormLabel mb={0}>Berulang</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
-                        aria-label={isProvinceFilterOpen ? "Hide province filter" : "Show province filter"}
-                        icon={isProvinceFilterOpen ? <FiMinus /> : <FiPlusIcon />}
-                        onClick={() => setIsProvinceFilterOpen(!isProvinceFilterOpen)}
+                        aria-label={isIsRecurringFilterOpen ? "Hide recurring filter" : "Show recurring filter"}
+                        icon={isIsRecurringFilterOpen ? <FiMinus /> : <FiPlusIcon />}
+                        onClick={() => setIsIsRecurringFilterOpen(!isIsRecurringFilterOpen)}
                         _hover={{ bg: "transparent" }}
                       />
                     </Flex>
-                    <Collapse in={isProvinceFilterOpen} animateOpacity>
+                    <Collapse in={isIsRecurringFilterOpen} animateOpacity>
                       <VStack align="start" spacing={1}>
-                        {provinces.map((province) => (
-                          <Checkbox
-                            key={province.id}
-                            isChecked={tempProvinceFilter.includes(province.id.toString())}
-                            onChange={() => handleProvinceFilterChange(province.id.toString())}
-                          >
-                            {province.name}
-                          </Checkbox>
-                        ))}
-                      </VStack>
-                    </Collapse>
-                  </FormControl>
-                  <FormControl>
-                    <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Jangkauan</FormLabel>
-                      <IconButton
-                        size="xs"
-                        variant="ghost"
-                        aria-label={isJangkauanFilterOpen ? "Hide jangkauan filter" : "Show jangkauan filter"}
-                        icon={isJangkauanFilterOpen ? <FiMinus /> : <FiPlusIcon />}
-                        onClick={() => setIsJangkauanFilterOpen(!isJangkauanFilterOpen)}
-                        _hover={{ bg: "transparent" }}
-                      />
-                    </Flex>
-                    <Collapse in={isJangkauanFilterOpen} animateOpacity>
-                      <VStack align="start" spacing={1}>
-                        {filteredJangkauanOptions.map((option) => (
+                        {isRecurringOptions.map((option) => (
                           <Checkbox
                             key={option.value}
-                            isChecked={tempJangkauanFilter.includes(option.value)}
-                            onChange={() => handleJangkauanFilterChange(option.value)}
+                            isChecked={tempIsRecurringFilter.includes(option.value)}
+                            onChange={() => handleIsRecurringFilterChange(option.value)}
                           >
                             {option.label}
                           </Checkbox>
@@ -1220,7 +1349,7 @@ export default function Event() {
                   lunar_day: "",
                   is_recurring: false,
                   poster_s3_bucket_link: null,
-                  jangkauan: "",
+                  area: "",
                 });
                 setImage(null);
                 setPreviewImage(null);
@@ -1242,34 +1371,23 @@ export default function Event() {
                 />
                 <InputRightElement>
                   <IconButton
-                    size="xs"
-                    variant="ghost"
-                    aria-label="Open calendar"
                     icon={<FiCalendar />}
+                    variant="ghost"
+                    size="xs"
                     onClick={onDateRangeOpen}
-                    _hover={{ bg: "transparent" }}
-                    _active={{ bg: "transparent" }}
-                    _focus={{ boxShadow: "none" }}
+                    aria-label="Buka kalender"
                   />
                 </InputRightElement>
               </InputGroup>
             </FormControl>
           </Flex>
         </Flex>
-        <Divider borderBottomWidth="2px" />
         <EventList
           events={validEvents}
           isLoading={isLoading}
           error={error}
           dateRange={dateRange}
           onEventClick={openEventDetail}
-        />
-        <DateRangeModal
-          isOpen={isDateRangeOpen}
-          onClose={onDateRangeClose}
-          onApply={handleApplyDateRange}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
         />
         <EventDetailModal
           isOpen={isDetailOpen}
@@ -1329,7 +1447,7 @@ export default function Event() {
           isCitiesLoading={isCitiesLoading}
           isDistrictsLoading={isDistrictsLoading}
           isLocalitiesLoading={isLocalitiesLoading}
-          title={`Edit Kegiatan: ${selectedEvent?.name || ""}`}
+          title="Edit Kegiatan"
         />
         <DeleteConfirmModal
           isOpen={isConfirmOpen}
@@ -1337,6 +1455,13 @@ export default function Event() {
           onConfirm={confirmDelete}
           eventName={selectedEvent?.name}
           isDeleting={deleteMutation.isLoading}
+        />
+        <DateRangeModal
+          isOpen={isDateRangeOpen}
+          onClose={onDateRangeClose}
+          onApply={handleApplyDateRange}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
         />
       </Box>
     </Layout>

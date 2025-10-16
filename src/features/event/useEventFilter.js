@@ -5,11 +5,14 @@ export const useEventFilter = () => {
     const queryClient = useQueryClient();
     const [filterOpen, setFilterOpen] = useState(false);
     const [eventTypeFilter, setEventTypeFilter] = useState([]);
-    const [provinceFilter, setProvinceFilter] = useState([]);
+    const [jangkauanFilter, setJangkauanFilter] = useState([]);
+    const [isRecurringFilter, setIsRecurringFilter] = useState([]);
     const [tempEventTypeFilter, setTempEventTypeFilter] = useState([]);
-    const [tempProvinceFilter, setTempProvinceFilter] = useState([]);
+    const [tempJangkauanFilter, setTempJangkauanFilter] = useState([]);
+    const [tempIsRecurringFilter, setTempIsRecurringFilter] = useState([]);
     const [isEventTypeFilterOpen, setIsEventTypeFilterOpen] = useState(false);
-    const [isProvinceFilterOpen, setIsProvinceFilterOpen] = useState(false);
+    const [isJangkauanFilterOpen, setIsJangkauanFilterOpen] = useState(false);
+    const [isIsRecurringFilterOpen, setIsIsRecurringFilterOpen] = useState(false);
     const [filter, setFilter] = useState("Bulan ini");
 
     const handleEventTypeFilterChange = useCallback((value) => {
@@ -18,28 +21,39 @@ export const useEventFilter = () => {
         );
     }, []);
 
-    const handleProvinceFilterChange = useCallback((value) => {
-        setTempProvinceFilter((prev) =>
+    const handleJangkauanFilterChange = useCallback((value) => {
+        setTempJangkauanFilter((prev) =>
+            prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+        );
+    }, []);
+
+    const handleIsRecurringFilterChange = useCallback((value) => {
+        setTempIsRecurringFilter((prev) =>
             prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
         );
     }, []);
 
     const applyFilters = useCallback(() => {
-        console.log("Applying filters:", { tempEventTypeFilter, tempProvinceFilter });
+        console.log("Applying filters:", { tempEventTypeFilter, tempJangkauanFilter, tempIsRecurringFilter });
         setEventTypeFilter([...tempEventTypeFilter]);
-        setProvinceFilter([...tempProvinceFilter]);
+        setJangkauanFilter([...tempJangkauanFilter]);
+        setIsRecurringFilter([...tempIsRecurringFilter]);
         setFilterOpen(false);
-        queryClient.invalidateQueries({ queryKey: ["fetch.events", tempEventTypeFilter, tempProvinceFilter] });
-    }, [tempEventTypeFilter, tempProvinceFilter, queryClient]);
+        queryClient.invalidateQueries({ 
+            queryKey: ["fetch.events", tempEventTypeFilter, tempJangkauanFilter, tempIsRecurringFilter] 
+        });
+    }, [tempEventTypeFilter, tempJangkauanFilter, tempIsRecurringFilter, queryClient]);
 
     const clearFilters = useCallback(() => {
         console.log("Clearing filters");
         setTempEventTypeFilter([]);
-        setTempProvinceFilter([]);
+        setTempJangkauanFilter([]);
+        setTempIsRecurringFilter([]);
         setEventTypeFilter([]);
-        setProvinceFilter([]);
+        setJangkauanFilter([]);
+        setIsRecurringFilter([]);
         setFilterOpen(false);
-        queryClient.invalidateQueries({ queryKey: ["fetch.events", [], []] });
+        queryClient.invalidateQueries({ queryKey: ["fetch.events", [], [], []] });
     }, [queryClient]);
 
     return {
@@ -47,20 +61,27 @@ export const useEventFilter = () => {
         setFilterOpen,
         eventTypeFilter,
         setEventTypeFilter,
-        provinceFilter,
-        setProvinceFilter,
+        jangkauanFilter,
+        setJangkauanFilter,
+        isRecurringFilter,
+        setIsRecurringFilter,
         tempEventTypeFilter,
         setTempEventTypeFilter,
-        tempProvinceFilter,
-        setTempProvinceFilter,
+        tempJangkauanFilter,
+        setTempJangkauanFilter,
+        tempIsRecurringFilter,
+        setTempIsRecurringFilter,
         isEventTypeFilterOpen,
         setIsEventTypeFilterOpen,
-        isProvinceFilterOpen,
-        setIsProvinceFilterOpen,
+        isJangkauanFilterOpen,
+        setIsJangkauanFilterOpen,
+        isIsRecurringFilterOpen,
+        setIsIsRecurringFilterOpen,
         filter,
         setFilter,
         handleEventTypeFilterChange,
-        handleProvinceFilterChange,
+        handleJangkauanFilterChange,
+        handleIsRecurringFilterChange,
         applyFilters,
         clearFilters,
     };

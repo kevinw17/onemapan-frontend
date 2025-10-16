@@ -6,8 +6,8 @@ import { format } from "date-fns";
 
 export const useFetchEvents = ({
   event_type = [],
-  provinceId = [],
   area = [],
+  is_recurring = [],
   startDate,
   endDate,
 }) => {
@@ -34,17 +34,17 @@ export const useFetchEvents = ({
   const queryParams = useMemo(() => {
     const params = {
       event_type: event_type.length ? event_type.join(",") : undefined,
-      provinceId: provinceId.length ? provinceId.join(",") : undefined,
-      area: area.length ? area.join(",") : undefined,
+      area: area.length ? (area.includes("nasional") ? "null" : area.join(",")) : undefined,
+      is_recurring: is_recurring.length ? is_recurring.map(String).join(",") : undefined,
       startDate: startDate ? format(new Date(startDate), "yyyy-MM-dd") : undefined,
       endDate: endDate ? format(new Date(endDate), "yyyy-MM-dd") : undefined,
     };
     console.log("DEBUG: useFetchEvents params:", params);
     return params;
-  }, [event_type, provinceId, area, startDate, endDate]);
+  }, [event_type, area, is_recurring, startDate, endDate]);
 
   return useQuery({
-    queryKey: ["fetch.events", queryParams, tokenData.tokenRole, tokenData.tokenArea],
+    queryKey: ["fetch.events", event_type, area, is_recurring, startDate, endDate, tokenData.tokenRole, tokenData.tokenArea],
     queryFn: async () => {
       const response = await axiosInstance.get("/event/filtered", {
         params: queryParams,
