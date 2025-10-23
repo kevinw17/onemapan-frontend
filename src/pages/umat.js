@@ -125,7 +125,6 @@ export default function UmatPage() {
   const { data: users, isLoading, refetch: refetchUsers } = useFetchUsers(queryParams);
   const usersList = useMemo(() => {
     const rawUsers = users?.data || [];
-    // Fallback filter for "User" role to ensure only their own data is shown
     return isNotUserRole ? rawUsers : rawUsers.filter(user => user.user_info_id === userId);
   }, [users, isNotUserRole, userId]);
   const total = users?.total || 0;
@@ -147,7 +146,6 @@ export default function UmatPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Bersihkan cache React Query untuk memastikan tidak ada data lama
       queryClient.invalidateQueries(["userProfile"]);
       queryClient.invalidateQueries(["users"]);
 
@@ -162,14 +160,11 @@ export default function UmatPage() {
           const decodedRole = decoded.role || "User";
 
           if (decodedUserId && !isNaN(decodedUserId)) {
-            // Perbarui localStorage dengan userId dan role dari token
             localStorage.setItem("userId", decodedUserId.toString());
             localStorage.setItem("role", decodedRole);
             setUserId(decodedUserId);
             setUserRole(decodedRole);
-            console.log("User ID and role fetched from token:", { userId: decodedUserId, role: decodedRole, token });
           } else {
-            console.warn("No user_info_id found in token", { token });
             toast({
               id: "token-decode-error",
               title: "Gagal memproses token",
@@ -181,7 +176,6 @@ export default function UmatPage() {
             router.push("/login");
           }
         } catch (error) {
-          console.error("Failed to decode token:", error);
           toast({
             id: "token-decode-error",
             title: "Gagal memproses token",
@@ -193,7 +187,6 @@ export default function UmatPage() {
           router.push("/login");
         }
       } else {
-        console.warn("Missing token in localStorage", { userId: storedUserId, token });
         toast({
           id: "auth-error",
           title: "Autentikasi Gagal",
@@ -231,7 +224,6 @@ export default function UmatPage() {
 
   useEffect(() => {
     if (profileError && profileError.message !== lastError) {
-      console.error("Profile fetch error:", profileError);
       toast({
         id: `profile-error-${profileError?.message || "unknown"}`,
         title: "Gagal memuat profil pengguna",

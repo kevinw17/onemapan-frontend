@@ -274,13 +274,9 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
   }
 
   return events.map((event, index) => {
-    // Validasi event sebelum render
     if (!event || !event.id || !event.date || !event.day) {
-      console.warn(`Invalid event data at index ${index}:`, { event, timestamp: new Date().toISOString() });
       return null;
     }
-
-    console.log("DEBUG: EventList - Rendering event:", { id: event.id, name: event.name, rawDate: event.rawDate });
 
     return (
       <Box
@@ -291,7 +287,6 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
         borderRadius="md"
         border="1px solid #e2e8f0"
         onClick={() => {
-          console.log("DEBUG: EventList - Clicking event:", { id: event.id, name: event.name });
           onEventClick(event);
         }}
         cursor="pointer"
@@ -334,8 +329,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl }
     const option = jangkauanOptions.find((opt) => opt.value === value);
     return option ? option.label : "-";
   };
-
-  console.log("DEBUG: EventDetailModal - isOpen:", isOpen, "event:", event);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
@@ -774,30 +767,19 @@ export default function Event() {
     endDate: format(dateRange.endDate, "yyyy-MM-dd"),
   });
 
-  // Debug log untuk memeriksa data kelurahan
   useEffect(() => {
     console.log("DEBUG: formData.districtId:", formData.districtId);
     console.log("DEBUG: localities:", localities);
     console.log("DEBUG: isLocalitiesLoading:", isLocalitiesLoading);
   }, [formData.districtId, localities, isLocalitiesLoading]);
 
-  // Sort events by greg_occur_date and filter by dateRange
   const sortedEvents = useMemo(() => {
-    console.log("DEBUG: Raw events before processing:", events.map(e => ({
-      id: e.id,
-      name: e.name,
-      rawDate: e.rawDate,
-      date: e.date,
-      is_recurring: e.is_recurring,
-    })));
     const filtered = events.filter(event => {
       if (!event.rawDate) {
-        console.warn("Missing rawDate for event:", event);
         return false;
       }
       const eventDate = typeof event.rawDate === 'string' ? new Date(event.rawDate) : event.rawDate;
       if (!isValid(eventDate)) {
-        console.warn("Invalid rawDate for event:", event);
         return false;
       }
       const inRange = eventDate >= dateRange.startDate && eventDate <= dateRange.endDate;
@@ -816,21 +798,13 @@ export default function Event() {
       const dateA = typeof a.rawDate === 'string' ? new Date(a.rawDate) : a.rawDate;
       const dateB = typeof b.rawDate === 'string' ? new Date(b.rawDate) : b.rawDate;
       if (!isValid(dateA) || !isValid(dateB)) {
-        console.warn("Invalid date comparison:", { a: a.rawDate, b: b.rawDate });
         return 0;
       }
       return dateA - dateB;
     });
-    console.log("DEBUG: Sorted and filtered events:", sorted.map(e => ({
-      id: e.id,
-      name: e.name,
-      rawDate: e.rawDate,
-      date: e.date,
-    })));
     return sorted;
   }, [events, dateRange.startDate, dateRange.endDate]);
 
-  // Ensure events are valid before passing to Layout
   const validEvents = sortedEvents.filter(event => 
     event && 
     event.id && 
@@ -839,12 +813,7 @@ export default function Event() {
     event.name
   );
 
-  // Refetch events when dateRange or filters change
   useEffect(() => {
-    console.log("DEBUG: dateRange changed:", {
-      startDate: format(dateRange.startDate, "yyyy-MM-dd"),
-      endDate: format(dateRange.endDate, "yyyy-MM-dd"),
-    });
     refetch();
   }, [dateRange, eventTypeFilter, jangkauanFilter, isRecurringFilter, refetch]);
 
@@ -857,7 +826,6 @@ export default function Event() {
         duration: 5000,
         isClosable: true,
       });
-      console.error("Error fetching events:", error);
       refetch();
     }
   }, [error, refetch, toast]);
@@ -913,25 +881,10 @@ export default function Event() {
       return;
     }
 
-    console.log("DEBUG: handleEdit - Input event:", {
-      id: event.id,
-      name: event.name,
-      rawDate: event.rawDate,
-      rawEndDate: event.rawEndDate,
-      date: event.date,
-      time: event.time,
-    });
-
     try {
       queryClient.invalidateQueries(["event", event.id]);
       const response = await axiosInstance.get(`/event/${event.id}`);
       const eventData = response.data;
-      console.log("DEBUG: handleEdit - eventData from API:", {
-        id: eventData.id,
-        event_name: eventData.event_name,
-        rawDate: eventData.rawDate,
-        rawEndDate: eventData.rawEndDate,
-      });
 
       if (!eventData || typeof eventData !== 'object') {
         throw new Error("Invalid event data from API: response is empty or not an object");
@@ -947,18 +900,10 @@ export default function Event() {
         const timeStr = event.time.replace(" WIB", "");
         const dateTimeStr = `${event.date} ${timeStr}`;
         rawDate = parse(dateTimeStr, "d MMMM yyyy HH.mm", new Date(), { locale: require('date-fns/locale/id') });
-        console.log("DEBUG: handleEdit - Fallback parsed rawDate:", rawDate);
       }
 
       const isRawDateValid = rawDate && isValid(rawDate);
       const isRawEndDateValid = rawEndDate && isValid(rawEndDate);
-
-      console.log("DEBUG: handleEdit - Date validation:", {
-        rawDate,
-        isRawDateValid,
-        rawEndDate,
-        isRawEndDateValid,
-      });
 
       const localDateTime = isRawDateValid
         ? rawDate.toLocaleString("sv-SE", {
@@ -983,11 +928,6 @@ export default function Event() {
             hour12: false,
           }).replace(" ", "T")
         : "";
-
-      console.log("DEBUG: handleEdit - Formatted dates:", {
-        localDateTime,
-        localEndDateTime,
-      });
 
       const location = eventData.location || {};
       const locality = location.locality || {};
@@ -1015,8 +955,6 @@ export default function Event() {
         area: eventData.area === null ? "nasional" : eventData.area || event.jangkauan || "",
       };
 
-      console.log("DEBUG: handleEdit - Setting formData:", newFormData);
-
       setFormData(newFormData);
       if (province.id) queryClient.invalidateQueries(['cities', province.id.toString()]);
       if (city.id) queryClient.invalidateQueries(['districts', city.id.toString()]);
@@ -1032,7 +970,6 @@ export default function Event() {
         duration: 3000,
         isClosable: true,
       });
-      console.error("Error in handleEdit:", error);
     }
   }, [setFormData, setImage, setPreviewImage, onEditOpen, queryClient, toast]);
 
@@ -1089,7 +1026,6 @@ export default function Event() {
   }, [selectedEvent, toast, onConfirmClose, onDetailClose, refetch, deleteMutation]);
 
   const openEventDetail = useCallback(async (event) => {
-    console.log("DEBUG: openEventDetail - Input event:", { id: event.id, name: event.name, rawDate: event.rawDate, date: event.date, time: event.time });
 
     if (!event?.id) {
       toast({
@@ -1106,7 +1042,6 @@ export default function Event() {
       queryClient.invalidateQueries(["event", event.id]);
       const response = await axiosInstance.get(`/event/${event.id}`);
       const eventData = response.data;
-      console.log("DEBUG: openEventDetail - eventData from API:", eventData);
 
       if (!eventData || typeof eventData !== 'object') {
         throw new Error("Invalid event data from API: response is empty or not an object");
@@ -1122,19 +1057,14 @@ export default function Event() {
         const timeStr = event.time.replace(" WIB", "");
         const dateTimeStr = `${event.date} ${timeStr}`;
         rawDate = parse(dateTimeStr, "d MMMM yyyy HH.mm", new Date(), { locale: require('date-fns/locale/id') });
-        console.log("DEBUG: openEventDetail - Fallback parsed rawDate:", rawDate);
       }
 
       if (rawDate && !isValid(rawDate)) {
-        console.warn("Invalid rawDate:", rawDate);
         rawDate = null;
       }
       if (rawEndDate && !isValid(rawEndDate)) {
-        console.warn("Invalid rawEndDate:", rawEndDate);
         rawEndDate = null;
       }
-
-      console.log("DEBUG: openEventDetail - Processed dates:", { rawDate, rawEndDate });
 
       const safeEventData = {
         id: eventData.id || event.id || null,
@@ -1158,19 +1088,9 @@ export default function Event() {
         time: eventData.time || event.time || (rawDate && isValid(rawDate) ? format(rawDate, "HH:mm") : "Waktu Tidak Tersedia"),
       };
 
-      console.log("DEBUG: openEventDetail - Setting selectedEvent:", {
-        id: safeEventData.id,
-        name: safeEventData.name,
-        rawDate: safeEventData.rawDate,
-        rawEndDate: safeEventData.rawEndDate,
-        date: safeEventData.date,
-        time: safeEventData.time,
-      });
-
       setSelectedEvent(safeEventData);
       onDetailOpen();
     } catch (error) {
-      console.error("Error in openEventDetail:", error);
       toast({
         title: "Error",
         description: `Gagal memuat detail kegiatan: ${error.message}. Silakan coba lagi.`,

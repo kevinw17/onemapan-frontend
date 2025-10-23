@@ -41,7 +41,6 @@ export default function CalendarComponent({
             const isToday = new Date(tileDate).toDateString() === new Date(today).toDateString();
             const hasEvents = events.some((event) => {
                 if (!event.dateRange || !Array.isArray(event.dateRange)) {
-                console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
                 return false;
                 }
                 return event.dateRange.some((eventDate) => {

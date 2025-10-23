@@ -57,7 +57,6 @@ const loadQiuDaoOptions = async (inputValue, callback, toast) => {
 
         callback(options);
     } catch (error) {
-        console.error("Error fetching Qiu Dao data:", error);
         callback([]);
         toast({
             title: "Gagal memuat data Qiu Dao",
@@ -137,7 +136,6 @@ export default function AddUmatPage() {
             setSelectedQiuDao(response.data);
             onOpen();
         } catch (error) {
-            console.error("Gagal fetch Qiu Dao details:", error);
             toast({
                 title: "Gagal memuat detail Qiu Dao",
                 status: "error",

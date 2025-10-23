@@ -34,13 +34,11 @@ export default function QiudaoDetailModal({
     const toast = useToast();
     const router = useRouter();
 
-    // State untuk modal konfirmasi hapus
     const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
     const [qiudaoIdToDelete, setQiudaoIdToDelete] = useState(null);
 
     useEffect(() => {
         if (isOpen) {
-            console.log("Selected Qiudao:", selectedQiudao);
             setIsLoading(true);
             Promise.all([
                 axiosInstance.get("/dianchuanshi").then(res => setDianChuanList(res.data)).catch(err => console.error("Gagal ambil Dian Chuan Shi:", err)),
@@ -49,7 +47,6 @@ export default function QiudaoDetailModal({
         }
     }, [isOpen, selectedQiudao]);
 
-    // Fungsi untuk menangani konfirmasi hapus
     const handleConfirmDelete = async () => {
         try {
             await handleDelete(qiudaoIdToDelete);
@@ -79,7 +76,7 @@ export default function QiudaoDetailModal({
     };
 
     if (!selectedQiudao) {
-        return null; // Hindari render jika selectedQiudao tidak ada
+        return null;
     }
 
     return (

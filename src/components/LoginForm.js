@@ -17,12 +17,12 @@ import {
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useRouter } from "next/router";
 import NextLink from "next/link";
-import { useMutation, useQueryClient } from "@tanstack/react-query"; // Tambahkan useQueryClient
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { loginApi } from "@/features/login/loginApi";
 
 export default function LoginForm() {
   const router = useRouter();
-  const queryClient = useQueryClient(); // Tambahkan queryClient untuk invalidasi cache
+  const queryClient = useQueryClient();
   const [flashMessage, setFlashMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ username: "", password: "" });
@@ -36,24 +36,19 @@ export default function LoginForm() {
     mutationFn: loginApi,
     onSuccess: (data) => {
       if (data?.token && data?.user_data) {
-        // Bersihkan localStorage sebelum menyimpan data baru
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        // Simpan token dan user data
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user_data));
-        // Invalidasi cache React Query
         queryClient.invalidateQueries(["userProfile"]);
         queryClient.invalidateQueries(["users"]);
         router.push("/dashboard");
       } else {
-        console.error("Data login tidak lengkap:", data);
         setFlashMessage("Login gagal: Data tidak lengkap");
       }
     },
     onError: (error) => {
       setForm((prev) => ({ ...prev, password: "" }));
-      console.error("Login error:", error);
       setFlashMessage(error?.response?.data?.message || "Terjadi kesalahan saat login");
     },
   });
@@ -68,7 +63,6 @@ export default function LoginForm() {
     try {
       login(form);
     } catch (err) {
-      console.error("Login gagal:", err);
       setFlashMessage("Terjadi kesalahan saat login");
     }
   };

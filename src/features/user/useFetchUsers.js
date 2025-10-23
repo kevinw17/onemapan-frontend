@@ -8,12 +8,11 @@ export const useFetchUsers = ({
     searchField = "full_name",
     job_name = [],
     last_education_level = [],
-    spiritualStatus = [], // Pastikan konsisten
+    spiritualStatus = [],
     is_qing_kou = [],
     gender = [],
     blood_type = [],
 }) => {
-    console.log("Fetch Users Params:", { page, limit, search, searchField, job_name, last_education_level, spiritualStatus, is_qing_kou, gender, blood_type });
     return useQuery({
         queryKey: ["fetch.users", page, limit, search, searchField, job_name, last_education_level, spiritualStatus, is_qing_kou, gender, blood_type],
         queryFn: async () => {
@@ -47,11 +46,9 @@ export const useFetchUsers = ({
                 blood_type.forEach(bt => params.append('blood_type[]', bt));
             }
 
-            console.log("API Request Params:", params.toString());
             const response = await axiosInstance.get("/profile/user", {
                 params: params,
             });
-            console.log("API Response:", response.data);
             return response.data;
         },
         keepPreviousData: true,

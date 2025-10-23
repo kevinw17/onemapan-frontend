@@ -27,7 +27,7 @@ const AddQiudaoPage = () => {
         };
         const fetchProvinces = async () => {
             try {
-                const res = await axiosInstance.get("/profile/location/provinces"); // Asumsi endpoint untuk provinces
+                const res = await axiosInstance.get("/profile/location/provinces");
                 setProvinces(res.data || []);
             } catch (err) {
                 console.error("Gagal fetch provinces:", err);
@@ -73,8 +73,8 @@ const AddQiudaoPage = () => {
         try {
             await axiosInstance.post("/profile/qiudao", {
             ...values,
-            qiu_dao_location_id: Number(values.qiu_dao_location_id), // Sudah benar
-            dian_chuan_shi_id: values.dian_chuan_shi_id ? Number(values.dian_chuan_shi_id) : null, // Konversi ke number atau null
+            qiu_dao_location_id: Number(values.qiu_dao_location_id),
+            dian_chuan_shi_id: values.dian_chuan_shi_id ? Number(values.dian_chuan_shi_id) : null,
             });
 
             toast({
@@ -94,10 +94,9 @@ const AddQiudaoPage = () => {
         }
     };
 
-    // Filter temple locations based on selected province
     const filteredTemples = selectedProvince
         ? templeLocations.filter((temple) => {
-            const locality = temple.locality; // Assuming locality is included in the fotang response
+            const locality = temple.locality;
             if (!locality || !locality.district || !locality.district.city) return false;
             return locality.district.city.provinceId === Number(selectedProvince);
         })

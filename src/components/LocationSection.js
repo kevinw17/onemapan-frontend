@@ -61,8 +61,6 @@ export default function LocationSection({ location = {}, onChange, hideMandarinN
             const localityId = parseInt(location.locality);
             if (!localityId || isNaN(localityId)) return;
 
-            console.log("Resolving full location chain from locality:", localityId);
-
             try {
                 const localityRes = await axiosInstance.get(`/profile/location/locality/${localityId}`);
                 const locality = localityRes.data;
@@ -97,7 +95,7 @@ export default function LocationSection({ location = {}, onChange, hideMandarinN
                     locality: locality.id,
                 });
             } catch (err) {
-                console.error("Failed to resolve location chain:", err);
+                console.error("Failed to resolve location:", err);
             }
         };
 

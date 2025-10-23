@@ -42,7 +42,6 @@ export default function EditQiudao() {
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const deleteQiudaoMutation = useDeleteQiudao();
 
-  // Mengambil data user role dan scope dari token
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -55,9 +54,7 @@ export default function EditQiudao() {
           setUserRole(role);
           localStorage.setItem("scope", scope);
           localStorage.setItem("role", role);
-          console.log("Decoded JWT:", { scope, role });
         } catch (error) {
-          console.error("Failed to decode token:", error);
           toast({
             id: "token-decode-error",
             title: "Gagal memproses token",
@@ -82,7 +79,6 @@ export default function EditQiudao() {
     }
   }, [toast, router]);
 
-  // Mengambil data Qiudao, dianchuanshi, dan fotang
   useEffect(() => {
     if (qiuDaoId) {
       setIsLoading(true);
@@ -91,7 +87,6 @@ export default function EditQiudao() {
           .get(`/profile/qiudao/${qiuDaoId}`)
           .then((res) => {
             const data = res.data;
-            console.log("API Response:", data); // Debug respons API
             setSelectedQiudao(data);
             setFormData({
               ...data,
@@ -100,7 +95,6 @@ export default function EditQiudao() {
             });
           })
           .catch((err) => {
-            console.error("Gagal ambil data Qiudao:", err);
             toast({
               title: "Gagal memuat data",
               description: "Tidak dapat mengambil data Qiudao",
@@ -112,11 +106,9 @@ export default function EditQiudao() {
         axiosInstance
           .get("/dianchuanshi")
           .then((res) => {
-            console.log("DianChuanList:", res.data); // Debug dianChuanList
             setDianChuanList(res.data);
           })
           .catch((err) => {
-            console.error("Gagal ambil Dian Chuan Shi:", err);
             toast({
               title: "Gagal memuat data",
               description: "Tidak dapat mengambil data Dian Chuan Shi",
@@ -128,11 +120,9 @@ export default function EditQiudao() {
         axiosInstance
           .get("/fotang")
           .then((res) => {
-            console.log("TempleLocations:", res.data); // Debug templeLocations
             setTempleLocations(res.data || []);
           })
           .catch((err) => {
-            console.error("Gagal ambil lokasi vihara:", err);
             toast({
               title: "Gagal memuat data",
               description: "Tidak dapat mengambil data lokasi vihara",
@@ -145,13 +135,11 @@ export default function EditQiudao() {
     }
   }, [qiuDaoId, toast]);
 
-  // Menangani perubahan input
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  // Menangani perubahan select untuk qiu_dao_location_id dan dian_chuan_shi_id
   const handleSelectChange = (field, value) => {
     setFormData({
       ...formData,
@@ -159,7 +147,6 @@ export default function EditQiudao() {
     });
   };
 
-  // Menangani submit form
   const handleSubmit = async () => {
     const {
       qiu_dao_name,
@@ -179,7 +166,6 @@ export default function EditQiudao() {
     const qiuDaoLocationId = parseInt(qiu_dao_location_id || 0);
     const dianChuanShiId = parseInt(dian_chuan_shi_id || 0);
 
-    // Validasi
     if (!qiuDaoLocationId || isNaN(qiuDaoLocationId)) {
       toast({
         title: "Lokasi Qiudao tidak valid",
@@ -239,7 +225,6 @@ export default function EditQiudao() {
     }
   };
 
-  // Menangani penghapusan
   const canDelete = userRole !== "User" && (userScope === "nasional" || userScope === "wilayah" || ["AdminWilayah", "AdminNasional", "Admin", "SuperAdmin"].includes(userRole));
 
   const handleDelete = () => {
@@ -285,7 +270,6 @@ export default function EditQiudao() {
     }
   };
 
-  // Menangani pembatalan
   const handleCancel = () => {
     router.push("/qiudao");
   };

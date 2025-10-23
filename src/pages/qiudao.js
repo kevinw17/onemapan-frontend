@@ -1,4 +1,3 @@
-// src/pages/qiudao.js
 import Layout from "../components/layout";
 import {
   Table,
@@ -132,7 +131,6 @@ export default function QiudaoPage() {
       if (token) {
         try {
           const decoded = jwtDecode(token);
-          console.log("DEBUG: Decoded JWT in qiudao.js:", decoded);
           const decodedUserId = parseInt(decoded.user_info_id);
           setUserId(decodedUserId);
           setUserScope(decoded.scope);
@@ -141,7 +139,6 @@ export default function QiudaoPage() {
           localStorage.setItem("scope", decoded.scope);
           localStorage.setItem("area", decoded.area || "");
         } catch (error) {
-          console.error("Failed to decode token:", error);
           toast({
             id: "token-decode-error",
             title: "Gagal memproses token",
@@ -153,7 +150,6 @@ export default function QiudaoPage() {
           router.push("/login");
         }
       } else {
-        console.warn("Missing token in localStorage");
         toast({
           id: "auth-error",
           title: "Autentikasi Gagal",
@@ -174,7 +170,6 @@ export default function QiudaoPage() {
     if (userProfile?.area) {
       setUserArea(userProfile.area);
       localStorage.setItem("area", userProfile.area);
-      console.log("DEBUG: Set userArea from profile:", userProfile.area);
     } else if (userScope === "wilayah") {
       console.warn("DEBUG: userProfile.area is missing:", userProfile);
     }
@@ -206,7 +201,6 @@ export default function QiudaoPage() {
 
   useEffect(() => {
     if (profileError && profileError.message !== lastError) {
-      console.error("Profile fetch error:", profileError);
       toast({
         id: `profile-error-${profileError?.message || "unknown"}`,
         title: "Gagal memuat profil pengguna",
@@ -229,22 +223,18 @@ export default function QiudaoPage() {
       area: userScope === "wilayah" && userArea ? userArea : undefined,
       userId: userScope === "self" ? userId : undefined,
     };
-    console.log("DEBUG: fetchParams:", params);
     return params;
   }, [page, limit, searchQuery, searchField, userScope, userArea, userId, isNotSelfScope]);
 
   const { data: qiudaos, isLoading, error, refetch: refetchQiudaos } = useFetchQiudaos(fetchParams);
   const qiudaosList = useMemo(() => {
     const rawQiudaos = qiudaos?.data || [];
-    console.log("DEBUG: rawQiudaos:", rawQiudaos);
     const filteredQiudaos = userScope === "self"
       ? rawQiudaos.filter(q => {
           const matches = q.qiu_dao_id === userProfile?.qiu_dao_id;
-          console.log("DEBUG: Filtering qiudao:", { qiu_dao_id: q.qiu_dao_id, userQiuDaoId: userProfile?.qiu_dao_id, matches });
           return matches;
         })
       : rawQiudaos;
-    console.log("DEBUG: qiudaosList:", filteredQiudaos);
     return filteredQiudaos;
   }, [qiudaos, userScope, userProfile]);
   const total = isNotSelfScope ? qiudaos?.total || 0 : qiudaosList.length;
@@ -252,7 +242,6 @@ export default function QiudaoPage() {
 
   useEffect(() => {
     if (error && error.message !== lastError) {
-      console.error("Qiudao fetch error:", error);
       toast({
         id: `fetch-error-${error?.message || "unknown"}`,
         title: "Gagal memuat data Qiudao",
@@ -268,13 +257,6 @@ export default function QiudaoPage() {
   }, [error, lastError, toast]);
 
   const handleRowClick = (qiudao) => {
-    console.log("DEBUG: handleRowClick:", {
-      userScope,
-      userArea,
-      qiudaoArea: qiudao.qiu_dao_location?.area,
-      qiu_dao_id: qiudao.qiu_dao_id,
-      userQiuDaoId: userProfile?.qiu_dao_id,
-    });
     if (userScope === "wilayah" && userArea) {
       if (qiudao.qiu_dao_location?.area && qiudao.qiu_dao_location.area !== userArea) {
         toast({
@@ -427,7 +409,6 @@ export default function QiudaoPage() {
       refetchQiudaos();
       handleClose();
     } catch (err) {
-      console.error("Gagal menyimpan:", err);
       const errorMessage = err?.response?.data?.message || "Terjadi kesalahan saat menyimpan";
       toast({
         id: `save-error-${qiu_dao_id}`,

@@ -119,9 +119,7 @@ export default function EditUmat() {
           setUserRole(role);
           localStorage.setItem("scope", scope);
           localStorage.setItem("role", role);
-          console.log("Decoded JWT:", { scope, role }); // Debug JWT
         } catch (error) {
-          console.error("Failed to decode token:", error);
           toast({
             id: "token-decode-error",
             title: "Gagal memproses token",
@@ -146,7 +144,6 @@ export default function EditUmat() {
     }
   }, [toast, router]);
 
-  // Allow delete for AdminWilayah, AdminNasional, Admin, or SuperAdmin, but not for User role
   const canDelete = userRole !== "User" && (userScope === "nasional" || userScope === "wilayah" || ["AdminWilayah", "AdminNasional", "Admin", "SuperAdmin"].includes(userRole));
 
   const fetchLocationData = async (type, id, setter, field) => {
@@ -235,7 +232,6 @@ export default function EditUmat() {
         }
       })
       .catch((err) => {
-        console.error("Gagal mengambil data user:", err);
         toast({
           title: "Gagal memuat data",
           status: "error",

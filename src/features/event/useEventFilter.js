@@ -34,7 +34,6 @@ export const useEventFilter = () => {
     }, []);
 
     const applyFilters = useCallback(() => {
-        console.log("Applying filters:", { tempEventTypeFilter, tempJangkauanFilter, tempIsRecurringFilter });
         setEventTypeFilter([...tempEventTypeFilter]);
         setJangkauanFilter([...tempJangkauanFilter]);
         setIsRecurringFilter([...tempIsRecurringFilter]);
@@ -45,7 +44,6 @@ export const useEventFilter = () => {
     }, [tempEventTypeFilter, tempJangkauanFilter, tempIsRecurringFilter, queryClient]);
 
     const clearFilters = useCallback(() => {
-        console.log("Clearing filters");
         setTempEventTypeFilter([]);
         setTempJangkauanFilter([]);
         setTempIsRecurringFilter([]);

@@ -24,7 +24,6 @@ export const useFetchEvents = ({
             tokenArea: decoded.area || null,
           });
         } catch (error) {
-          console.error("Failed to decode token:", error);
           setTokenData({ tokenRole: null, tokenArea: null });
         }
       }
@@ -39,7 +38,6 @@ export const useFetchEvents = ({
       startDate: startDate ? format(new Date(startDate), "yyyy-MM-dd") : undefined,
       endDate: endDate ? format(new Date(endDate), "yyyy-MM-dd") : undefined,
     };
-    console.log("DEBUG: useFetchEvents params:", params);
     return params;
   }, [event_type, area, is_recurring, startDate, endDate]);
 
@@ -49,26 +47,20 @@ export const useFetchEvents = ({
       const response = await axiosInstance.get("/event/filtered", {
         params: queryParams,
       }).catch((error) => {
-        console.error("Error fetching events:", error.response?.data || error.message);
         return { data: [] };
       });
 
-      console.log("DEBUG: useFetchEvents response:", response.data);
-
       if (!response.data || !Array.isArray(response.data)) {
-        console.warn("No events returned from API");
         return [];
       }
 
       const flattenedEvents = response.data.flatMap((event) => {
         if (!event || !event.event_id || !event.occurrences || !Array.isArray(event.occurrences)) {
-          console.warn(`Invalid event or occurrences:`, { event_id: event?.event_id, event_name: event?.event_name });
           return [];
         }
 
         return event.occurrences.map((occ) => {
           if (!occ || !occ.greg_occur_date || !occ.occurrence_id) {
-            console.warn(`Invalid occurrence for event ${event.event_id}:`, { occurrence_id: occ?.occurrence_id });
             return null;
           }
 
@@ -76,7 +68,6 @@ export const useFetchEvents = ({
           const endDate = occ.greg_end_date ? new Date(occ.greg_end_date) : null;
 
           if (isNaN(startDate.getTime())) {
-            console.warn(`Invalid start date for event ${event.event_id}, occurrence ${occ.occurrence_id}: ${occ.greg_occur_date}`);
             return null;
           }
 
@@ -177,9 +168,6 @@ export const useFetchEvents = ({
           const requiredProps = ["id", "occurrence_id", "date", "name"];
           const missingProps = requiredProps.filter((prop) => !eventData[prop]);
           if (missingProps.length > 0) {
-            console.warn(
-              `Event ${event.event_id}, occurrence ${occ.occurrence_id} missing required properties: ${missingProps.join(", ")}`
-            );
             return null;
           }
 
@@ -188,7 +176,7 @@ export const useFetchEvents = ({
       });
 
       if (flattenedEvents.length === 0) {
-        console.warn("No valid events after flattening. Check occurrence data in database.");
+        console.warn("No valid events.");
       }
 
       return flattenedEvents;

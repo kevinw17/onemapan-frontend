@@ -57,7 +57,6 @@ export const useEventForm = ({ onAddClose, onEditClose, onDetailClose, selectedE
             return { valid: false, error: "Semua ID lokasi harus berupa angka." };
         }
 
-        // Validasi area
         const validAreas = ["nasional", "Korwil_1", "Korwil_2", "Korwil_3", "Korwil_4", "Korwil_5", "Korwil_6"];
         if (!validAreas.includes(formData.area)) {
             return { valid: false, error: "Area tidak valid. Pilih salah satu dari opsi yang tersedia." };
@@ -321,7 +320,7 @@ export const useEventForm = ({ onAddClose, onEditClose, onDetailClose, selectedE
                         });
                         resetFormData();
                         onEditClose();
-                        onDetailClose(); // Menutup EventDetailModal setelah edit berhasil
+                        onDetailClose();
                     },
                     onError: (error) => {
                         toast({

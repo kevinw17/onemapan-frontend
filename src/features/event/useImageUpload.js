@@ -26,7 +26,6 @@ export const useImageUpload = () => {
         img.src = previewImage;
         img.onload = () => setIsImageLoaded(true);
         img.onerror = () => {
-            console.error("Failed to load image:", previewImage);
             setIsImageLoaded(false);
             setPreviewImage(null);
             toast({
@@ -47,7 +46,6 @@ export const useImageUpload = () => {
         try {
             cropperRef.current.cropper.replace(previewImage);
         } catch (error) {
-            console.error("Error replacing Cropper image:", error);
             setIsImageLoaded(false);
             toast({
             title: "Error",

@@ -112,7 +112,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
     return events
       .filter((event) => {
         if (!event.dateRange || !Array.isArray(event.dateRange)) {
-          console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
           return false;
         }
         return event.dateRange.some((eventDate) => (
@@ -122,8 +121,7 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
         ));
       })
       .map((event) => {
-        console.log(`getEventsForDate event ${event.id}:`, { startTime: event.startTime, endTime: event.endTime, isSameDay: event.isSameDay, time: event.time }); // Debug
-        return event; // Use event.time from useFetchEvents
+        return event;
       })
       .sort((a, b) => {
         const timeA = (a.startTime || "00:00 WIB").replace(" WIB", "").split(":");
@@ -136,7 +134,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
     return events
       .filter((event) => {
         if (!event.dateRange || !Array.isArray(event.dateRange)) {
-          console.warn(`Invalid dateRange for event ${event.id}, occurrence ${event.occurrence_id}:`, event.dateRange);
           return false;
         }
         return event.dateRange.some((eventDate) => (
@@ -145,8 +142,7 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
         ));
       })
       .map((event) => {
-        console.log(`getEventsForMonth event ${event.id}:`, { startTime: event.startTime, endTime: event.endTime, isSameDay: event.isSameDay, time: event.time }); // Debug
-        return event; // Use event.time from useFetchEvents
+        return event;
       })
       .sort((a, b) => {
         const dateA = a.dateRange[0] || new Date(a.rawDate || Date.now());
@@ -270,16 +266,37 @@ export default function Layout({ children, title, showCalendar = false }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewMode, setViewMode] = useState("month");
 
-  const navItems = useMemo(() => [
-    { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
-    { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
-    { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
-    { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
-    { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
-    { label: "Peran", href: "/role", iconSrc: "/role_icon.svg" },
-    { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
-    { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
-  ], []);
+  const navItems = useMemo(() => {
+    const baseItems = [
+      { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
+      { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
+      { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
+      { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
+      { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
+      { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
+      { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
+    ];
+
+    const userStr = localStorage.getItem("user");
+    let isSuperAdmin = false;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        isSuperAdmin = user.role === "Super Admin";
+      } catch (e) {
+        console.error("Gagal parsing user role:", e);
+      }
+    }
+
+    return isSuperAdmin 
+      ? [
+          ...baseItems.slice(0, 5),
+          { label: "Peran", href: "/role", iconSrc: "/role_icon.svg" },
+          ...baseItems.slice(5)
+        ]
+      : baseItems;
+  }, []);
 
   const showBackButton = useMemo(() => 
     ["/umat/addUmat", "/umat/editUmat", "/qiudao/addQiudao", "/qiudao/editQiudao"].includes(router.pathname),
@@ -313,8 +330,7 @@ export default function Layout({ children, title, showCalendar = false }) {
   });
 
   useEffect(() => {
-    console.log("Raw fetchedEvents:", fetchedEvents); // Debug raw data
-    setEvents(fetchedEvents); // Use fetchedEvents directly
+    setEvents(fetchedEvents);
   }, [fetchedEvents]);
 
   if (isCheckingAuth) {

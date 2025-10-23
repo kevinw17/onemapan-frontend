@@ -86,7 +86,6 @@ export default function Dashboard() {
   const router = useRouter();
   const toast = useToast();
 
-  // Load userId from token
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -96,12 +95,10 @@ export default function Dashboard() {
           const decodedUserId = parseInt(decoded.user_info_id);
           if (decodedUserId && !isNaN(decodedUserId)) {
             setUserId(decodedUserId);
-            console.log("DEBUG: Decoded userId:", decodedUserId);
           } else {
             throw new Error("Invalid user_info_id in token");
           }
         } catch (err) {
-          console.error("Failed to decode token:", err);
           toast({
             title: "Gagal memproses token",
             description: "Token tidak valid atau tidak dapat diproses.",
@@ -125,29 +122,19 @@ export default function Dashboard() {
     }
   }, [toast, router]);
 
-  // Fetch user profile
   const { data: userProfile, isLoading: isProfileLoading, error: profileError } =
     useFetchUserProfile(userId);
 
-  // Set role and area from profile
   useEffect(() => {
     if (userProfile) {
       setUserRole(userProfile.role?.toLowerCase() || "user");
       setUserArea(userProfile.qiudao?.qiu_dao_location?.area || null);
       setUsername(userProfile.username || userProfile.full_name || "");
-      console.log("DEBUG: User Profile:", {
-        userId,
-        role: userProfile.role,
-        userArea: userProfile.qiudao?.qiu_dao_location?.area,
-        username: userProfile.username || userProfile.full_name,
-      });
     }
   }, [userProfile, userId]);
 
-  // Handle profile error
   useEffect(() => {
     if (profileError) {
-      console.error("Profile fetch error:", profileError);
       toast({
         title: "Gagal memuat profil pengguna",
         description:
@@ -161,13 +148,11 @@ export default function Dashboard() {
     }
   }, [profileError, toast, router]);
 
-  // Automatically set selectedArea based on role
   useEffect(() => {
     if (userRole && isUserLoaded) {
       if (userRole === "user" || userRole === "admin") {
         if (userArea && AREA_OPTIONS.some((opt) => opt.value === userArea)) {
           setSelectedArea(userArea);
-          console.log("DEBUG: Set selectedArea to userArea:", userArea);
         } else {
           toast({
             title: "Wilayah Tidak Valid",
@@ -181,15 +166,13 @@ export default function Dashboard() {
         }
       } else if (userRole === "super admin") {
         setSelectedArea("Nasional");
-        console.log("DEBUG: Set selectedArea to Nasional for super admin");
       }
     }
   }, [userRole, userArea, isUserLoaded, toast]);
 
-  // Debug stats data
   useEffect(() => {
     if (stats) {
-      console.log("DEBUG: Dashboard Stats Data:", JSON.stringify(stats, null, 2));
+      console.log("Dashboard Stats Data:", JSON.stringify(stats, null, 2));
     }
   }, [stats]);
 
@@ -316,7 +299,7 @@ export default function Dashboard() {
               : `Total Umat per Provinsi Wilayah ${areaLabel.replace("Korwil ", "")}`}
           >
             {(selectedArea === "Nasional" ? stats?.qiudaoUmatByKorwil?.length > 0 : stats?.qiudaoUmatByProvince?.length > 0) &&
-             (selectedArea === "Nasional" ? stats.qiudaoUmatByKorwil?.some((item) => item.umat > 0) : stats.qiudaoUmatByProvince?.some((item) => item.umat > 0)) ? (
+              (selectedArea === "Nasional" ? stats.qiudaoUmatByKorwil?.some((item) => item.umat > 0) : stats.qiudaoUmatByProvince?.some((item) => item.umat > 0)) ? (
               <Box width="100%" height="300px">
                 <Bar data={barData} options={barOptions} />
               </Box>
