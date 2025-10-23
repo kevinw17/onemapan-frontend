@@ -261,42 +261,33 @@ export default function Layout({ children, title, showCalendar = false }) {
   const router = useRouter();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [username, setUsername] = useState("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);  // ✅ NEW STATE
   const [events, setEvents] = useState([]);
   const [date, setDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewMode, setViewMode] = useState("month");
 
+  // ✅ FIXED: BASE NAV ITEMS (NO localStorage)
+  const baseNavItems = useMemo(() => [
+    { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
+    { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
+    { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
+    { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
+    { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
+    { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
+    { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
+  ], []);
+
+  // ✅ FIXED: DYNAMIC NAV ITEMS (USE STATE - SSR SAFE)
   const navItems = useMemo(() => {
-    const baseItems = [
-      { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
-      { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
-      { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
-      { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
-      { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
-      { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
-      { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
-    ];
-
-    const userStr = localStorage.getItem("user");
-    let isSuperAdmin = false;
-    
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        isSuperAdmin = user.role === "Super Admin";
-      } catch (e) {
-        console.error("Gagal parsing user role:", e);
-      }
-    }
-
     return isSuperAdmin 
       ? [
-          ...baseItems.slice(0, 5),
+          ...baseNavItems.slice(0, 5),  // Dashboard to QiuDao
           { label: "Peran", href: "/role", iconSrc: "/role_icon.svg" },
-          ...baseItems.slice(5)
+          ...baseNavItems.slice(5)       // Settings, Help
         ]
-      : baseItems;
-  }, []);
+      : baseNavItems;
+  }, [isSuperAdmin, baseNavItems]);
 
   const showBackButton = useMemo(() => 
     ["/umat/addUmat", "/umat/editUmat", "/qiudao/addQiudao", "/qiudao/editQiudao"].includes(router.pathname),
@@ -305,14 +296,20 @@ export default function Layout({ children, title, showCalendar = false }) {
 
   const backPath = router.pathname.includes("umat") ? "/umat" : "/qiudao";
 
+  // ✅ FIXED: localStorage IN useEffect (CLIENT-SIDE ONLY)
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setUsername(user.username);
-      } catch (e) {
-        console.error("Gagal parsing user:", e);
+    // ✅ SAFE: Check if running on client-side
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          setUsername(user.username);
+          setIsSuperAdmin(user.role === "Super Admin");  // ✅ SET STATE
+          console.log("✅ User role loaded:", user.role);
+        } catch (e) {
+          console.error("Gagal parsing user:", e);
+        }
       }
     }
     setIsCheckingAuth(false);

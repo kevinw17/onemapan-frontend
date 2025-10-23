@@ -187,10 +187,10 @@ const RolePage = () => {
             }
           }
           
-          await assignRole({ user_id, role_id: selectedRole.id });
+          assignRole({ user_id, role_id: selectedRole.id });
           
         } catch (error) {
-          console.error(`❌ Error replacing role for user ${user_id}:`, error);
+          console.error(`Error replacing role for user ${user_id}:`, error);
         }
       }
       
