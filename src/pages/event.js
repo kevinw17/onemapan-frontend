@@ -33,7 +33,7 @@ const lunarDays = [
   "十一日", "十二日", "十三日", "十四日", "十五日", "十六日", "十七日", "十八日", "十九日", "二十日",
   "二十一日", "二十二日", "二十三日", "二十四日", "二十五日", "二十六日", "二十七日", "二十八日", "二十九日", "三十日",
 ];
-const eventTypes = ["Regular", "Hari_Besar", "AdHoc", "Anniversary", "Peresmian", "Seasonal"];
+const eventTypes = ["Regular", "Hari_Besar", "Lembaga", "Anniversary", "Peresmian", "Seasonal"];
 const jangkauanOptions = [
   { value: "nasional", label: "Nasional" },
   { value: "Korwil_1", label: "Wilayah 1" },
