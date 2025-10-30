@@ -1,20 +1,40 @@
 import Layout from "@/components/layout";
-import { Box, Flex, Heading, Button, useToast, Text, SimpleGrid, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, Select } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import {
+    Box,
+    Flex,
+    Heading,
+    Button,
+    useToast,
+    Text,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Select,
+    IconButton,
+    VStack,
+    HStack,
+    Table,
+    Thead,
+    Tbody,
+    Tr,
+    Th,
+    Td,
+    Badge,
+} from "@chakra-ui/react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
-import { Bar } from "react-chartjs-2";
-import Chart from "chart.js/auto";
-import ChartDataLabels from "chartjs-plugin-datalabels";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { FiUpload } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUpload } from "react-icons/fi";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
-Chart.register(ChartDataLabels);
-
 const AREA_OPTIONS = [
+    { value: "Nasional", label: "Nasional" },
     { value: "Korwil_1", label: "Wilayah 1" },
     { value: "Korwil_2", label: "Wilayah 2" },
     { value: "Korwil_3", label: "Wilayah 3" },
@@ -23,284 +43,273 @@ const AREA_OPTIONS = [
     { value: "Korwil_6", label: "Wilayah 6" },
 ];
 
+const DATA_TYPES = [
+    { key: "vihara", label: "Jumlah Vihara" },
+    { key: "umat", label: "Total Umat" },
+    { key: "pandita", label: "Jumlah Pandita" },
+    { key: "fuwuyuan", label: "Biarawan/Biarawati" },
+];
+
 export default function Report() {
     const toast = useToast();
-    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [isExportOpen, setIsExportOpen] = useState(false);
     const [exportFormat, setExportFormat] = useState("pdf");
 
     const { data: stats, isLoading, error } = useQuery({
         queryKey: ["report-stats"],
         queryFn: async () => {
-            let fotangData = [], qiudaoData = [], dcsData = [], spiritualUsers = [];
+        const [fotangRes, qiudaoRes, dcsRes, spiritualRes] = await Promise.all([
+            axiosInstance.get("/fotang").catch(() => ({ data: [] })),
+            axiosInstance.get("/profile/qiudao").catch(() => ({ data: [] })),
+            axiosInstance.get("/dianchuanshi").catch(() => ({ data: [] })),
+            axiosInstance.get("/spiritualuser").catch(() => ({ data: [] })),
+        ]);
 
-            try {
-                const [fotangResponse, qiudaoResponse, dcsResponse, spiritualResponse] = await Promise.all([
-                    axiosInstance.get("/fotang").catch(() => ({ data: [] })),
-                    axiosInstance.get("/profile/qiudao").catch(() => ({ data: [] })),
-                    axiosInstance.get("/dianchuanshi").catch(() => ({ data: [] })),
-                    axiosInstance.get("/spiritualuser").catch(() => ({ data: [] })),
-                ]);
+        const fotangData = Array.isArray(fotangRes.data) ? fotangRes.data : fotangRes.data.data || [];
+        const qiudaoData = Array.isArray(qiudaoRes.data) ? qiudaoRes.data : qiudaoRes.data.data || [];
+        const dcsData = Array.isArray(dcsRes.data) ? dcsRes.data : dcsRes.data.data || [];
+        const spiritualUsers = Array.isArray(spiritualRes.data) ? spiritualRes.data : spiritualRes.data.data || [];
 
-                fotangData = Array.isArray(fotangResponse.data) ? fotangResponse.data : fotangResponse.data.data || [];
-                qiudaoData = Array.isArray(qiudaoResponse.data) ? qiudaoResponse.data : qiudaoResponse.data.data || [];
-                dcsData = Array.isArray(dcsResponse.data) ? dcsResponse.data : dcsResponse.data.data || [];
-                spiritualUsers = Array.isArray(spiritualResponse.data) ? spiritualResponse.data : spiritualResponse.data.data || [];
+        const viharaByArea = fotangData.reduce((acc, f) => {
+            const area = f.area || "Unknown";
+            acc[area] = (acc[area] || 0) + 1;
+            return acc;
+        }, {});
 
-                console.log("Fotang Data:", fotangData);
-                console.log("Qiudao Data:", qiudaoData);
-                console.log("Dianchuanshi Data:", dcsData);
-                console.log("Spiritual Users:", spiritualUsers);
-            } catch (err) {
-                console.error("Error fetching data:", err);
-            }
+        const umatByArea = qiudaoData.reduce((acc, q) => {
+            const area = q.qiu_dao_location?.area || "Unknown";
+            acc[area] = (acc[area] || 0) + 1;
+            return acc;
+        }, {});
 
-            const viharaByArea = fotangData.reduce((acc, f) => {
-                const area = f.area || "Unknown";
-                acc[area] = (acc[area] || 0) + 1;
-                return acc;
-            }, {});
-            const qiudaoUmatByKorwil = qiudaoData.reduce((acc, q) => {
-                const korwil = q.qiu_dao_location?.area || "Unknown";
-                const existing = acc.find((item) => item.korwil === korwil);
-                if (existing) {
-                    existing.umat += 1;
-                } else {
-                    acc.push({ korwil, umat: 1 });
-                }
-                return acc;
-            }, []).map(item => ({ ...item, umat: Math.round(item.umat) }));
+        const panditaByArea = dcsData.reduce((acc, d) => {
+            const area = d.area || "Unknown";
+            acc[area] = (acc[area] || 0) + 1;
+            return acc;
+        }, {});
 
-            const panditaByArea = dcsData.reduce((acc, d) => {
+        const fuwuyuanByArea = {
+            ...dcsData.reduce((acc, d) => {
+            if (d.is_fuwuyuan) {
                 const area = d.area || "Unknown";
                 acc[area] = (acc[area] || 0) + 1;
-                return acc;
-            }, {});
+            }
+            return acc;
+            }, {}),
+            ...spiritualUsers.reduce((acc, s) => {
+            if (s.is_fuwuyuan) {
+                const area = s.area || "Unknown";
+                acc[area] = (acc[area] || 0) + 1;
+            }
+            return acc;
+            }, {}),
+        };
 
-            const fuwuyuanByArea = {
-                ...dcsData.reduce((acc, d) => {
-                    const area = d.area || "Unknown";
-                    if (d.is_fuwuyuan === true) {
-                        acc[area] = (acc[area] || 0) + 1;
-                    }
-                    return acc;
-                }, {}),
-                ...spiritualUsers.reduce((acc, s) => {
-                    const area = s.area || "Unknown";
-                    if (s.is_fuwuyuan === true) {
-                        acc[area] = (acc[area] || 0) + 1;
-                    }
-                    return acc;
-                }, {})
-            };
+        const total = {
+            vihara: fotangData.length,
+            umat: qiudaoData.length,
+            pandita: dcsData.length,
+            fuwuyuan: Object.values(fuwuyuanByArea).reduce((a, b) => a + b, 0),
+        };
 
-            const areas = AREA_OPTIONS.map((opt) => opt.value);
-            const viharaData = {
-                labels: areas.map((a) => AREA_OPTIONS.find((opt) => opt.value === a)?.label || a),
-                datasets: [{
-                    data: areas.map((a) => viharaByArea[a] || 0),
-                    backgroundColor: "#216ceeff",
-                    borderColor: "#216ceeff",
-                    borderWidth: 1,
-                }],
-            };
-            const umatData = {
-                labels: qiudaoUmatByKorwil.map((item) => AREA_OPTIONS.find(opt => opt.value === item.korwil)?.label || item.korwil) || [],
-                datasets: [{
-                    data: qiudaoUmatByKorwil.map((item) => item.umat) || [],
-                    backgroundColor: "#216ceeff",
-                    borderColor: "#216ceeff",
-                    borderWidth: 1,
-                }],
-            };
-            const panditaData = {
-                labels: areas.map((a) => AREA_OPTIONS.find((opt) => opt.value === a)?.label || a),
-                datasets: [{
-                    data: areas.map((a) => panditaByArea[a] || 0),
-                    backgroundColor: "#216ceeff",
-                    borderColor: "#216ceeff",
-                    borderWidth: 1,
-                }],
-            };
-            const fuwuyuanData = {
-                labels: areas.map((a) => AREA_OPTIONS.find((opt) => opt.value === a)?.label || a),
-                datasets: [{
-                    data: areas.map((a) => fuwuyuanByArea[a] || 0),
-                    backgroundColor: "#216ceeff",
-                    borderColor: "#216ceeff",
-                    borderWidth: 1,
-                }],
-            };
-
-            return { viharaData, umatData, panditaData, fuwuyuanData, lastUpdated: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) };
+        return {
+            byArea: { viharaByArea, umatByArea, panditaByArea, fuwuyuanByArea },
+            total,
+            lastUpdated: new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }),
+        };
         },
         refetchInterval: 60000,
     });
 
-    const exportReport = (format) => {
-        if (!stats || !stats.viharaData || !stats.viharaData.datasets || !stats.viharaData.datasets[0]?.data) {
-            toast({
-                title: "Error",
-                description: "Data tidak tersedia untuk diekspor.",
-                status: "error",
-                duration: 3000,
-                isClosable: true,
-            });
-            return;
-        }
-
-        const tableData = [
-            ["Wilayah", "Vihara", "Umat", "Pandita", "Biarawan/Biarawati"],
-            ...AREA_OPTIONS.map((opt, index) => [
-                opt.label,
-                stats.viharaData.datasets[0].data[index] || 0,
-                stats.umatData.datasets[0].data[index] || 0,
-                stats.panditaData.datasets[0].data[index] || 0,
-                stats.fuwuyuanData.datasets[0].data[index] || 0,
-            ]),
-        ];
-
-        if (format === "pdf") {
-            const doc = new jsPDF();
-            autoTable(doc, {
-                head: tableData.slice(0, 1),
-                body: tableData.slice(1),
-            });
-            doc.save("report.pdf");
-            toast({
-                title: "Berhasil",
-                description: "Laporan telah diekspor ke PDF.",
-                status: "success",
-                duration: 3000,
-                isClosable: true,
-            });
-        } else if (format === "excel") {
-            const ws = XLSX.utils.aoa_to_sheet(tableData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Report");
-            const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-            const dataBlob = new Blob([excelBuffer], { type: "application/octet-stream" });
-            saveAs(dataBlob, "report.xlsx");
-            toast({
-                title: "Berhasil",
-                description: "Laporan telah diekspor ke Excel.",
-                status: "success",
-                duration: 3000,
-                isClosable: true,
-            });
-        } else if (format === "csv") {
-            const csvContent = tableData.map(row => row.join(",")).join("\n");
-            const dataBlob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-            saveAs(dataBlob, "report.csv");
-            toast({
-                title: "Berhasil",
-                description: "Laporan telah diekspor ke CSV.",
-                status: "success",
-                duration: 3000,
-                isClosable: true,
-            });
-        }
-        setIsExportModalOpen(false);
+    const addItem = () => {
+        setSelectedItems((prev) => [...prev, { dataType: "", area: "" }]);
     };
 
-    const chartOptions = {
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: { enabled: false },
-            datalabels: {
-                display: function(context) {
-                    return context.dataset.data[context.dataIndex] > 0;
-                },
-                color: "#000",
-                anchor: "end",
-                align: "top",
-                offset: 5,
-                font: { size: 14, weight: "bold" },
-                formatter: (value) => Math.round(value),
-            },
-        },
-        scales: {
-            x: { grid: { display: false } },
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: (value) => Math.round(value),
-                    stepSize: 20, // Increased step size for better spacing
-                    max: function() {
-                        const maxDataValue = Math.max(...stats?.viharaData.datasets[0].data);
-                        return Math.ceil(maxDataValue / 20) * 20 + 50; // Increased buffer to 50
-                    }
-                },
-                grid: { display: false }
-            },
-        },
-        animation: false,
+    const updateItem = (index, field, value) => {
+        setSelectedItems((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: value };
+        return updated;
+        });
+    };
+
+    const removeItem = (index) => {
+        setSelectedItems((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const exportSelected = () => {
+        const validItems = selectedItems.filter((item) => item.dataType && item.area);
+        if (validItems.length === 0) {
+        toast({ title: "Pilih data", description: "Pilih minimal 1 data lengkap.", status: "warning" });
+        return;
+        }
+
+        const tableData = [["Jenis Data", "Wilayah", "Jumlah"]];
+        validItems.forEach((item) => {
+        const typeLabel = DATA_TYPES.find((d) => d.key === item.dataType)?.label || item.dataType;
+        const areaLabel = AREA_OPTIONS.find((o) => o.value === item.area)?.label || item.area;
+        const value =
+            item.area === "Nasional"
+            ? stats?.total?.[item.dataType] || 0
+            : stats?.byArea?.[`${item.dataType}ByArea`]?.[item.area] || 0;
+        tableData.push([typeLabel, areaLabel, value]); // ← URUTAN BARU
+        });
+
+        if (exportFormat === "pdf") {
+        const doc = new jsPDF();
+        autoTable(doc, { head: [tableData[0]], body: tableData.slice(1) });
+        doc.save("laporan-custom.pdf");
+        } else if (exportFormat === "excel") {
+        const ws = XLSX.utils.aoa_to_sheet(tableData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+        const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        saveAs(new Blob([buf]), "laporan-custom.xlsx");
+        } else if (exportFormat === "csv") {
+        const csv = tableData.map((r) => r.join(",")).join("\n");
+        saveAs(new Blob([csv], { type: "text/csv" }), "laporan-custom.csv");
+        }
+
+        toast({ title: "Berhasil", description: `Dieksport ke ${exportFormat.toUpperCase()}.`, status: "success" });
+        setIsExportOpen(false);
     };
 
     if (isLoading) return <Layout title="Laporan"><Box p={6}>Loading...</Box></Layout>;
-    if (error) return <Layout title="Laporan"><Box p={6}>Error loading data: {error.message}</Box></Layout>;
+    if (error) return <Layout title="Laporan"><Box p={6}>Error: {error.message}</Box></Layout>;
 
     return (
         <Layout title="Laporan">
-            <Box p={2} overflow="auto">
-                <Flex justify="start" align="center" mb={6}>
-                    <Button size="sm" colorScheme="blue" onClick={() => setIsExportModalOpen(true)} leftIcon={<FiUpload style={{ marginTop: "2px" }} />}>Ekspor Data</Button>
-                </Flex>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                    <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
-                        <Text fontWeight="bold" mb={4}>Jumlah Vihara per Wilayah</Text>
-                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
-                            <Bar data={stats?.viharaData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
-                        </Box>
-                    </Box>
-                    <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
-                        <Text fontWeight="bold" mb={4}>Total Umat per Wilayah</Text>
-                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
-                            <Bar data={stats?.umatData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
-                        </Box>
-                    </Box>
-                </SimpleGrid>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mt={6}>
-                    <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
-                        <Text fontWeight="bold" mb={4}>Jumlah Pandita per Wilayah</Text>
-                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
-                            <Bar data={stats?.panditaData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
-                        </Box>
-                    </Box>
-                    <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center">
-                        <Text fontWeight="bold" mb={4}>Jumlah Biarawan/Biarawati per Wilayah</Text>
-                        <Box width="100%" height="400px"> {/* Increased height to 400px */}
-                            <Bar data={stats?.fuwuyuanData || { labels: [], datasets: [{ data: [] }] }} options={chartOptions} />
-                        </Box>
-                    </Box>
-                </SimpleGrid>
-                <Box mt={4}>
-                    <Text fontSize="sm" color="gray.500">
-                        Update terakhir: {stats?.lastUpdated || "N/A"}
-                    </Text>
-                </Box>
+        <Box p={4}>
+            <Flex justify="space-between" align="center" mb={6}>
+            <Heading size="lg">Laporan Data</Heading>
+            <HStack spacing={2}>
+                <Button size="sm" leftIcon={<FiPlus />} onClick={addItem} colorScheme="blue">
+                Tambah Data
+                </Button>
+                <Button
+                size="sm"
+                leftIcon={<FiUpload />}
+                colorScheme="blue"
+                onClick={() => setIsExportOpen(true)}
+                isDisabled={selectedItems.filter(i => i.dataType && i.area).length === 0}
+                >
+                Ekspor
+                </Button>
+            </HStack>
+            </Flex>
 
-                <Modal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)}>
-                    <ModalOverlay />
-                    <ModalContent>
-                        <ModalHeader textAlign="center">Ekspor Data</ModalHeader>
-                        <Text mb={4} textAlign="center">Pilih tipe file untuk ekspor data</Text>
-                        <ModalBody>
-                            <Select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} mb={4}>
-                                <option value="excel">File excel</option>
-                                <option value="pdf">File PDF</option>
-                                <option value="csv">File CSV</option>
-                            </Select>
-                        </ModalBody>
-                        <ModalFooter>
-                            <Flex width="100%" justifyContent="space-between">
-                                <Button variant="ghost" width="48%" onClick={() => setIsExportModalOpen(false)}>Batal</Button>
-                                <Button colorScheme="blue" width="48%" onClick={() => exportReport(exportFormat)}>Ekspor</Button>
-                            </Flex>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+            <Box bg="white" borderRadius="lg" shadow="md" p={4} mb={6}>
+            <Text fontWeight="medium" mb={3}>Pilih Data untuk Diekspor</Text>
+            <VStack align="stretch" spacing={3}>
+                {selectedItems.map((item, index) => (
+                <HStack key={index} spacing={3}>
+                    <Select
+                    placeholder="Pilih Jenis Data"
+                    value={item.dataType}
+                    onChange={(e) => updateItem(index, "dataType", e.target.value)}
+                    flex={1}
+                    >
+                    {DATA_TYPES.map((dt) => (
+                        <option key={dt.key} value={dt.key}>{dt.label}</option>
+                    ))}
+                    </Select>
+                    <Select
+                    placeholder="Pilih Wilayah"
+                    value={item.area}
+                    onChange={(e) => updateItem(index, "area", e.target.value)}
+                    flex={1}
+                    >
+                    {AREA_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                    </Select>
+                    <IconButton
+                    icon={<FiTrash2 />}
+                    onClick={() => removeItem(index)}
+                    colorScheme="red"
+                    variant="ghost"
+                    size="sm"
+                    />
+                </HStack>
+                ))}
+                {selectedItems.length === 0 && (
+                <Text color="gray.500" fontStyle="italic">Belum ada data dipilih</Text>
+                )}
+            </VStack>
             </Box>
+
+            {/* TABEL SEMUA DATA */}
+            <Box bg="white" borderRadius="lg" shadow="md" overflowX="auto">
+            <Table variant="simple">
+                <Thead>
+                <Tr>
+                    <Th>Wilayah</Th>
+                    {DATA_TYPES.map((dt) => (
+                    <Th key={dt.key} textAlign="center">
+                        {dt.label}
+                    </Th>
+                    ))}
+                </Tr>
+                </Thead>
+                <Tbody>
+                {AREA_OPTIONS.map((area) => (
+                    <Tr key={area.value}>
+                    <Td fontWeight="medium">{area.label}</Td>
+                    {DATA_TYPES.map((dt) => {
+                        const value =
+                        area.value === "Nasional"
+                            ? stats?.total?.[dt.key] || 0
+                            : stats?.byArea?.[`${dt.key}ByArea`]?.[area.value] || 0;
+                        const isSelected = selectedItems.some(
+                        (i) => i.dataType === dt.key && i.area === area.value
+                        );
+                        return (
+                        <Td key={dt.key} textAlign="center">
+                            {isSelected ? (
+                            <Badge colorScheme="green">{value}</Badge>
+                            ) : (
+                            <Text color="gray.600">{value}</Text>
+                            )}
+                        </Td>
+                        );
+                    })}
+                    </Tr>
+                ))}
+                </Tbody>
+            </Table>
+            </Box>
+
+            <Text mt={4} fontSize="sm" color="gray.500">
+            Update terakhir: {stats?.lastUpdated}
+            </Text>
+
+            {/* MODAL EKSPOR */}
+            <Modal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)}>
+            <ModalOverlay />
+            <ModalContent>
+                <ModalHeader>Ekspor Data</ModalHeader>
+                <ModalBody>
+                <Text mb={4}>
+                    Terdapat {selectedItems.filter(i => i.dataType && i.area).length} data yang akan diexport
+                </Text>
+                <Select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)}>
+                    <option value="pdf">PDF</option>
+                    <option value="excel">Excel</option>
+                    <option value="csv">CSV</option>
+                </Select>
+                </ModalBody>
+                <ModalFooter>
+                <Button variant="ghost" mr={3} onClick={() => setIsExportOpen(false)}>
+                    Batal
+                </Button>
+                <Button colorScheme="blue" onClick={exportSelected}>
+                    Ekspor
+                </Button>
+                </ModalFooter>
+            </ModalContent>
+            </Modal>
+        </Box>
         </Layout>
     );
 }
