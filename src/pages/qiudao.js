@@ -28,11 +28,23 @@ import {
   ModalFooter,
   ModalCloseButton,
   Text,
+  VStack,
+  FormControl,
+  FormLabel,
+  Collapse,
+  HStack,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
+  PopoverFooter,
+  PopoverArrow,
+  PopoverCloseButton,
 } from "@chakra-ui/react";
 import { useFetchQiudaos } from "@/features/qiudao/useFetchQiudaos";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
-import { FiSearch, FiX, FiPlus } from "react-icons/fi";
+import { FiSearch, FiX, FiPlus, FiFilter, FiMinus } from "react-icons/fi";
 import Pagination from "@/components/Pagination";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import QiudaoDetailModal from "@/components/QiudaoDetailModal";
@@ -94,6 +106,37 @@ export default function QiudaoPage() {
     bao_shi_qd_mandarin_name: false,
     date: true,
   });
+
+  // === FILTER STATES (HANYA VIhara & Pandita) ===
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [locationFilter, setLocationFilter] = useState([]);
+  const [locationMandarinFilter, setLocationMandarinFilter] = useState([]);
+  const [dianChuanShiFilter, setDianChuanShiFilter] = useState([]);
+  const [dianChuanShiMandarinFilter, setDianChuanShiMandarinFilter] = useState([]);
+
+  // TEMP FILTERS
+  const [tempLocationFilter, setTempLocationFilter] = useState([]);
+  const [tempLocationMandarinFilter, setTempLocationMandarinFilter] = useState([]);
+  const [tempDianChuanShiFilter, setTempDianChuanShiFilter] = useState([]);
+  const [tempDianChuanShiMandarinFilter, setTempDianChuanShiMandarinFilter] = useState([]);
+
+  // COLLAPSE STATES
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [isLocationMandarinOpen, setIsLocationMandarinOpen] = useState(false);
+  const [isDianChuanShiOpen, setIsDianChuanShiOpen] = useState(false);
+  const [isDianChuanShiMandarinOpen, setIsDianChuanShiMandarinOpen] = useState(false);
+
+  // === PER COLUMN FILTER STATES ===
+  const [columnFilters, setColumnFilters] = useState({});
+  const [columnSearch, setColumnSearch] = useState({});
+
+  // === KOLOM YANG BOLEH DIFILTER (HANYA VIhara & Pandita) ===
+  const filterableColumns = [
+    "location_name",
+    "location_mandarin_name",
+    "dian_chuan_shi_name",
+    "dian_chuan_shi_mandarin_name",
+  ];
 
   const tableHeaders = [
     { key: "qiu_dao_id", label: "ID" },
@@ -214,26 +257,51 @@ export default function QiudaoPage() {
     }
   }, [profileError, lastError, toast, router]);
 
+  // === SYNC TEMP FILTERS WHEN FILTER PANEL OPENS ===
+  useEffect(() => {
+    if (filterOpen) {
+      setTempLocationFilter([...locationFilter]);
+      setTempLocationMandarinFilter([...locationMandarinFilter]);
+      setTempDianChuanShiFilter([...dianChuanShiFilter]);
+      setTempDianChuanShiMandarinFilter([...dianChuanShiMandarinFilter]);
+    }
+  }, [filterOpen, locationFilter, locationMandarinFilter, dianChuanShiFilter, dianChuanShiMandarinFilter]);
+
+  // === FETCH PARAMS DENGAN COLUMN FILTERS ===
   const fetchParams = useMemo(() => {
     const params = {
       page: isNotSelfScope ? page : undefined,
       limit: isNotSelfScope ? limit : undefined,
       search: isNotSelfScope ? searchQuery : undefined,
       searchField: isNotSelfScope ? searchField : undefined,
-      area: userScope === "wilayah" && userArea ? userArea : undefined,
-      userId: userScope === "self" ? userId : undefined,
+
+      // GLOBAL FILTERS
+      location_name: isNotSelfScope ? locationFilter : [],
+      location_mandarin_name: isNotSelfScope ? locationMandarinFilter : [],
+      dian_chuan_shi_name: isNotSelfScope ? dianChuanShiFilter : [],
+      dian_chuan_shi_mandarin_name: isNotSelfScope ? dianChuanShiMandarinFilter : [],
+
+      // COLUMN FILTERS (PER KOLOM)
+      ...Object.fromEntries(
+        Object.entries(columnFilters).map(([key, values]) => [
+          key,
+          isNotSelfScope ? values : [],
+        ])
+      ),
     };
     return params;
-  }, [page, limit, searchQuery, searchField, userScope, userArea, userId, isNotSelfScope]);
+  }, [
+    page, limit, searchQuery, searchField, isNotSelfScope,
+    locationFilter, locationMandarinFilter,
+    dianChuanShiFilter, dianChuanShiMandarinFilter,
+    columnFilters,
+  ]);
 
   const { data: qiudaos, isLoading, error, refetch: refetchQiudaos } = useFetchQiudaos(fetchParams);
   const qiudaosList = useMemo(() => {
     const rawQiudaos = qiudaos?.data || [];
     const filteredQiudaos = userScope === "self"
-      ? rawQiudaos.filter(q => {
-          const matches = q.qiu_dao_id === userProfile?.qiu_dao_id;
-          return matches;
-        })
+      ? rawQiudaos.filter(q => q.qiu_dao_id === userProfile?.qiu_dao_id)
       : rawQiudaos;
     return filteredQiudaos;
   }, [qiudaos, userScope, userProfile]);
@@ -255,6 +323,83 @@ export default function QiudaoPage() {
       setLastError(error?.message || null);
     }
   }, [error, lastError, toast]);
+
+  // === GLOBAL FILTER HANDLERS ===
+  const applyFilters = () => {
+    setLocationFilter([...tempLocationFilter]);
+    setLocationMandarinFilter([...tempLocationMandarinFilter]);
+    setDianChuanShiFilter([...tempDianChuanShiFilter]);
+    setDianChuanShiMandarinFilter([...tempDianChuanShiMandarinFilter]);
+    setPage(1);
+    refetchQiudaos();
+    setFilterOpen(false);
+  };
+
+  const clearFilters = () => {
+    setTempLocationFilter([]);
+    setTempLocationMandarinFilter([]);
+    setTempDianChuanShiFilter([]);
+    setTempDianChuanShiMandarinFilter([]);
+    setLocationFilter([]);
+    setLocationMandarinFilter([]);
+    setDianChuanShiFilter([]);
+    setDianChuanShiMandarinFilter([]);
+    setColumnFilters({});
+    setColumnSearch({});
+    setPage(1);
+    refetchQiudaos();
+    setFilterOpen(false);
+  };
+
+  const handleFilterChange = (setter, value) => {
+    setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
+  };
+
+  // === COLUMN FILTER HANDLERS ===
+  const handleColumnFilterChange = (key, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [key]: prev[key]?.includes(value) ? prev[key].filter(v => v !== value) : [...(prev[key] || []), value]
+    }));
+  };
+
+  const handleColumnSearchChange = (key, value) => {
+    setColumnSearch(prev => ({ ...prev, [key]: value }));
+  };
+
+  const applyColumnFilter = (key, closePopover) => {
+    setPage(1);
+    refetchQiudaos();
+    closePopover();
+  };
+
+  const clearColumnFilter = (key, closePopover) => {
+    setColumnFilters(prev => {
+      const newFilters = { ...prev };
+      delete newFilters[key];
+      return newFilters;
+    });
+    setColumnSearch(prev => {
+      const newSearch = { ...prev };
+      delete newSearch[key];
+      return newSearch;
+    });
+    setPage(1);
+    refetchQiudaos();
+    closePopover();
+  };
+
+  const getColumnValues = (key) => {
+    const search = columnSearch[key] || "";
+    const values = Array.from(new Set(qiudaosList.map(q => {
+      if (key === "location_name") return q.qiu_dao_location?.location_name;
+      if (key === "location_mandarin_name") return q.qiu_dao_location?.location_mandarin_name;
+      if (key === "dian_chuan_shi_name") return q.dian_chuan_shi?.name;
+      if (key === "dian_chuan_shi_mandarin_name") return q.dian_chuan_shi?.mandarin_name;
+      return q[key];
+    }).filter(Boolean)));
+    return values.filter(v => v.toLowerCase().includes(search.toLowerCase()));
+  };
 
   const handleRowClick = (qiudao) => {
     if (userScope === "wilayah" && userArea) {
@@ -542,25 +687,160 @@ export default function QiudaoPage() {
               </Button>
             )}
 
+            {/* FILTER BUTTON + PANEL */}
+            <Box position="relative">
+              <Button
+                colorScheme="white"
+                textColor="gray.700"
+                borderRadius="full"
+                borderWidth="1px"
+                borderColor="gray.400"
+                size="xs"
+                minW="80px"
+                leftIcon={<FiFilter />}
+                onClick={() => setFilterOpen(!filterOpen)}
+              >
+                Filter
+              </Button>
+
+              {filterOpen && (
+                <VStack
+                  spacing={2}
+                  p={4}
+                  bg="white"
+                  borderRadius="md"
+                  boxShadow="md"
+                  zIndex={10}
+                  align="stretch"
+                  w="340px"
+                  position="absolute"
+                  top="100%"
+                  left={0}
+                  mt={1}
+                  maxH="70vh"
+                  overflowY="auto"
+                >
+                  {/* Vihara (Indonesia) */}
+                  <FormControl>
+                    <Flex align="center" justify="space-between">
+                      <FormLabel mb={0}>Vihara (Indonesia)</FormLabel>
+                      <IconButton size="xs" variant="ghost" icon={isLocationOpen ? <FiMinus /> : <FiPlus />}
+                        onClick={() => setIsLocationOpen(!isLocationOpen)} />
+                    </Flex>
+                    <Collapse in={isLocationOpen} animateOpacity>
+                      <VStack align="start" spacing={1} maxH="200px" overflowY="auto">
+                        {Array.from(new Set(qiudaosList.map(q => q.qiu_dao_location?.location_name).filter(Boolean))).map(loc => (
+                          <Checkbox key={loc} isChecked={tempLocationFilter.includes(loc)}
+                            onChange={() => handleFilterChange(setTempLocationFilter, loc)}>
+                            {loc}
+                          </Checkbox>
+                        ))}
+                      </VStack>
+                    </Collapse>
+                  </FormControl>
+
+                  {/* Vihara (Mandarin) */}
+                  <FormControl>
+                    <Flex align="center" justify="space-between">
+                      <FormLabel mb={0}>Vihara (Mandarin)</FormLabel>
+                      <IconButton size="xs" variant="ghost" icon={isLocationMandarinOpen ? <FiMinus /> : <FiPlus />}
+                        onClick={() => setIsLocationMandarinOpen(!isLocationMandarinOpen)} />
+                    </Flex>
+                    <Collapse in={isLocationMandarinOpen} animateOpacity>
+                      <VStack align="start" spacing={1} maxH="200px" overflowY="auto">
+                        {Array.from(new Set(qiudaosList.map(q => q.qiu_dao_location?.location_mandarin_name).filter(Boolean))).map(loc => (
+                          <Checkbox key={loc} isChecked={tempLocationMandarinFilter.includes(loc)}
+                            onChange={() => handleFilterChange(setTempLocationMandarinFilter, loc)}>
+                            {loc}
+                          </Checkbox>
+                        ))}
+                      </VStack>
+                    </Collapse>
+                  </FormControl>
+
+                  {/* Pandita (Indonesia) */}
+                  <FormControl>
+                    <Flex align="center" justify="space-between">
+                      <FormLabel mb={0}>Pandita (Indonesia)</FormLabel>
+                      <IconButton size="xs" variant="ghost" icon={isDianChuanShiOpen ? <FiMinus /> : <FiPlus />}
+                        onClick={() => setIsDianChuanShiOpen(!isDianChuanShiOpen)} />
+                    </Flex>
+                    <Collapse in={isDianChuanShiOpen} animateOpacity>
+                      <VStack align="start" spacing={1} maxH="200px" overflowY="auto">
+                        {Array.from(new Set(qiudaosList.map(q => q.dian_chuan_shi?.name).filter(Boolean))).map(name => (
+                          <Checkbox key={name} isChecked={tempDianChuanShiFilter.includes(name)}
+                            onChange={() => handleFilterChange(setTempDianChuanShiFilter, name)}>
+                            {name}
+                          </Checkbox>
+                        ))}
+                      </VStack>
+                    </Collapse>
+                  </FormControl>
+
+                  {/* Pandita (Mandarin) */}
+                  <FormControl>
+                    <Flex align="center" justify="space-between">
+                      <FormLabel mb={0}>Pandita (Mandarin)</FormLabel>
+                      <IconButton size="xs" variant="ghost" icon={isDianChuanShiMandarinOpen ? <FiMinus /> : <FiPlus />}
+                        onClick={() => setIsDianChuanShiMandarinOpen(!isDianChuanShiMandarinOpen)} />
+                    </Flex>
+                    <Collapse in={isDianChuanShiMandarinOpen} animateOpacity>
+                      <VStack align="start" spacing={1} maxH="200px" overflowY="auto">
+                        {Array.from(new Set(qiudaosList.map(q => q.dian_chuan_shi?.mandarin_name).filter(Boolean))).map(name => (
+                          <Checkbox key={name} isChecked={tempDianChuanShiMandarinFilter.includes(name)}
+                            onChange={() => handleFilterChange(setTempDianChuanShiMandarinFilter, name)}>
+                            {name}
+                          </Checkbox>
+                        ))}
+                      </VStack>
+                    </Collapse>
+                  </FormControl>
+
+                  <HStack justify="flex-end" spacing={2} mt={3}>
+                    <Button size="sm" onClick={clearFilters}>Reset</Button>
+                    <Button size="sm" onClick={() => setFilterOpen(false)}>Batal</Button>
+                    <Button size="sm" colorScheme="blue" onClick={applyFilters}>Terapkan</Button>
+                  </HStack>
+                </VStack>
+              )}
+            </Box>
+
+            {/* DROPDOWN SEARCH DENGAN GURU PENGAJAK & PENANGGUNG */}
             <Select
               size="xs"
-              width="240px"
+              width="320px"
               borderRadius="full"
               value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
+              onChange={(e) => {
+                setSearchField(e.target.value);
+                setPage(1);
+              }}
             >
-              <option value="qiu_dao_mandarin_name">Nama Mandarin Qiudao</option>
-              <option value="qiu_dao_name">Nama Qiudao</option>
-              <option value="dian_chuan_shi.name">Nama Pandita</option>
-              <option value="dian_chuan_shi.mandarin_name">Nama Mandarin Pandita</option>
-              <option value="yin_shi_qd_name">Nama Guru Pengajak</option>
-              <option value="yin_shi_qd_mandarin_name">Nama Mandarin Guru Pengajak</option>
-              <option value="bao_shi_qd_name">Nama Guru Penanggung</option>
-              <option value="bao_shi_qd_mandarin_name">Nama Mandarin Guru Penanggung</option>
+              {/* Qiudao */}
+              <option value="qiu_dao_name">Nama Qiudao (Indonesia)</option>
+              <option value="qiu_dao_mandarin_name">Nama Qiudao (Mandarin)</option>
+
+              {/* Vihara */}
+              <option value="qiu_dao_location.name">Nama Vihara (Indonesia)</option>
+              <option value="qiu_dao_location.location_mandarin_name">Nama Vihara (Mandarin)</option>
+
+              {/* Pandita */}
+              <option value="dian_chuan_shi.name">Nama Pandita (Indonesia)</option>
+              <option value="dian_chuan_shi.mandarin_name">Nama Pandita (Mandarin)</option>
+
+              {/* Guru Pengajak */}
+              <option value="yin_shi_qd_name">Guru Pengajak (Indonesia)</option>
+              <option value="yin_shi_qd_mandarin_name">Guru Pengajak (Mandarin)</option>
+
+              {/* Guru Penanggung */}
+              <option value="bao_shi_qd_name">Guru Penanggung (Indonesia)</option>
+              <option value="bao_shi_qd_mandarin_name">Guru Penanggung (Mandarin)</option>
+
+              {/* Tanggal Lunar */}
               <option value="lunar_sui_ci_year">Tahun Lunar</option>
               <option value="lunar_month">Bulan Lunar</option>
               <option value="lunar_day">Tanggal Lunar</option>
-              <option value="lunar_shi_chen_time">Waktu Lunar</option>
+              <option value="lunar_shi_chen_time">Waktu Shi Chen</option>
             </Select>
 
             <InputGroup size="xs" width="180px">
@@ -620,6 +900,7 @@ export default function QiudaoPage() {
         </Flex>
       )}
 
+      {/* TABEL DENGAN FILTER PER KOLOM */}
       <Box overflowX="auto" minH="80vh">
         {isLoading ? (
           <Flex justify="center" py={10} height="60vh">
@@ -640,9 +921,16 @@ export default function QiudaoPage() {
             <Thead>
               <Tr>
                 {tableHeaders.map((header) => (
-                  <Th key={header.key} textAlign="center">
-                    {isNotSelfScope && header.key === "qiu_dao_id" ? (
-                      <Flex align="center" justify="center" gap={2}>
+                  <Th
+                    key={header.key}
+                    textAlign="center"
+                    position="relative"
+                    textTransform="none"
+                    fontWeight="medium"
+                    fontSize="sm"
+                  >
+                    <Flex align="center" justify="center" gap={1}>
+                      {isNotSelfScope && header.key === "qiu_dao_id" ? (
                         <Checkbox
                           size="sm"
                           isChecked={isAllSelected}
@@ -658,11 +946,70 @@ export default function QiudaoPage() {
                             },
                           }}
                         />
-                        <Box>{header.label}</Box>
-                      </Flex>
-                    ) : (
-                      header.label
-                    )}
+                      ) : null}
+                      <Box>{header.label}</Box>
+                      {filterableColumns.includes(header.key) && (
+                        <Popover placement="bottom-start">
+                          {({ onClose }) => (
+                            <>
+                              <PopoverTrigger>
+                                <IconButton size="xs" variant="ghost" icon={<FiFilter />} />
+                              </PopoverTrigger>
+                              <PopoverContent width="340px">
+                                <PopoverArrow />
+                                <PopoverCloseButton
+                                  position="absolute"
+                                  right="8px"
+                                  top="8px"
+                                  zIndex="1"
+                                />
+                                <PopoverBody pt={10}>
+                                  <Input
+                                    size="sm"
+                                    placeholder="Cari..."
+                                    value={columnSearch[header.key] || ""}
+                                    onChange={(e) => handleColumnSearchChange(header.key, e.target.value)}
+                                    mb={3}
+                                    textAlign="left"
+                                  />
+                                  <VStack align="start" spacing={2} maxH="240px" overflowY="auto">
+                                    {getColumnValues(header.key).map(value => (
+                                      <Checkbox
+                                        key={value}
+                                        size="sm"
+                                        isChecked={columnFilters[header.key]?.includes(value)}
+                                        onChange={() => handleColumnFilterChange(header.key, value)}
+                                        width="full"
+                                      >
+                                        <Box textAlign="left">{value}</Box>
+                                      </Checkbox>
+                                    ))}
+                                  </VStack>
+                                </PopoverBody>
+                                <PopoverFooter>
+                                  <HStack justify="space-between">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => clearColumnFilter(header.key, onClose)}
+                                    >
+                                      Reset
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      colorScheme="blue"
+                                      onClick={() => applyColumnFilter(header.key, onClose)}
+                                    >
+                                      Terapkan
+                                    </Button>
+                                  </HStack>
+                                </PopoverFooter>
+                              </PopoverContent>
+                            </>
+                          )}
+                        </Popover>
+                      )}
+                    </Flex>
                   </Th>
                 ))}
               </Tr>
@@ -676,7 +1023,13 @@ export default function QiudaoPage() {
                   onClick={() => handleRowClick(qiudao)}
                 >
                   {tableHeaders.map((header) => (
-                    <Td key={header.key} textAlign="center" onClick={header.key === "qiu_dao_id" ? (e) => e.stopPropagation() : undefined}>
+                    <Td
+                      key={header.key}
+                      textAlign="center"
+                      fontFamily="inherit"
+                      fontSize="sm"
+                      onClick={header.key === "qiu_dao_id" ? (e) => e.stopPropagation() : undefined}
+                    >
                       {header.key === "qiu_dao_id" && isNotSelfScope ? (
                         <Flex align="center" justify="center" gap={2}>
                           <Checkbox
