@@ -259,7 +259,7 @@ export default function UmatPage() {
   }, [jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter]);
 
   const handleClickOutside = (e) => {
-    if (!e.target.closest('.filter-dropdown')) {
+    if (!e.target.closest('.filter-dropdown') && !e.target.closest('.chakra-popover__content')) {
       setIsColumnFilterOpen({
         job_name: false,
         last_education_level: false,
@@ -732,7 +732,7 @@ export default function UmatPage() {
 
   return (
     <Layout title="Umat">
-      <Heading size="md" mb={4} ml={2}>
+      <Heading size="md" mb={4} ml={2} fontFamily="inherit">
         Data Umat
         <Box as="span" fontSize="lg" color="gray.500" ml={2}>
           {isNotUserRole ? total : usersList.length}
@@ -794,28 +794,32 @@ export default function UmatPage() {
                 minW="80px"
                 leftIcon={<FiFilter />}
                 onClick={() => setFilterOpen(!filterOpen)}
+                fontFamily="inherit"
+                fontSize="sm"
               >
                 Filter
               </Button>
 
               {filterOpen && (
                 <VStack
-                  spacing={2}
+                  spacing={3}
                   p={4}
                   bg="white"
                   borderRadius="md"
                   boxShadow="md"
                   zIndex={10}
                   align="stretch"
-                  w="300px"
+                  w="320px"
                   position="absolute"
                   top="100%"
                   left={0}
                   mt={1}
+                  fontFamily="inherit"
+                  fontSize="sm"
                 >
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Pekerjaan</FormLabel>
+                      <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Pekerjaan</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
@@ -830,8 +834,12 @@ export default function UmatPage() {
                         {["PNS", "Guru/Dosen", "Dokter/Perawat", "Wiraswasta", "Karyawan Swasta", "Petani/Nelayan", "Pelajar/Mahasiswa", "Pensiunan", "Lainnya"].map((job) => (
                           <Checkbox
                             key={job}
+                            size="sm"
                             isChecked={tempJobFilter.includes(job)}
                             onChange={() => handleJobFilterChange(job)}
+                            fontSize="sm"
+                            fontFamily="inherit"
+                            sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                           >
                             {job}
                           </Checkbox>
@@ -842,11 +850,10 @@ export default function UmatPage() {
 
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Pendidikan Terakhir</FormLabel>
+                      <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Pendidikan Terakhir</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
-                        aria-label={isEducationFilterOpen ? "Hide education filter" : "Show education filter"}
                         icon={isEducationFilterOpen ? <FiMinus /> : <FiPlus />}
                         onClick={() => setIsEducationFilterOpen(!isEducationFilterOpen)}
                         _hover={{ bg: "transparent" }}
@@ -857,8 +864,12 @@ export default function UmatPage() {
                         {["TK", "SD", "SMP", "SMA", "D1", "D2", "D3", "S1", "S2", "S3"].map((edu) => (
                           <Checkbox
                             key={edu}
+                            size="sm"
                             isChecked={tempEducationFilter.includes(edu)}
                             onChange={() => handleEducationFilterChange(edu)}
+                            fontSize="sm"
+                            fontFamily="inherit"
+                            sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                           >
                             {edu === "TK" ? "TK (Taman Kanak-Kanak)" :
                               edu === "SD" ? "SD (Sekolah Dasar)" :
@@ -878,11 +889,10 @@ export default function UmatPage() {
 
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Status Rohani</FormLabel>
+                      <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Status Rohani</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
-                        aria-label={isSpiritualFilterOpen ? "Hide spiritual filter" : "Show spiritual filter"}
                         icon={isSpiritualFilterOpen ? <FiMinus /> : <FiPlus />}
                         onClick={() => setIsSpiritualFilterOpen(!isSpiritualFilterOpen)}
                         _hover={{ bg: "transparent" }}
@@ -893,8 +903,12 @@ export default function UmatPage() {
                         {["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
                           <Checkbox
                             key={status}
+                            size="sm"
                             isChecked={tempSpiritualFilter.includes(status)}
                             onChange={() => handleSpiritualFilterChange(status)}
+                            fontSize="sm"
+                            fontFamily="inherit"
+                            sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                           >
                             {status === "QianRen" ? "Qian Ren / Sesepuh" :
                               status === "DianChuanShi" ? "Dian Chuan Shi / Pandita" :
@@ -911,11 +925,10 @@ export default function UmatPage() {
 
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Status Vegetarian</FormLabel>
+                      <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Status Vegetarian</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
-                        aria-label={isQingKouFilterOpen ? "Hide vegetarian filter" : "Show vegetarian filter"}
                         icon={isQingKouFilterOpen ? <FiMinus /> : <FiPlus />}
                         onClick={() => setIsQingKouFilterOpen(!isQingKouFilterOpen)}
                         _hover={{ bg: "transparent" }}
@@ -924,16 +937,22 @@ export default function UmatPage() {
                     <Collapse in={isQingKouFilterOpen} animateOpacity>
                       <VStack align="start" spacing={1}>
                         <Checkbox
-                          key="true"
+                          size="sm"
                           isChecked={tempQingKouFilter.includes("true")}
                           onChange={() => handleQingKouFilterChange("true")}
+                          fontSize="sm"
+                          fontFamily="inherit"
+                          sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                         >
                           Sudah
                         </Checkbox>
                         <Checkbox
-                          key="false"
+                          size="sm"
                           isChecked={tempQingKouFilter.includes("false")}
                           onChange={() => handleQingKouFilterChange("false")}
+                          fontSize="sm"
+                          fontFamily="inherit"
+                          sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                         >
                           Belum
                         </Checkbox>
@@ -943,11 +962,10 @@ export default function UmatPage() {
 
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Jenis Kelamin</FormLabel>
+                      <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Jenis Kelamin</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
-                        aria-label={isGenderFilterOpen ? "Hide gender filter" : "Show gender filter"}
                         icon={isGenderFilterOpen ? <FiMinus /> : <FiPlus />}
                         onClick={() => setIsGenderFilterOpen(!isGenderFilterOpen)}
                         _hover={{ bg: "transparent" }}
@@ -956,16 +974,22 @@ export default function UmatPage() {
                     <Collapse in={isGenderFilterOpen} animateOpacity>
                       <VStack align="start" spacing={1}>
                         <Checkbox
-                          key="Male"
+                          size="sm"
                           isChecked={tempGenderFilter.includes("Male")}
                           onChange={() => handleGenderFilterChange("Male")}
+                          fontSize="sm"
+                          fontFamily="inherit"
+                          sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                         >
                           Pria
                         </Checkbox>
                         <Checkbox
-                          key="Female"
+                          size="sm"
                           isChecked={tempGenderFilter.includes("Female")}
                           onChange={() => handleGenderFilterChange("Female")}
+                          fontSize="sm"
+                          fontFamily="inherit"
+                          sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                         >
                           Wanita
                         </Checkbox>
@@ -975,11 +999,10 @@ export default function UmatPage() {
 
                   <FormControl>
                     <Flex align="center" justify="space-between">
-                      <FormLabel mb={0}>Golongan Darah</FormLabel>
+                      <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Golongan Darah</FormLabel>
                       <IconButton
                         size="xs"
                         variant="ghost"
-                        aria-label={isBloodTypeFilterOpen ? "Hide blood type filter" : "Show blood type filter"}
                         icon={isBloodTypeFilterOpen ? <FiMinus /> : <FiPlus />}
                         onClick={() => setIsBloodTypeFilterOpen(!isBloodTypeFilterOpen)}
                         _hover={{ bg: "transparent" }}
@@ -990,8 +1013,12 @@ export default function UmatPage() {
                         {["A", "B", "O", "AB"].map((type) => (
                           <Checkbox
                             key={type}
+                            size="sm"
                             isChecked={tempBloodTypeFilter.includes(type)}
                             onChange={() => handleBloodTypeFilterChange(type)}
+                            fontSize="sm"
+                            fontFamily="inherit"
+                            sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                           >
                             {type}
                           </Checkbox>
@@ -1000,16 +1027,17 @@ export default function UmatPage() {
                     </Collapse>
                   </FormControl>
 
-                  <HStack justify="flex-end" spacing={2}>
-                    <Button size="sm" onClick={clearFilters}>Reset</Button>
+                  <HStack justify="flex-end" spacing={2} mt={2}>
+                    <Button size="sm" variant="ghost" onClick={clearFilters}>Reset</Button>
                     <Button size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
-                    <Button size="sm" colorScheme="blue" onClick={applyFilters}>Unggah</Button>
+                    <Button size="sm" colorScheme="blue" onClick={applyFilters}>Terapkan</Button>
                   </HStack>
                 </VStack>
               )}
             </Box>
           )}
 
+          {/* Dropdown search yang sudah dibersihkan */}
           {isNotUserRole && (
             <Select
               size="xs"
@@ -1017,18 +1045,15 @@ export default function UmatPage() {
               borderRadius="full"
               value={searchField}
               onChange={(e) => setSearchField(e.target.value)}
+              fontSize="sm"
+              fontFamily="inherit"
             >
               <option value="full_name">Nama Lengkap</option>
               {columnVisibility.mandarin_name && <option value="mandarin_name">Nama Mandarin</option>}
               {columnVisibility.place_of_birth && <option value="place_of_birth">Tempat Lahir</option>}
-              <option value="id_card_number">No. KTP</option>
               <option value="phone_number">No. HP</option>
-              <option value="email">Email</option>
               <option value="last_education_level">Pendidikan Terakhir</option>
-              <option value="education_major">Jurusan Pendidikan</option>
               <option value="job_name">Pekerjaan</option>
-              <option value="domicile_location.city">Domisili (Kota)</option>
-              <option value="id_card_location.city">Lokasi sesuai KTP (Kota)</option>
             </Select>
           )}
 
@@ -1045,6 +1070,8 @@ export default function UmatPage() {
                   setPage(1);
                 }}
                 borderRadius="full"
+                fontSize="sm"
+                fontFamily="inherit"
               />
               {searchQuery && (
                 <InputRightElement>
@@ -1074,6 +1101,8 @@ export default function UmatPage() {
               minW="100px"
               leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
               onClick={() => router.push("/umat/addUmat")}
+              fontSize="sm"
+              fontFamily="inherit"
             >
               Tambah Umat
             </Button>
@@ -1087,6 +1116,8 @@ export default function UmatPage() {
               minW="100px"
               leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
               onClick={handleImportUmat}
+              fontSize="sm"
+              fontFamily="inherit"
             >
               Import Data
             </Button>
@@ -1102,7 +1133,7 @@ export default function UmatPage() {
             <Thead>
               <Tr>
                 {columnVisibility.user_info_id && isNotUserRole && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     <Flex align="center" justify="center" gap={2}>
                       <Checkbox
                         size="sm"
@@ -1124,12 +1155,12 @@ export default function UmatPage() {
                   </Th>
                 )}
                 {columnVisibility.user_info_id && !isNotUserRole && (
-                  <Th textAlign="center">ID</Th>
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">ID</Th>
                 )}
-                {columnVisibility.full_name && <Th textAlign="center">Nama Lengkap</Th>}
-                {columnVisibility.mandarin_name && <Th textAlign="center">Nama Mandarin</Th>}
+                {columnVisibility.full_name && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Nama Lengkap</Th>}
+                {columnVisibility.mandarin_name && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Nama Mandarin</Th>}
                 {columnVisibility.spiritual_status && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     {isNotUserRole ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Status Rohani
@@ -1155,15 +1186,20 @@ export default function UmatPage() {
                             left="0"
                             mt={1}
                             align="start"
-                            width="200px"
-                            style={{ textTransform: "none" }}
+                            width="220px"
+                            fontFamily="inherit"
+                            fontSize="sm"
                           >
                             {["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
                               <Checkbox
                                 key={status}
+                                size="sm"
                                 isChecked={columnFilters.spiritualStatus.includes(status)}
                                 onChange={() => handleColumnFilterChange("spiritualStatus", status)}
-                                style={{ textTransform: "none", textAlign: "left" }}
+                                fontSize="sm"
+                                fontFamily="inherit"
+                                textAlign="left"
+                                sx={{ "& .chakra-checkbox__label": { textAlign: "left", width: "100%" } }}
                               >
                                 {status === "QianRen" ? "Qian Ren / Sesepuh" :
                                   status === "DianChuanShi" ? "Dian Chuan Shi / Pandita" :
@@ -1174,9 +1210,9 @@ export default function UmatPage() {
                                   "Dao Qin / Umat"}
                               </Checkbox>
                             ))}
-                            <HStack justify="flex-end" spacing={2}>
-                              <Button size="xs" onClick={() => { clearColumnFilters("spiritualStatus"); setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: false })); }}>Reset</Button>
-                              <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: false })); }}>Apply</Button>
+                            <HStack justify="flex-end" spacing={2} mt={1}>
+                              <Button size="xs" variant="ghost" onClick={() => { clearColumnFilters("spiritualStatus"); setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: false })); }}>Reset</Button>
+                              <Button size="xs" colorScheme="blue" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, spiritualStatus: false })); }}>Apply</Button>
                             </HStack>
                           </VStack>
                         )}
@@ -1187,54 +1223,18 @@ export default function UmatPage() {
                   </Th>
                 )}
                 {columnVisibility.is_qing_kou && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     {isNotUserRole ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Status Vegetarian
-                        <IconButton
-                          size="xs"
-                          variant="ghost"
-                          aria-label="Filter vegetarian status"
-                          icon={<FiFilter />}
-                          onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: !prev.is_qing_kou }))}
-                          _hover={{ bg: "transparent" }}
-                        />
+                        <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: !prev.is_qing_kou }))} />
                         {isColumnFilterOpen.is_qing_kou && (
-                          <VStack
-                            className="filter-dropdown"
-                            spacing={1}
-                            p={2}
-                            bg="white"
-                            borderRadius="md"
-                            boxShadow="md"
-                            zIndex={10}
-                            position="absolute"
-                            top="100%"
-                            left="0"
-                            mt={1}
-                            align="start"
-                            width="200px"
-                            style={{ textTransform: "none" }}
-                          >
-                            <Checkbox
-                              key="true"
-                              isChecked={columnFilters.is_qing_kou.includes("true")}
-                              onChange={() => handleColumnFilterChange("is_qing_kou", "true")}
-                              style={{ textTransform: "none", textAlign: "left" }}
-                            >
-                              Sudah
-                            </Checkbox>
-                            <Checkbox
-                              key="false"
-                              isChecked={columnFilters.is_qing_kou.includes("false")}
-                              onChange={() => handleColumnFilterChange("is_qing_kou", "false")}
-                              style={{ textTransform: "none", textAlign: "left" }}
-                            >
-                              Belum
-                            </Checkbox>
-                            <HStack justify="flex-end" spacing={2}>
-                              <Button size="xs" onClick={() => { clearColumnFilters("is_qing_kou"); setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: false })); }}>Reset</Button>
-                              <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: false })); }}>Apply</Button>
+                          <VStack className="filter-dropdown" spacing={1} p={2} bg="white" borderRadius="md" boxShadow="md" zIndex={10} position="absolute" top="100%" left="0" mt={1} align="start" width="180px" fontFamily="inherit" fontSize="sm">
+                            <Checkbox size="sm" isChecked={columnFilters.is_qing_kou.includes("true")} onChange={() => handleColumnFilterChange("is_qing_kou", "true")} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>Sudah</Checkbox>
+                            <Checkbox size="sm" isChecked={columnFilters.is_qing_kou.includes("false")} onChange={() => handleColumnFilterChange("is_qing_kou", "false")} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>Belum</Checkbox>
+                            <HStack justify="flex-end" spacing={2} mt={1}>
+                              <Button size="xs" variant="ghost" onClick={() => { clearColumnFilters("is_qing_kou"); setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: false })); }}>Reset</Button>
+                              <Button size="xs" colorScheme="blue" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: false })); }}>Apply</Button>
                             </HStack>
                           </VStack>
                         )}
@@ -1245,54 +1245,18 @@ export default function UmatPage() {
                   </Th>
                 )}
                 {columnVisibility.gender && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     {isNotUserRole ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Jenis Kelamin
-                        <IconButton
-                          size="xs"
-                          variant="ghost"
-                          aria-label="Filter gender"
-                          icon={<FiFilter />}
-                          onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, gender: !prev.gender }))}
-                          _hover={{ bg: "transparent" }}
-                        />
+                        <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, gender: !prev.gender }))} />
                         {isColumnFilterOpen.gender && (
-                          <VStack
-                            className="filter-dropdown"
-                            spacing={1}
-                            p={2}
-                            bg="white"
-                            borderRadius="md"
-                            boxShadow="md"
-                            zIndex={10}
-                            position="absolute"
-                            top="100%"
-                            left="0"
-                            mt={1}
-                            align="start"
-                            width="200px"
-                            style={{ textTransform: "none" }}
-                          >
-                            <Checkbox
-                              key="Male"
-                              isChecked={columnFilters.gender.includes("Male")}
-                              onChange={() => handleColumnFilterChange("gender", "Male")}
-                              style={{ textTransform: "none", textAlign: "left" }}
-                            >
-                              Pria
-                            </Checkbox>
-                            <Checkbox
-                              key="Female"
-                              isChecked={columnFilters.gender.includes("Female")}
-                              onChange={() => handleColumnFilterChange("gender", "Female")}
-                              style={{ textTransform: "none", textAlign: "left" }}
-                            >
-                              Wanita
-                            </Checkbox>
-                            <HStack justify="flex-end" spacing={2}>
-                              <Button size="xs" onClick={() => { clearColumnFilters("gender"); setIsColumnFilterOpen((prev) => ({ ...prev, gender: false })); }}>Reset</Button>
-                              <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, gender: false })); }}>Apply</Button>
+                          <VStack className="filter-dropdown" spacing={1} p={2} bg="white" borderRadius="md" boxShadow="md" zIndex={10} position="absolute" top="100%" left="0" mt={1} align="start" width="180px" fontFamily="inherit" fontSize="sm">
+                            <Checkbox size="sm" isChecked={columnFilters.gender.includes("Male")} onChange={() => handleColumnFilterChange("gender", "Male")} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>Pria</Checkbox>
+                            <Checkbox size="sm" isChecked={columnFilters.gender.includes("Female")} onChange={() => handleColumnFilterChange("gender", "Female")} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>Wanita</Checkbox>
+                            <HStack justify="flex-end" spacing={2} mt={1}>
+                              <Button size="xs" variant="ghost" onClick={() => { clearColumnFilters("gender"); setIsColumnFilterOpen((prev) => ({ ...prev, gender: false })); }}>Reset</Button>
+                              <Button size="xs" colorScheme="blue" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, gender: false })); }}>Apply</Button>
                             </HStack>
                           </VStack>
                         )}
@@ -1303,48 +1267,21 @@ export default function UmatPage() {
                   </Th>
                 )}
                 {columnVisibility.blood_type && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     {isNotUserRole ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Golongan Darah
-                        <IconButton
-                          size="xs"
-                          variant="ghost"
-                          aria-label="Filter blood type"
-                          icon={<FiFilter />}
-                          onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: !prev.blood_type }))}
-                          _hover={{ bg: "transparent" }}
-                        />
+                        <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: !prev.blood_type }))} />
                         {isColumnFilterOpen.blood_type && (
-                          <VStack
-                            className="filter-dropdown"
-                            spacing={1}
-                            p={2}
-                            bg="white"
-                            borderRadius="md"
-                            boxShadow="md"
-                            zIndex={10}
-                            position="absolute"
-                            top="100%"
-                            left="0"
-                            mt={1}
-                            align="start"
-                            width="200px"
-                            style={{ textTransform: "none" }}
-                          >
+                          <VStack className="filter-dropdown" spacing={1} p={2} bg="white" borderRadius="md" boxShadow="md" zIndex={10} position="absolute" top="100%" left="0" mt={1} align="start" width="180px" fontFamily="inherit" fontSize="sm">
                             {["A", "B", "O", "AB"].map((type) => (
-                              <Checkbox
-                                key={type}
-                                isChecked={columnFilters.blood_type.includes(type)}
-                                onChange={() => handleColumnFilterChange("blood_type", type)}
-                                style={{ textTransform: "none", textAlign: "left" }}
-                              >
+                              <Checkbox key={type} size="sm" isChecked={columnFilters.blood_type.includes(type)} onChange={() => handleColumnFilterChange("blood_type", type)} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>
                                 {type}
                               </Checkbox>
                             ))}
-                            <HStack justify="flex-end" spacing={2}>
-                              <Button size="xs" onClick={() => { clearColumnFilters("blood_type"); setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: false })); }}>Reset</Button>
-                              <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: false })); }}>Apply</Button>
+                            <HStack justify="flex-end" spacing={2} mt={1}>
+                              <Button size="xs" variant="ghost" onClick={() => { clearColumnFilters("blood_type"); setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: false })); }}>Reset</Button>
+                              <Button size="xs" colorScheme="blue" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: false })); }}>Apply</Button>
                             </HStack>
                           </VStack>
                         )}
@@ -1354,52 +1291,25 @@ export default function UmatPage() {
                     )}
                   </Th>
                 )}
-                {columnVisibility.place_of_birth && <Th textAlign="center">Tempat Lahir</Th>}
-                {columnVisibility.date_of_birth && <Th textAlign="center">Tanggal Lahir</Th>}
-                {columnVisibility.phone_number && <Th textAlign="center">No. HP</Th>}
+                {columnVisibility.place_of_birth && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Tempat Lahir</Th>}
+                {columnVisibility.date_of_birth && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Tanggal Lahir</Th>}
+                {columnVisibility.phone_number && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">No. HP</Th>}
                 {columnVisibility.job_name && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     {isNotUserRole ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Pekerjaan
-                        <IconButton
-                          size="xs"
-                          variant="ghost"
-                          aria-label="Filter job"
-                          icon={<FiFilter />}
-                          onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, job_name: !prev.job_name }))}
-                          _hover={{ bg: "transparent" }}
-                        />
+                        <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, job_name: !prev.job_name }))} />
                         {isColumnFilterOpen.job_name && (
-                          <VStack
-                            className="filter-dropdown"
-                            spacing={1}
-                            p={2}
-                            bg="white"
-                            borderRadius="md"
-                            boxShadow="md"
-                            zIndex={10}
-                            position="absolute"
-                            top="100%"
-                            left="0"
-                            mt={1}
-                            align="start"
-                            width="200px"
-                            style={{ textTransform: "none" }}
-                          >
+                          <VStack className="filter-dropdown" spacing={1} p={2} bg="white" borderRadius="md" boxShadow="md" zIndex={10} position="absolute" top="100%" left="0" mt={1} align="start" width="220px" fontFamily="inherit" fontSize="sm" maxH="200px" overflowY="auto">
                             {["PNS", "Guru/Dosen", "Dokter/Perawat", "Wiraswasta", "Karyawan Swasta", "Petani/Nelayan", "Pelajar/Mahasiswa", "Pensiunan", "Lainnya"].map((job) => (
-                              <Checkbox
-                                key={job}
-                                isChecked={columnFilters.job_name.includes(job)}
-                                onChange={() => handleColumnFilterChange("job_name", job)}
-                                style={{ textTransform: "none", textAlign: "left" }}
-                              >
+                              <Checkbox key={job} size="sm" isChecked={columnFilters.job_name.includes(job)} onChange={() => handleColumnFilterChange("job_name", job)} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>
                                 {job}
                               </Checkbox>
                             ))}
-                            <HStack justify="flex-end" spacing={2}>
-                              <Button size="xs" onClick={() => { clearColumnFilters("job_name"); setIsColumnFilterOpen((prev) => ({ ...prev, job_name: false })); }}>Reset</Button>
-                              <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, job_name: false })); }}>Apply</Button>
+                            <HStack justify="flex-end" spacing={2} mt={1}>
+                              <Button size="xs" variant="ghost" onClick={() => { clearColumnFilters("job_name"); setIsColumnFilterOpen((prev) => ({ ...prev, job_name: false })); }}>Reset</Button>
+                              <Button size="xs" colorScheme="blue" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, job_name: false })); }}>Apply</Button>
                             </HStack>
                           </VStack>
                         )}
@@ -1410,42 +1320,15 @@ export default function UmatPage() {
                   </Th>
                 )}
                 {columnVisibility.last_education_level && (
-                  <Th textAlign="center">
+                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     {isNotUserRole ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Pendidikan Terakhir
-                        <IconButton
-                          size="xs"
-                          variant="ghost"
-                          aria-label="Filter education"
-                          icon={<FiFilter />}
-                          onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: !prev.last_education_level }))}
-                          _hover={{ bg: "transparent" }}
-                        />
+                        <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: !prev.last_education_level }))} />
                         {isColumnFilterOpen.last_education_level && (
-                          <VStack
-                            className="filter-dropdown"
-                            spacing={1}
-                            p={2}
-                            bg="white"
-                            borderRadius="md"
-                            boxShadow="md"
-                            zIndex={10}
-                            position="absolute"
-                            top="100%"
-                            left="0"
-                            mt={1}
-                            align="start"
-                            width="200px"
-                            style={{ textTransform: "none" }}
-                          >
+                          <VStack className="filter-dropdown" spacing={1} p={2} bg="white" borderRadius="md" boxShadow="md" zIndex={10} position="absolute" top="100%" left="0" mt={1} align="start" width="250px" fontFamily="inherit" fontSize="sm" maxH="200px" overflowY="auto">
                             {["TK", "SD", "SMP", "SMA", "D1", "D2", "D3", "S1", "S2", "S3"].map((edu) => (
-                              <Checkbox
-                                key={edu}
-                                isChecked={columnFilters.last_education_level.includes(edu)}
-                                onChange={() => handleColumnFilterChange("last_education_level", edu)}
-                                style={{ textTransform: "none", textAlign: "left" }}
-                              >
+                              <Checkbox key={edu} size="sm" isChecked={columnFilters.last_education_level.includes(edu)} onChange={() => handleColumnFilterChange("last_education_level", edu)} fontSize="sm" fontFamily="inherit" textAlign="left" sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}>
                                 {edu === "TK" ? "TK (Taman Kanak-Kanak)" :
                                   edu === "SD" ? "SD (Sekolah Dasar)" :
                                   edu === "SMP" ? "SMP (Sekolah Menengah Pertama)" :
@@ -1458,9 +1341,9 @@ export default function UmatPage() {
                                   "S3 (Doktor)"}
                               </Checkbox>
                             ))}
-                            <HStack justify="flex-end" spacing={2}>
-                              <Button size="xs" onClick={() => { clearColumnFilters("last_education_level"); setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: false })); }}>Reset</Button>
-                              <Button size="xs" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: false })); }}>Apply</Button>
+                            <HStack justify="flex-end" spacing={2} mt={1}>
+                              <Button size="xs" variant="ghost" onClick={() => { clearColumnFilters("last_education_level"); setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: false })); }}>Reset</Button>
+                              <Button size="xs" colorScheme="blue" onClick={() => { applyColumnFilters(); setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: false })); }}>Apply</Button>
                             </HStack>
                           </VStack>
                         )}
@@ -1475,7 +1358,7 @@ export default function UmatPage() {
             <Tbody>
               {usersList.length === 0 ? (
                 <Tr>
-                  <Td colSpan={Object.values(columnVisibility).filter(Boolean).length + (isNotUserRole ? 1 : 0)} textAlign="center" color="gray.500">
+                  <Td colSpan={Object.values(columnVisibility).filter(Boolean).length + (isNotUserRole ? 1 : 0)} textAlign="center" color="gray.500" fontSize="sm">
                     Belum ada data
                   </Td>
                 </Tr>
