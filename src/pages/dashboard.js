@@ -314,7 +314,7 @@ export default function Dashboard() {
           <ChartCard
             title={selectedArea === "Nasional" 
               ? "Total Umat per Wilayah" 
-              : `Total Umat per Provinsi Wilayah ${areaLabel.replace("Korwil ", "")}`}
+              : `Total Umat per Provinsi ${areaLabel.replace("Korwil ", "")}`}
           >
             {(selectedArea === "Nasional" ? stats?.qiudaoUmatByKorwil?.length > 0 : stats?.qiudaoUmatByProvince?.length > 0) &&
               (selectedArea === "Nasional" ? stats.qiudaoUmatByKorwil?.some((item) => item.umat > 0) : stats.qiudaoUmatByProvince?.some((item) => item.umat > 0)) ? (
@@ -328,7 +328,7 @@ export default function Dashboard() {
 
           {/* PIE CHART — PAKAI displayPieData */}
           <ChartCard
-            title={`Total Umat Berdasarkan Gender${selectedArea === "Nasional" ? "" : ` Wilayah ${areaLabel.replace("Korwil ", "")}`}`}
+            title={`Total Umat Berdasarkan Gender${selectedArea === "Nasional" ? "" : ` ${areaLabel.replace("Korwil ", "")}`}`}
           >
             {displayPieData.some((entry) => entry.value > 0) ? (
               <PieChart width={300} height={300}>
