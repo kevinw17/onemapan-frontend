@@ -208,6 +208,7 @@ export default function QiudaoPage() {
   }, [toast, router]);
 
   const { data: userProfile, isLoading: isProfileLoading, error: profileError, refetch: refetchProfile } = useFetchUserProfile(userId);
+  const isSuperAdmin = isProfileLoading ? false : (userProfile?.role || "") === "Super Admin";
 
   useEffect(() => {
     if (userProfile?.area) {
@@ -571,23 +572,35 @@ export default function QiudaoPage() {
   };
 
   const handleImportQiudao = () => {
-    if (!isNotSelfScope) {
+      if (!isSuperAdmin) {
+        toast({
+          id: "import-permission",
+          title: "Akses Ditolak",
+          description: "Hanya Super Admin yang dapat mengimpor data qiudao.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      fileInputRef.current?.click();
+    };
+
+    const handleFileQiudaoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!isSuperAdmin) {
       toast({
-        id: "import-error",
-        title: "Tidak Diizinkan",
-        description: "Anda tidak memiliki izin untuk import data.",
-        status: "warning",
+        id: "import-permission",
+        title: "Akses Ditolak",
+        description: "Hanya Super Admin yang dapat mengimpor data qiudao.",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
       return;
     }
-    fileInputRef.current?.click();
-  };
-
-  const handleFileQiudaoChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
 
     const formData = new FormData();
     formData.append("file", file);
@@ -886,16 +899,18 @@ export default function QiudaoPage() {
               Tambah Qiudao
             </Button>
 
-            <Button
-              colorScheme="green"
-              borderRadius="full"
-              size="xs"
-              minW="100px"
-              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
-              onClick={handleImportQiudao}
-            >
-              Import Data
-            </Button>
+            {isSuperAdmin && (
+              <Button
+                colorScheme="green"
+                borderRadius="full"
+                size="xs"
+                minW="100px"
+                leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
+                onClick={handleImportQiudao}
+              >
+                Import Data
+              </Button>
+            )}
           </Flex>
         </Flex>
       )}
@@ -1107,7 +1122,7 @@ export default function QiudaoPage() {
         />
       )}
 
-      {isNotSelfScope && (
+      {isSuperAdmin && (
         <input
           type="file"
           accept=".xlsx"

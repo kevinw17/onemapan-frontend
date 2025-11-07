@@ -107,6 +107,7 @@ export default function UmatPage() {
 
   const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useFetchUserProfile(userId);
   const isNotUserRole = isProfileLoading ? false : (userProfile?.role || userRole) !== "User";
+  const isSuperAdmin = isProfileLoading ? false : (userProfile?.role || userRole) === "Super Admin";
 
   const queryParams = useMemo(() => ({
     page,
@@ -666,6 +667,17 @@ export default function UmatPage() {
   };
 
   const handleImportUmat = () => {
+    if (!isSuperAdmin) {
+      toast({
+        id: "import-permission",
+        title: "Akses Ditolak",
+        description: "Hanya Super Admin yang dapat mengimpor data umat.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -673,11 +685,11 @@ export default function UmatPage() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!isNotUserRole) {
+    if (!isSuperAdmin) {
       toast({
-        id: `import-error`,
+        id: "import-permission",
         title: "Akses Ditolak",
-        description: "Anda tidak memiliki izin untuk mengimpor data.",
+        description: "Hanya Super Admin yang dapat mengimpor data umat.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -1108,7 +1120,7 @@ export default function UmatPage() {
             </Button>
           )}
 
-          {isNotUserRole && (
+          {isSuperAdmin && (
             <Button
               colorScheme="green"
               borderRadius="full"
@@ -1494,7 +1506,7 @@ export default function UmatPage() {
         />
       )}
 
-      {isNotUserRole && (
+      {isSuperAdmin && (
         <input
           type="file"
           accept=".xlsx"
