@@ -33,14 +33,19 @@ export const useDashboardData = (selectedArea) => {
                 ? users.filter((u) => u.qiudao?.qiu_dao_location?.area === selectedArea)
                 : users;
 
+            const totalQingkou = Math.round(
+                (selectedArea === "Nasional" ? users : filteredUsers)
+                    .filter((u) => u.is_qing_kou === true).length
+            );
+
             const totalVihara = Math.round(selectedArea === "Nasional" ? fotangData.length : fotangData.filter((f) => f.area === selectedArea).length);
-            const fyCount = Math.round(filteredUsers.filter((u) => u.spiritualUser?.spiritual_status === "FoYuan").length);
             const tzCount = Math.round(filteredUsers.filter((u) => u.spiritualUser?.spiritual_status === "TanZhu").length);
+            const fyCount = Math.round(filteredUsers.filter((u) => u.spiritualUser?.spiritual_status === "FoYuan").length);
             
             const totalDCS = Math.round(selectedArea === "Nasional" ? dcsData.length : dcsData.filter((d) => d.area === selectedArea).length);
-            const totalFYTZ = Math.round(fyCount + tzCount);
+            const totalTZFY = Math.round(tzCount + fyCount);
 
-            const totalMonksNuns = Math.round(
+            const totalFuWuYuan = Math.round(
                 (selectedArea === "Nasional" ? dcsData : dcsData.filter((d) => d.area === selectedArea)).filter((d) => d.is_fuwuyuan === true).length +
                 (selectedArea === "Nasional" ? spiritualUsers : spiritualUsers.filter((s) => s.area === selectedArea)).filter((s) => s.is_fuwuyuan === true).length
             );
@@ -123,8 +128,9 @@ export const useDashboardData = (selectedArea) => {
             return {
                 totalVihara,
                 totalDCS,
-                totalFYTZ,
-                totalMonksNuns,
+                totalTZFY,
+                totalFuWuYuan,
+                totalQingkou,
                 qiudaoUmatByKorwil,
                 qiudaoUmatByProvince,
                 userUmatByGender,

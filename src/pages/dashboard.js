@@ -86,27 +86,10 @@ export default function Dashboard() {
   const router = useRouter();
   const toast = useToast();
 
-  // TAMBAH: useRef untuk simpan pie data terakhir
-  const lastPieDataRef = useRef([]);
-
-  // UPDATE: Simpan pie data ke ref setiap stats berubah
-  useEffect(() => {
-    if (stats?.userUmatByGender) {
-      const newPieData = stats.userUmatByGender.map((entry) => ({
-        name: entry.gender || "Unknown",
-        value: Math.round(entry.value) || 0,
-      }));
-      lastPieDataRef.current = newPieData;
-    }
-  }, [stats]);
-
-  // GUNAKAN: data dari ref jika tersedia, fallback ke pieData
-  const displayPieData = lastPieDataRef.current.length > 0 ? lastPieDataRef.current : (
-    stats?.userUmatByGender?.map((entry) => ({
-      name: entry.gender || "Unknown",
-      value: Math.round(entry.value) || 0,
-    })) || []
-  );
+  const pieData = stats?.userUmatByGender?.map((entry) => ({
+    name: entry.gender || "Unknown",
+    value: Math.round(entry.value) || 0,
+  })) || [];
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -303,11 +286,12 @@ export default function Dashboard() {
           )}
         </Flex>
 
-        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, md: 5 }} spacing={6}>
           <StatCard label="Total Vihara" value={stats?.totalVihara} />
           <StatCard label="Total DianChuanShi" value={stats?.totalDCS} />
-          <StatCard label="Total FoYuan dan TanZhu" value={stats?.totalFYTZ} />
-          <StatCard label="Total Biarawan/Biarawati" value={stats?.totalMonksNuns} />
+          <StatCard label="Total TanZhu dan FoYuan" value={stats?.totalTZFY} />
+          <StatCard label="Total Biarawan/Biarawati" value={stats?.totalFuWuYuan} />
+          <StatCard label="Total Umat Qingkou" value={stats?.totalQingkou} />
         </SimpleGrid>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
@@ -326,14 +310,13 @@ export default function Dashboard() {
             )}
           </ChartCard>
 
-          {/* PIE CHART — PAKAI displayPieData */}
           <ChartCard
             title={`Total Umat Berdasarkan Gender${selectedArea === "Nasional" ? "" : ` ${areaLabel.replace("Korwil ", "")}`}`}
           >
-            {displayPieData.some((entry) => entry.value > 0) ? (
+            {pieData.some((entry) => entry.value > 0) ? (
               <PieChart width={300} height={300}>
                 <Pie
-                  data={displayPieData}
+                  data={pieData}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
@@ -341,7 +324,7 @@ export default function Dashboard() {
                   labelLine={false}
                   label={({ value }) => (value > 0 ? Math.round(value) : "")}
                 >
-                  {displayPieData.map((entry, index) => (
+                  {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
