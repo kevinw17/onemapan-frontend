@@ -1,17 +1,9 @@
 import Layout from "@/components/layout";
 import {
-  Box,
-  Heading,
-  Text,
-  Stat,
-  StatLabel,
-  StatNumber,
-  SimpleGrid,
-  VStack,
-  Select,
-  Flex,
+  Box, Heading, Text, Stat, StatLabel, StatNumber, SimpleGrid, VStack, Select, Flex,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from "@chakra-ui/react";
-import { useEffect, useState, useRef } from "react"; // TAMBAH useRef
+import { useEffect, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import Chart from "chart.js/auto";
@@ -22,10 +14,15 @@ import { jwtDecode } from "jwt-decode";
 import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import { useRouter } from "next/router";
 import { useToast } from "@chakra-ui/react";
+import { FiChevronRight, FiHome } from "react-icons/fi";
 
 Chart.register(ChartDataLabels);
 
-const COLORS = ["#160ee7ff", "#e331c8ff"];
+// === WARNA KONSISTEN: PRIA BIRU, WANITA PINK ===
+const GENDER_COLORS = {
+  Pria: "#160ee7ff",   // Biru
+  Wanita: "#e331c8ff", // Pink
+};
 
 const StatCard = ({ label, value }) => (
   <Box bg="blue.100" borderRadius={16} p={2}>
@@ -37,15 +34,7 @@ const StatCard = ({ label, value }) => (
 );
 
 const ChartCard = ({ title, children }) => (
-  <Box
-    bg="gray.100"
-    borderRadius={16}
-    p={4}
-    display="flex"
-    flexDirection="column"
-    alignItems="center"
-    width="100%"
-  >
+  <Box bg="gray.100" borderRadius={16} p={4} display="flex" flexDirection="column" alignItems="center" width="100%">
     <Text fontWeight="bold" mb={4}>{title}</Text>
     {children}
   </Box>
@@ -67,9 +56,7 @@ const EventTileContent = ({ date, events }) => {
   return eventsOnDate.length > 0 ? (
     <Box mt={2} bg="blue.50" p={1} borderRadius="md">
       {eventsOnDate.map((eventName, index) => (
-        <Text key={index} fontSize="xs" color="blue.600" px={1}>
-          {eventName}
-        </Text>
+        <Text key={index} fontSize="xs" color="blue.600" px={1}>{eventName}</Text>
       ))}
     </Box>
   ) : null;
@@ -78,19 +65,39 @@ const EventTileContent = ({ date, events }) => {
 export default function Dashboard() {
   const [username, setUsername] = useState("");
   const [selectedArea, setSelectedArea] = useState("Nasional");
+  const [drillDown, setDrillDown] = useState({
+    level: "korwil",
+    korwil: null,
+    province: null,
+  });
   const [userId, setUserId] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [userArea, setUserArea] = useState(null);
   const [isUserLoaded, setIsUserLoaded] = useState(false);
-  const { data: stats, isLoading, error } = useDashboardData(selectedArea);
   const router = useRouter();
   const toast = useToast();
+  const chartRef = useRef(null);
 
-  const pieData = stats?.userUmatByGender?.map((entry) => ({
-    name: entry.gender || "Unknown",
-    value: Math.round(entry.value) || 0,
-  })) || [];
+  // === DATA ===
+  const { data: stats, isLoading, error } = useDashboardData({
+    selectedArea,
+    drillDownLevel: drillDown.level,
+    drillDownKorwil: drillDown.korwil,
+    drillDownProvince: drillDown.province,
+  });
 
+  // === PIE DATA: SELALU ADA PRIA & WANITA (value 0 jika tidak ada) ===
+  const pieData = [
+    { name: "Pria", value: 0 },
+    { name: "Wanita", value: 0 },
+  ];
+
+  stats?.userUmatByGender?.forEach(entry => {
+    if (entry.gender === "Pria") pieData[0].value = Math.round(entry.value);
+    if (entry.gender === "Wanita") pieData[1].value = Math.round(entry.value);
+  });
+
+  // === AUTH & PROFILE (sama) ===
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -98,37 +105,21 @@ export default function Dashboard() {
         try {
           const decoded = jwtDecode(token);
           const decodedUserId = parseInt(decoded.user_info_id);
-          if (decodedUserId && !isNaN(decodedUserId)) {
-            setUserId(decodedUserId);
-          } else {
-            throw new Error("Invalid user_info_id in token");
-          }
+          if (decodedUserId && !isNaN(decodedUserId)) setUserId(decodedUserId);
+          else throw new Error("Invalid user_info_id");
         } catch (err) {
-          toast({
-            title: "Gagal memproses token",
-            description: "Token tidak valid atau tidak dapat diproses.",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-          });
+          toast({ title: "Token tidak valid", status: "error" });
           router.push("/login");
         }
       } else {
-        toast({
-          title: "Autentikasi Gagal",
-          description: "Silakan login kembali.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+        toast({ title: "Silakan login", status: "error" });
         router.push("/login");
       }
       setIsUserLoaded(true);
     }
   }, [toast, router]);
 
-  const { data: userProfile, isLoading: isProfileLoading, error: profileError } =
-    useFetchUserProfile(userId);
+  const { data: userProfile, isLoading: isProfileLoading } = useFetchUserProfile(userId);
 
   useEffect(() => {
     if (userProfile) {
@@ -136,76 +127,68 @@ export default function Dashboard() {
       setUserArea(userProfile.qiudao?.qiu_dao_location?.area || null);
       setUsername(userProfile.username || userProfile.full_name || "");
     }
-  }, [userProfile, userId]);
-
-  useEffect(() => {
-    if (profileError) {
-      toast({
-        title: "Gagal memuat profil pengguna",
-        description:
-          profileError?.message ||
-          "Terjadi kesalahan saat memuat data profil. Silakan login kembali.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      router.push("/login");
-    }
-  }, [profileError, toast, router]);
+  }, [userProfile]);
 
   useEffect(() => {
     if (userRole && isUserLoaded) {
-      if (userRole === "user" || userRole === "admin") {
-        if (userArea && AREA_OPTIONS.some((opt) => opt.value === userArea)) {
-          setSelectedArea(userArea);
-        } else {
-          toast({
-            title: "Wilayah Tidak Valid",
-            description:
-              "Wilayah Anda tidak ditemukan. Menampilkan data Nasional sebagai fallback.",
-            status: "warning",
-            duration: 3000,
-            isClosable: true,
-          });
-          setSelectedArea("Nasional");
-        }
+      if (["user", "admin"].includes(userRole) && userArea) {
+        setSelectedArea(userArea);
       } else if (userRole === "super admin") {
         setSelectedArea("Nasional");
       }
     }
-  }, [userRole, userArea, isUserLoaded, toast]);
+  }, [userRole, userArea, isUserLoaded]);
 
+  // === SINKRONKAN DROPDOWN ===
   useEffect(() => {
-    if (stats) {
-      console.log("Dashboard Stats Data:", JSON.stringify(stats, null, 2));
+    if (selectedArea === "Nasional") {
+      setDrillDown({ level: "korwil", korwil: null, province: null });
+    } else if (drillDown.level === "korwil") {
+      setDrillDown({ level: "province", korwil: selectedArea, province: null });
+    } else if (drillDown.korwil !== selectedArea) {
+      setDrillDown({ level: "province", korwil: selectedArea, province: null });
     }
-  }, [stats]);
+  }, [drillDown.korwil, drillDown.level, selectedArea]);
 
-  const barData = {
-    labels: selectedArea === "Nasional" 
-      ? (stats?.qiudaoUmatByKorwil?.map((item) => 
-          item.korwil.startsWith("Korwil_") 
-            ? `Wilayah ${item.korwil.replace("Korwil_", "")}` 
-            : item.korwil
-        ) || []) 
-      : (stats?.qiudaoUmatByProvince?.map((item) => item.province) || []),
-    datasets: [
-      {
-        data: selectedArea === "Nasional"
-          ? (stats?.qiudaoUmatByKorwil?.map((item) => Math.round(item.umat) || 0) || [])
-          : (stats?.qiudaoUmatByProvince?.map((item) => Math.round(item.umat) || 0) || []),
-        backgroundColor: "#216ceeff",
-        borderColor: "#216ceeff",
-        borderWidth: 1,
-      },
-    ],
+  // === BAR CLICK ===
+  const handleBarClick = (event, elements) => {
+    if (!elements.length) return;
+    const index = elements[0].index;
+
+    if (drillDown.level === "korwil") {
+      const korwil = stats.qiudaoUmatByKorwil[index].korwil;
+      setDrillDown({ level: "province", korwil, province: null });
+      setSelectedArea(korwil);
+    } else if (drillDown.level === "province") {
+      const province = stats.qiudaoUmatByProvince[index].province;
+      setDrillDown({ level: "city", korwil: drillDown.korwil, province });
+    }
   };
 
+  // === CHART DATA ===
+  let labels = [], values = [], title = "";
+
+  if (drillDown.level === "korwil") {
+    labels = stats?.qiudaoUmatByKorwil?.map(item => `Wilayah ${item.korwil.replace("Korwil_", "")}`) || [];
+    values = stats?.qiudaoUmatByKorwil?.map(item => Math.round(item.umat)) || [];
+    title = "Total Umat per Wilayah";
+  } else if (drillDown.level === "province") {
+    labels = stats?.qiudaoUmatByProvince?.map(item => item.province) || [];
+    values = stats?.qiudaoUmatByProvince?.map(item => Math.round(item.umat)) || [];
+    title = `Total Umat per Provinsi - Wilayah ${drillDown.korwil?.replace("Korwil_", "")}`;
+  } else if (drillDown.level === "city") {
+    labels = stats?.qiudaoUmatByCity?.map(item => item.city) || [];
+    values = stats?.qiudaoUmatByCity?.map(item => Math.round(item.umat)) || [];
+    title = `Total Umat per Kota - ${drillDown.province}`;
+  }
+
+  const barData = { labels, datasets: [{ data: values, backgroundColor: "#216ceeff" }] };
   const barOptions = {
     maintainAspectRatio: false,
+    onClick: handleBarClick,
     plugins: {
       legend: { display: false },
-      tooltip: { enabled: false },
+      tooltip: { enabled: true },
       datalabels: {
         display: true,
         color: "#fff",
@@ -213,78 +196,73 @@ export default function Dashboard() {
         align: "top",
         offset: -25,
         font: { size: 14, weight: "bold" },
-        formatter: (value) => Math.round(value) || 0,
+        formatter: v => Math.round(v) || 0,
       },
     },
-    scales: {
-      x: { grid: { display: false } },
-      y: {
-        beginAtZero: true,
-        ticks: { callback: (value) => Math.round(value), stepSize: 1 },
-        grid: { display: false },
-      },
-    },
+    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { display: false } } },
     animation: false,
+    cursor: drillDown.level !== "city" ? "pointer" : "default",
   };
 
-  if (!isUserLoaded || isProfileLoading) {
-    return (
-      <VStack h="100vh" justify="center">
-        <Text>Loading user data...</Text>
-      </VStack>
-    );
-  }
+  // === BREADCRUMB: TANPA DUP (hanya tampilkan jika level > province) ===
+  const renderBreadcrumb = () => {
+    if (drillDown.level === "korwil") return null;
 
-  if (isLoading) {
     return (
-      <VStack h="100vh" justify="center">
-        <Text>Loading dashboard...</Text>
-      </VStack>
-    );
-  }
+      <Breadcrumb spacing={2} separator={<FiChevronRight color="gray.500" />}>
+        <BreadcrumbItem>
+          <BreadcrumbLink onClick={() => {
+            setDrillDown({ level: "korwil", korwil: null, province: null });
+            setSelectedArea("Nasional");
+          }}>
+            <FiHome />
+          </BreadcrumbLink>
+        </BreadcrumbItem>
 
-  if (error) {
-    return (
-      <VStack h="100vh" justify="center">
-        <Text>Error loading data: {error.message}</Text>
-      </VStack>
-    );
-  }
+        {drillDown.korwil && (
+          <BreadcrumbItem>
+            <BreadcrumbLink onClick={() => {
+              setDrillDown({ level: "province", korwil: drillDown.korwil, province: null });
+              setSelectedArea(drillDown.korwil);
+            }}>
+              Wilayah {drillDown.korwil.replace("Korwil_", "")}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+        )}
 
-  const areaLabel = AREA_OPTIONS.find((opt) => opt.value === selectedArea)?.label || selectedArea;
+        {drillDown.province && drillDown.level === "city" && (
+          <BreadcrumbItem isCurrentPage>
+            <span>{drillDown.province}</span>
+          </BreadcrumbItem>
+        )}
+      </Breadcrumb>
+    );
+  };
+
+  // === RENDER ===
+  if (isLoading || isProfileLoading) return <VStack h="100vh" justify="center"><Text>Memuat...</Text></VStack>;
+  if (error) return <VStack h="100vh" justify="center"><Text>Error: {error.message}</Text></VStack>;
+
+  const areaLabel = AREA_OPTIONS.find(o => o.value === selectedArea)?.label || selectedArea;
 
   return (
-    <Layout
-      title="Dashboard"
-      showCalendar={true}
-      tileContent={(props) => <EventTileContent {...props} events={stats?.events || []} />}
-    >
+    <Layout title="Dashboard" showCalendar tileContent={(p) => <EventTileContent {...p} events={stats?.events || []} />}>
       <VStack spacing={6} align="stretch" p={4}>
         <Flex align="center" justify="space-between" mb={4}>
           <Box>
-            <Heading size="lg" mb={2}>
-              Halo, {username || "User"}
-            </Heading>
-            <Text fontSize="md">Dapatkan gambaran lengkap komunitas dalam sekejap.</Text>
+            <Heading size="lg" mb={2}>Halo, {username}</Heading>
+            <Text>Gambaran lengkap komunitas.</Text>
           </Box>
           {userRole === "super admin" ? (
-            <Select
-              value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value)}
-              width="200px"
-            >
-              {AREA_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
+            <Select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} width="200px">
+              {AREA_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </Select>
           ) : (
-            <Text fontWeight="bold" width="200px" textAlign="right">
-              {areaLabel}
-            </Text>
+            <Text fontWeight="bold" width="200px" textAlign="right">{areaLabel}</Text>
           )}
         </Flex>
+
+        {renderBreadcrumb()}
 
         <SimpleGrid columns={{ base: 1, md: 5 }} spacing={6}>
           <StatCard label="Total Vihara" value={stats?.totalVihara} />
@@ -295,25 +273,18 @@ export default function Dashboard() {
         </SimpleGrid>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-          <ChartCard
-            title={selectedArea === "Nasional" 
-              ? "Total Umat per Wilayah" 
-              : `Total Umat per Provinsi ${areaLabel.replace("Korwil ", "")}`}
-          >
-            {(selectedArea === "Nasional" ? stats?.qiudaoUmatByKorwil?.length > 0 : stats?.qiudaoUmatByProvince?.length > 0) &&
-              (selectedArea === "Nasional" ? stats.qiudaoUmatByKorwil?.some((item) => item.umat > 0) : stats.qiudaoUmatByProvince?.some((item) => item.umat > 0)) ? (
+          <ChartCard title={title}>
+            {labels.length > 0 && values.some(v => v > 0) ? (
               <Box width="100%" height="300px">
-                <Bar data={barData} options={barOptions} />
+                <Bar ref={chartRef} data={barData} options={barOptions} />
               </Box>
             ) : (
-              <Text>Tidak ada data umat untuk {areaLabel}</Text>
+              <Text textAlign="center" color="gray.500">Tidak ada data</Text>
             )}
           </ChartCard>
 
-          <ChartCard
-            title={`Total Umat Berdasarkan Gender${selectedArea === "Nasional" ? "" : ` ${areaLabel.replace("Korwil ", "")}`}`}
-          >
-            {pieData.some((entry) => entry.value > 0) ? (
+          <ChartCard title={`Total Umat by Gender${drillDown.level === "korwil" ? "" : ` - ${drillDown.province || areaLabel.replace("Korwil ", "")}`}`}>
+            {pieData.some(e => e.value > 0) ? (
               <PieChart width={300} height={300}>
                 <Pie
                   data={pieData}
@@ -322,17 +293,17 @@ export default function Dashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ value }) => (value > 0 ? Math.round(value) : "")}
+                  label={({ value }) => value > 0 ? Math.round(value) : ""}
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {pieData.map((entry) => (
+                    <Cell key={entry.name} fill={GENDER_COLORS[entry.name]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => Math.round(value)} />
+                <Tooltip formatter={v => Math.round(v)} />
                 <Legend />
               </PieChart>
             ) : (
-              <Text>Tidak ada data umat untuk {areaLabel}</Text>
+              <Text textAlign="center" color="gray.500">Tidak ada data gender</Text>
             )}
           </ChartCard>
         </SimpleGrid>
