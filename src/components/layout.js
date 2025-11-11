@@ -51,45 +51,57 @@ const NavItem = ({ item, isActive, isCollapsed }) => (
   </Tooltip>
 );
 
-// HEADER
-const Header = ({ title, showBackButton, backPath, router, username, handleLogout }) => (
-  <Flex justify="space-between" align="center" p={3}>
-    <HStack spacing={2} ml={3}>
-      {showBackButton && (
-        <>
-          <IconButton
-            variant="outline"
-            size="sm"
-            icon={<FiArrowLeft fontSize="20px" color="gray.600" />}
-            aria-label="Kembali"
-            borderColor="blue.500"
-            onClick={() => router.push(backPath)}
-            mr={2}
-          />
-          <Heading size="sm" color="gray.300">{title}</Heading>
-          <IconButton
-            variant="unstyled"
-            size="sm"
-            icon={<FiChevronRight color="gray.600" />}
-            aria-label="ActivePage"
-            p={2.5}
-          />
-          <Heading size="sm">Tambah manual</Heading>
-        </>
-      )}
-      {!showBackButton && <Heading size="sm">{title}</Heading>}
-    </HStack>
-    <Flex gap={2} align="center">
-      <Menu>
-        <MenuButton as={IconButton} icon={<FiSettings />} variant="ghost" aria-label="Settings" />
-        <MenuList>
-          {username && <Text px={3} py={2} fontWeight="bold">Halo, {username}</Text>}
-          <MenuItem onClick={handleLogout}>Logout</MenuItem>
-        </MenuList>
-      </Menu>
+// HEADER — DENGAN LOGIKA "Tambah manual" / "Edit manual"
+const Header = ({ title, showBackButton, backPath, router, username, handleLogout }) => {
+  const isEditPage = useMemo(() => {
+    const editPaths = [
+      "/umat/editUmat",
+      "/qiudao/editQiudao",
+      "/fotang/editFotang",
+      "/dianchuanshi/editDianChuanShi"
+    ];
+    return editPaths.includes(router.pathname);
+  }, [router.pathname]);
+
+  return (
+    <Flex justify="space-between" align="center" p={3}>
+      <HStack spacing={2} ml={3}>
+        {showBackButton && (
+          <>
+            <IconButton
+              variant="outline"
+              size="sm"
+              icon={<FiArrowLeft fontSize="20px" color="gray.600" />}
+              aria-label="Kembali"
+              borderColor="blue.500"
+              onClick={() => router.push(backPath)}
+              mr={2}
+            />
+            <Heading size="sm" color="gray.300">{title}</Heading>
+            <IconButton
+              variant="unstyled"
+              size="sm"
+              icon={<FiChevronRight color="gray.600" />}
+              aria-label="ActivePage"
+              p={2.5}
+            />
+            <Heading size="sm">{isEditPage ? "Edit manual" : "Tambah manual"}</Heading>
+          </>
+        )}
+        {!showBackButton && <Heading size="sm">{title}</Heading>}
+      </HStack>
+      <Flex gap={2} align="center">
+        <Menu>
+          <MenuButton as={IconButton} icon={<FiSettings />} variant="ghost" aria-label="Settings" />
+          <MenuList>
+            {username && <Text px={3} py={2} fontWeight="bold">Halo, {username}</Text>}
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+          </MenuList>
+        </Menu>
+      </Flex>
     </Flex>
-  </Flex>
-);
+  );
+};
 
 // EVENT CALENDAR
 const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelectedEvent }) => {
@@ -245,23 +257,45 @@ export default function Layout({ children, title, showCalendar = false }) {
     { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
   ], []);
 
-  const navItems = useMemo(() => {
-    return isSuperAdmin 
-      ? [
-          ...baseNavItems.slice(0, 5),
-          { label: "Peran", href: "/role", iconSrc: "/role_icon.svg" },
-          ...baseNavItems.slice(5)
-        ]
-      : baseNavItems;
-  }, [isSuperAdmin, baseNavItems]);
+  const superAdminNavItems = useMemo(() => [
+    { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
+    { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
+    { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
+    { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
+    { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
+    { label: "Peran", href: "/role", iconSrc: "/role_icon.svg" },
+    { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
+    { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
+    { label: "List Vihara", href: "/fotang", iconSrc: "/temple_icon.svg" },
+    { label: "List Pandita", href: "/dianchuanshi", iconSrc: "/group_icon.svg" },
+    { label: "List Lembaga", href: "/institution", iconSrc: "/institution_icon.svg" },
+  ], []);
+
+  const navItems = isSuperAdmin ? superAdminNavItems : baseNavItems;
 
   const showBackButton = useMemo(() => 
-    ["/umat/addUmat", "/umat/editUmat", "/qiudao/addQiudao", "/qiudao/editQiudao"].includes(router.pathname),
+    [
+      "/umat/addUmat", 
+      "/umat/editUmat", 
+      "/qiudao/addQiudao", 
+      "/qiudao/editQiudao",
+      "/fotang/addFotang",
+      "/fotang/editFotang",
+      "/dianchuanshi/addDianChuanShi",
+      "/dianchuanshi/editDianChuanShi"
+    ].includes(router.pathname),
     [router.pathname]
   );
 
-  const backPath = router.pathname.includes("umat") ? "/umat" : "/qiudao";
+  const backPath = useMemo(() => {
+    if (router.pathname.includes("umat")) return "/umat";
+    if (router.pathname.includes("qiudao")) return "/qiudao";
+    if (router.pathname.includes("fotang")) return "/fotang";
+    if (router.pathname.includes("dianchuanshi")) return "/dianchuanshi"; // TAMBAH INI
+    return "/";
+  }, [router.pathname]);
 
+  // Di dalam useEffect yang baca user
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const userStr = localStorage.getItem("user");
@@ -269,7 +303,8 @@ export default function Layout({ children, title, showCalendar = false }) {
         try {
           const user = JSON.parse(userStr);
           setUsername(user.username);
-          setIsSuperAdmin(user.role === "Super Admin");
+          const role = (user.role || "").toLowerCase();
+          setIsSuperAdmin(role === "super admin");
         } catch (e) {
           console.error("Gagal parsing user:", e);
         }
@@ -323,23 +358,45 @@ export default function Layout({ children, title, showCalendar = false }) {
               </Box>
 
               <Flex direction="column" gap={2}>
+                {/* DASHBOARD, KEGIATAN, LAPORAN */}
                 {navItems.slice(0, 3).map((item) => (
                   <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                 ))}
 
+                {/* NON-COLLAPSED: KELOMPOK */}
                 {!isSidebarCollapsed && (
                   <>
                     <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Umat</Text>
                     {navItems.slice(3, 5).map((item) => (
                       <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                     ))}
-                    <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Akun</Text>
-                    {navItems.slice(5).map((item) => (
-                      <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
-                    ))}
+
+                    {isSuperAdmin && (
+                      <>
+                        <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Akun</Text>
+                        {navItems.slice(5, 8).map((item) => (
+                          <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
+                        ))}
+
+                        <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Data</Text>
+                        {navItems.slice(8, 11).map((item) => (
+                          <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
+                        ))}
+                      </>
+                    )}
+
+                    {!isSuperAdmin && (
+                      <>
+                        <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Akun</Text>
+                        {navItems.slice(5).map((item) => (
+                          <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
+                        ))}
+                      </>
+                    )}
                   </>
                 )}
 
+                {/* COLLAPSED: SEMUA NAV */}
                 {isSidebarCollapsed && navItems.slice(3).map((item) => (
                   <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                 ))}
@@ -353,7 +410,6 @@ export default function Layout({ children, title, showCalendar = false }) {
               justifyContent={isSidebarCollapsed ? "center" : "flex-end"}
               alignItems="center"
             >
-              {/* BULAT SAAT FULL, HOVER BULAT SAAT COLLAPSED */}
               <Box
                 as="button"
                 onClick={toggleSidebar}
@@ -363,10 +419,9 @@ export default function Layout({ children, title, showCalendar = false }) {
                 justifyContent="center"
                 width={isSidebarCollapsed ? "36px" : "40px"}
                 height={isSidebarCollapsed ? "36px" : "40px"}
-                borderRadius={isSidebarCollapsed ? "full" : "full"} // selalu bulat
-                bg={"transparent"}
-                border={"transparent"}
-                borderColor={"transparent"}
+                borderRadius="full"
+                bg="transparent"
+                border="transparent"
                 transition="all 0.2s"
                 _hover={{
                   bg: "gray.100",
@@ -389,7 +444,14 @@ export default function Layout({ children, title, showCalendar = false }) {
 
         <Flex flex="1" direction="row" overflow="hidden">
           <Box flex="1" overflowY="auto" overflowX="hidden" minW="0">
-            <Header title={title} showBackButton={showBackButton} backPath={backPath} router={router} username={username} handleLogout={logout} />
+            <Header 
+              title={title} 
+              showBackButton={showBackButton} 
+              backPath={backPath} 
+              router={router} 
+              username={username} 
+              handleLogout={logout} 
+            />
             <Divider borderBottomWidth="4px"/>
             <Box p={4}>{children}</Box>
           </Box>
