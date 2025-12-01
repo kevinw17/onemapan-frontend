@@ -58,7 +58,8 @@ const Header = ({ title, showBackButton, backPath, router, username, handleLogou
       "/umat/editUmat",
       "/qiudao/editQiudao",
       "/fotang/editFotang",
-      "/dianchuanshi/editDianChuanShi"
+      "/dianchuanshi/editDianChuanShi",
+      "/event/editEvent",
     ];
     return editPaths.includes(router.pathname);
   }, [router.pathname]);
@@ -282,7 +283,8 @@ export default function Layout({ children, title, showCalendar = false }) {
       "/fotang/addFotang",
       "/fotang/editFotang",
       "/dianchuanshi/addDianChuanShi",
-      "/dianchuanshi/editDianChuanShi"
+      "/dianchuanshi/editDianChuanShi",
+      "/event/editEvent",
     ].includes(router.pathname),
     [router.pathname]
   );
@@ -291,7 +293,8 @@ export default function Layout({ children, title, showCalendar = false }) {
     if (router.pathname.includes("umat")) return "/umat";
     if (router.pathname.includes("qiudao")) return "/qiudao";
     if (router.pathname.includes("fotang")) return "/fotang";
-    if (router.pathname.includes("dianchuanshi")) return "/dianchuanshi"; // TAMBAH INI
+    if (router.pathname.includes("dianchuanshi")) return "/dianchuanshi";
+    if (router.pathname.includes("event")) return "/event";
     return "/";
   }, [router.pathname]);
 

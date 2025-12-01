@@ -1,110 +1,139 @@
+// src/features/event/useFetchEvents.js
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
 import { jwtDecode } from "jwt-decode";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { format } from "date-fns";
 
+// Helper stabil untuk queryKey
+const stableKey = (arr) => {
+  const array = Array.isArray(arr) ? arr : [];
+  if (array.length === 0) return "none";
+  return [...array]
+    .sort((a, b) => String(a).localeCompare(String(b)))
+    .join("|");
+};
+
 export const useFetchEvents = ({
+  category,
   event_type = [],
   area = [],
-  is_recurring = [],
+  province_id = [],
+  city_id = [],
+  institution_id = [],
+  is_recurring = null,
   startDate,
   endDate,
 }) => {
-  const [tokenData, setTokenData] = useState({ tokenRole: null, tokenArea: null });
+  const tokenRef = useRef({ role: "guest", area: "none" });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decoded = jwtDecode(token);
-          setTokenData({
-            tokenRole: decoded.role || null,
-            tokenArea: decoded.area || null,
-          });
-        } catch (error) {
-          setTokenData({ tokenRole: null, tokenArea: null });
-        }
-      }
-    }
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const decoded = jwtDecode(token);
+      tokenRef.current = {
+        role: decoded.role || "guest",
+        area: decoded.area || "none",
+      };
+    } catch {}
   }, []);
 
+  // LOG HANYA KALAU BENAR-BENAR BERUBAH
+  const prevParamsRef = useRef(null);
   const queryParams = useMemo(() => {
+    // PASTIKAN SEMUA ADALAH ARRAY (ini yang fix error null.length)
+    const safeEventType = Array.isArray(event_type) ? event_type : [];
+    const safeArea = Array.isArray(area) ? area : [];
+    const safeProvince = Array.isArray(province_id) ? province_id : [];
+    const safeCity = Array.isArray(city_id) ? city_id : [];
+    const safeInstitution = Array.isArray(institution_id) ? institution_id : [];
+
     const params = {
-      event_type: event_type.length ? event_type.join(",") : undefined,
-      area: area.length ? (area.includes("nasional") ? "null" : area.join(",")) : undefined,
-      is_recurring: is_recurring.length ? is_recurring.map(String).join(",") : undefined,
-      startDate: startDate ? format(new Date(startDate), "yyyy-MM-dd") : undefined,
-      endDate: endDate ? format(new Date(endDate), "yyyy-MM-dd") : undefined,
+      category: category || "all",
+      ...(safeEventType.length > 0 && { event_type: safeEventType.join(",") }),
+      ...(safeArea.length > 0 && { area: safeArea.join(",") }),
+      ...(safeProvince.length > 0 && { province_id: safeProvince.join(",") }),
+      ...(safeCity.length > 0 && { city_id: safeCity.join(",") }),
+      ...(safeInstitution.length > 0 && { institution_id: safeInstitution.join(",") }),
+      ...(is_recurring !== null && { is_recurring: String(is_recurring) }),
+      ...(startDate && { startDate: format(new Date(startDate), "yyyy-MM-dd") }),
+      ...(endDate && { endDate: format(new Date(endDate), "yyyy-MM-dd") }),
     };
+
+    const currentStr = JSON.stringify(params);
+    if (prevParamsRef.current !== currentStr) {
+      console.log("Event filter params →", params);
+      prevParamsRef.current = currentStr;
+    }
+
     return params;
-  }, [event_type, area, is_recurring, startDate, endDate]);
+  }, [
+    category,
+    event_type,
+    area,
+    province_id,
+    city_id,
+    institution_id,
+    is_recurring,
+    startDate,
+    endDate,
+  ]);
+
+  const queryKey = [
+    "events-final-v3",
+    category || "all",
+    stableKey(event_type),
+    stableKey(area),
+    stableKey(province_id),
+    stableKey(city_id),
+    stableKey(institution_id),
+    is_recurring ?? "null",
+    startDate || "none",
+    endDate || "none",
+    tokenRef.current.role,
+    tokenRef.current.area,
+  ];
 
   return useQuery({
-    queryKey: ["fetch.events", event_type, area, is_recurring, startDate, endDate, tokenData.tokenRole, tokenData.tokenArea],
+    queryKey,
     queryFn: async () => {
-      const response = await axiosInstance.get("/event/filtered", {
-        params: queryParams,
-      }).catch((error) => {
-        return { data: [] };
-      });
+      const response = await axiosInstance
+        .get("/event/filtered", { params: queryParams })
+        .catch(() => ({ data: [] }));
 
-      if (!response.data || !Array.isArray(response.data)) {
-        return [];
-      }
+      if (!response.data || !Array.isArray(response.data)) return [];
 
-      const flattenedEvents = response.data.flatMap((event) => {
-        if (!event || !event.event_id || !event.occurrences || !Array.isArray(event.occurrences)) {
-          return [];
-        }
+      return response.data.flatMap((event) => {
+        if (!event?.event_id || !event.occurrences || !Array.isArray(event.occurrences)) return [];
 
         return event.occurrences.map((occ) => {
-          if (!occ || !occ.greg_occur_date || !occ.occurrence_id) {
-            return null;
-          }
+          if (!occ?.greg_occur_date || !occ.occurrence_id) return null;
 
           const startDate = new Date(occ.greg_occur_date);
           const endDate = occ.greg_end_date ? new Date(occ.greg_end_date) : null;
+          if (isNaN(startDate.getTime())) return null;
 
-          if (isNaN(startDate.getTime())) {
-            return null;
-          }
-
-          const isSameDay = endDate
-            ? startDate.getFullYear() === endDate.getFullYear() &&
-              startDate.getMonth() === endDate.getMonth() &&
-              startDate.getDate() === endDate.getDate()
-            : true;
-
-          const isSameMonthYear = endDate
-            ? startDate.getFullYear() === endDate.getFullYear() &&
-              startDate.getMonth() === endDate.getMonth()
-            : false;
+          const isSameDay = endDate ? startDate.toDateString() === endDate.toDateString() : true;
 
           const startDay = startDate.toLocaleDateString("id-ID", { day: "numeric" });
           const endDay = endDate && !isNaN(endDate.getTime())
-            ? endDate.toLocaleDateString("id-ID", { day: "numeric" })
-            : "TBD";
-          const monthYear = startDate.toLocaleDateString("id-ID", {
-            month: "long",
-            year: "numeric",
-          });
+            ? endDate.toLocaleDateString("id-ID", { day: "numeric" }) : "TBD";
+          const monthYear = startDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
           const endMonthYear = endDate && !isNaN(endDate.getTime())
-            ? endDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
-            : "TBD";
+            ? endDate.toLocaleDateString("id-ID", { month: "long", year: "numeric" }) : "TBD";
+
           const dateRangeString = isSameDay
             ? `${startDay} ${monthYear}`
-            : isSameMonthYear
-            ? `${startDay} - ${endDay} ${monthYear}`
             : `${startDay} ${monthYear} - ${endDay} ${endMonthYear}`;
 
           const dateRange = [];
           if (endDate && !isSameDay && !isNaN(endDate.getTime())) {
-            let currentDate = new Date(startDate);
-            while (currentDate <= endDate) {
-              dateRange.push(new Date(currentDate));
-              currentDate.setDate(currentDate.getDate() + 1);
+            let current = new Date(startDate);
+            while (current <= endDate) {
+              dateRange.push(new Date(current));
+              current.setDate(current.getDate() + 1);
             }
           } else {
             dateRange.push(startDate);
@@ -116,30 +145,30 @@ export const useFetchEvents = ({
             hour12: false,
             timeZone: "Asia/Jakarta",
           }) + " WIB";
+
           const endTime = endDate && !isNaN(endDate.getTime())
-            ? endDate.toLocaleTimeString("id-ID", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-                timeZone: "Asia/Jakarta",
-              }) + " WIB"
+            ? endDate.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" }) + " WIB"
             : "TBD";
 
-          let time = "";
-          if (
-            isSameDay ||
-            (dateRange.length > 0 && dateRange[0].toDateString() === startDate.toDateString())
-          ) {
-            if (!event.is_recurring) {
-              time = startTime;
-            } else {
-              time = `${startTime} - ${endTime !== "TBD" ? endTime : "00:00 WIB"}`;
-            }
-          }
+          const time = !event.is_recurring
+            ? startTime
+            : `${startTime} - ${endTime !== "TBD" ? endTime : "00:00 WIB"}`;
 
-          const eventData = {
+          const location = event.is_in_fotang
+            ? event.fotang?.location_name || "Lokasi Tidak Diketahui"
+            : event.eventLocation?.location_name || "Lokasi Tidak Diketahui";
+
+          const areaValue = event.is_in_fotang
+            ? event.fotang?.area || "Korwil_1"
+            : event.eventLocation?.area || "Korwil_1";
+
+          return {
             id: event.event_id,
             occurrence_id: occ.occurrence_id,
+            name: event.event_name || "Tanpa Nama",
+            location,
+            type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "AdHoc",
+            area: areaValue,
             date: dateRangeString,
             dateRange,
             dateString: dateRangeString,
@@ -147,45 +176,22 @@ export const useFetchEvents = ({
             startTime,
             endTime: endTime !== "TBD" ? endTime : "TBD",
             isSameDay,
-            name: event.event_name || "Unnamed Event",
-            location:
-              typeof event.location === "object" && event.location?.location_name
-                ? event.location.location_name
-                : event.location || "All Vihara",
-            type: event.event_type === "Hari_Besar" ? "Hari Besar" : event.event_type || "AdHoc",
-            day: startDate.toLocaleDateString("id-ID", { weekday: "long" }) || "Hari",
-            lunar_sui_ci_year: event.lunar_sui_ci_year || "Tahun Lunar",
-            lunar_month: event.lunar_month || "Bulan Lunar",
-            lunar_day: event.lunar_day || "Hari Lunar",
-            description: event.description || "Deskripsi belum tersedia",
+            day: startDate.toLocaleDateString("id-ID", { weekday: "long" }),
+            lunar_sui_ci_year: event.lunar_sui_ci_year || "",
+            lunar_month: event.lunar_month || "",
+            lunar_day: event.lunar_day || "",
+            description: event.description || "",
             is_recurring: event.is_recurring || false,
             poster_s3_bucket_link: event.poster_s3_bucket_link || null,
-            jangkauan: event.area === null ? "nasional" : event.area || "",
             rawDate: occ.greg_occur_date,
             rawEndDate: occ.greg_end_date || null,
           };
-
-          const requiredProps = ["id", "occurrence_id", "date", "name"];
-          const missingProps = requiredProps.filter((prop) => !eventData[prop]);
-          if (missingProps.length > 0) {
-            return null;
-          }
-
-          return eventData;
-        }).filter((event) => event !== null);
+        }).filter(Boolean);
       });
-
-      if (flattenedEvents.length === 0) {
-        console.warn("No valid events.");
-      }
-
-      return flattenedEvents;
     },
     enabled: true,
-    keepPreviousData: false,
-    staleTime: 0,
-    cacheTime: 0,
-    retry: 1,
+    staleTime: 1000 * 60 * 3,
+    retry: 2,
     refetchOnWindowFocus: false,
   });
 };
