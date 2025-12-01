@@ -28,6 +28,7 @@ import { useFetchInstitution } from "@/features/institution/useFetchInstitution"
 import EventFormContent from "@/components/EventFormContent";
 import { jwtDecode } from "jwt-decode";
 import { toWIBLocalString } from "@/lib/timezone";
+import { isNationalRole } from "@/lib/roleUtils";
 
 export default function EditEvent() {
   const router = useRouter();
@@ -410,7 +411,7 @@ export default function EditEvent() {
     );
   }
 
-  const canDelete = true;
+  const canDelete = isNationalRole(userRole);
 
   return (
     <Layout title={`Edit: ${formData.event_name || "Kegiatan"}`}>

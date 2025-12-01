@@ -12,6 +12,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState, useMemo } from "react";
 import { jwtDecode } from "jwt-decode";
 import { FiPlus, FiFilter, FiMinus, FiX } from "react-icons/fi";
+import { isNationalRole } from "@/lib/roleUtils";
 
 export default function DianChuanShiPage() {
   const [userId, setUserId] = useState(null);
@@ -54,7 +55,7 @@ export default function DianChuanShiPage() {
 
   useEffect(() => {
     if (userProfile?.role) {
-      setIsSuperAdmin(userProfile.role === "Super Admin");
+      setIsSuperAdmin(isNationalRole(userProfile?.role));
     }
   }, [userProfile]);
 
@@ -152,7 +153,7 @@ export default function DianChuanShiPage() {
     );
   }
 
-  if (!isSuperAdmin) {
+  if (!isNationalRole(userProfile?.role)) {
     return (
       <Layout title="Akses Ditolak">
         <Flex direction="column" align="center" justify="center" h="80vh" color="red.500">

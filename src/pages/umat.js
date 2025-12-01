@@ -20,6 +20,7 @@ import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import { useRouter } from "next/router";
 import { jwtDecode } from "jwt-decode";
 import { useQueryClient } from "@tanstack/react-query";
+import { isNationalRole } from "@/lib/roleUtils";
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
   <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
@@ -107,7 +108,9 @@ export default function UmatPage() {
 
   const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useFetchUserProfile(userId);
   const isNotUserRole = isProfileLoading ? false : (userProfile?.role || userRole) !== "User";
-  const isSuperAdmin = isProfileLoading ? false : (userProfile?.role || userRole) === "Super Admin";
+  const isSuperAdmin = isProfileLoading 
+    ? false 
+    : isNationalRole(userProfile?.role || userRole);
 
   const queryParams = useMemo(() => ({
     page,

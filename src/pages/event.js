@@ -28,6 +28,7 @@ import { useFetchCities, useFetchProvinces } from "@/features/location/useFetchL
 import { jwtDecode } from "jwt-decode";
 import { useFetchInstitution } from "@/features/institution/useFetchInstitution";
 import { useFetchFotang } from "@/features/location/useFetchFotang";
+import { isNationalRole } from "@/lib/roleUtils";
 
 const lunarYears = ["乙巳年"];
 const lunarMonths = [
@@ -860,9 +861,13 @@ export default function Event() {
   // === APP STATES ===
   const [eventCategory, setEventCategory] = useState("Internal");
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [dateRange, setDateRange] = useState({
-    startDate: startOfMonth(new Date()),
-    endDate: endOfMonth(new Date()),
+  const [dateRange, setDateRange] = useState(() => {
+    const now = new Date();
+    const nowInWIB = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+    return {
+      startDate: startOfMonth(nowInWIB),
+      endDate: endOfMonth(nowInWIB),
+    };
   });
   const [userArea, setUserArea] = useState(null);
   const [userRole, setUserRole] = useState(null);
@@ -889,32 +894,10 @@ export default function Event() {
       // ✅ CEK APAKAH DATA BARU SUDAH MUNCUL
       const newEvents = queryClient.getQueryData(['events-final-v3']) || [];
       console.log("✅ Refetch completed! New events count:", newEvents.length);
-      
-      // ✅ BARU TAMPILKAN TOAST SETELAH REFETCH SUKSES
-      toast({
-        title: "Berhasil!",
-        description: data.event_name 
-          ? `Kegiatan "${data.event_name}" berhasil disimpan`
-          : "Kegiatan berhasil disimpan",
-        status: "success",
-        duration: 4000,
-        isClosable: true,
-        position: "top-right"
-      });
+
       
     } catch (error) {
       console.error("❌ Refetch failed:", error);
-      
-      // ✅ KALAU REFETCH GAGAL, TETAP TAMPILKAN TOAST SUKSES
-      // (karena data sudah tersimpan di server)
-      toast({
-        title: "Berhasil Disimpan!",
-        description: "Data sudah tersimpan, tetapi list belum ter-refresh",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-        position: "top-right"
-      });
     }
   }, [queryClient, toast]);
   // === USER ROLE & AREA ===
@@ -935,7 +918,7 @@ export default function Event() {
 
   // === JANGKAUAN OPTIONS BERDASARKAN ROLE ===
   const filteredJangkauanOptions = useMemo(() => {
-    if (userRole === "Super Admin") return jangkauanOptions;
+    if (isNationalRole(userRole)) return jangkauanOptions;
     if (!userArea) return [];
     return jangkauanOptions.filter(o => o.value === userArea);
   }, [userRole, userArea]);
@@ -1067,10 +1050,9 @@ export default function Event() {
 
     // LOGIKA BARU: Hanya kirim area kalau TIDAK ADA filter provinsi/kota
     // Ganti bagian ini di useFetchEvents
-    area:
-      userRole === "Super Admin"
-        ? (areaFilter.length > 0 ? areaFilter : undefined)
-        : userArea,
+    area: isNationalRole(userRole)
+      ? (areaFilter.length > 0 ? areaFilter : undefined)
+      : userArea,
 
     // Kirim provinsi & kota seperti biasa
     province_id: provinceFilter.length > 0 ? provinceFilter : undefined,
@@ -1079,8 +1061,8 @@ export default function Event() {
       ? institutionFilter
       : undefined,
     is_recurring: isRecurringFilter !== null ? isRecurringFilter : undefined,
-    startDate: format(dateRange.startDate, "yyyy-MM-dd"),
-    endDate: format(dateRange.endDate, "yyyy-MM-dd"),
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
   });
 
   // === VALID & SORTED EVENTS ===

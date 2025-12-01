@@ -53,6 +53,7 @@ import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
 import { jwtDecode } from "jwt-decode";
 import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import { useQueryClient } from "@tanstack/react-query";
+import { isNationalRole } from "@/lib/roleUtils";
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
   <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
@@ -208,7 +209,9 @@ export default function QiudaoPage() {
   }, [toast, router]);
 
   const { data: userProfile, isLoading: isProfileLoading, error: profileError, refetch: refetchProfile } = useFetchUserProfile(userId);
-  const isSuperAdmin = isProfileLoading ? false : (userProfile?.role || "") === "Super Admin";
+  const isSuperAdmin = isProfileLoading 
+    ? false 
+    : isNationalRole(userProfile?.role);
 
   useEffect(() => {
     if (userProfile?.area) {

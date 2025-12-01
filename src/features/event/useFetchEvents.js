@@ -49,6 +49,13 @@ export const useFetchEvents = ({
     const safeProvince = Array.isArray(province_id) ? province_id : [];
     const safeCity = Array.isArray(city_id) ? city_id : [];
     const safeInstitution = Array.isArray(institution_id) ? institution_id : [];
+    const formatDateLocal = (date) => {
+      if (!date || !(date instanceof Date) || isNaN(date)) return undefined;
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
     const params = {
       category: category || "all",
@@ -58,8 +65,8 @@ export const useFetchEvents = ({
       ...(safeCity.length > 0 && { city_id: safeCity.join(",") }),
       ...(safeInstitution.length > 0 && { institution_id: safeInstitution.join(",") }),
       ...(is_recurring !== null && { is_recurring: String(is_recurring) }),
-      ...(startDate && { startDate: format(new Date(startDate), "yyyy-MM-dd") }),
-      ...(endDate && { endDate: format(new Date(endDate), "yyyy-MM-dd") }),
+      ...(startDate && { startDate: formatDateLocal(startDate) }),
+      ...(endDate && { endDate: formatDateLocal(endDate) }),
     };
 
     const currentStr = JSON.stringify(params);

@@ -306,8 +306,8 @@ export default function Layout({ children, title, showCalendar = false }) {
         try {
           const user = JSON.parse(userStr);
           setUsername(user.username);
-          const role = (user.role || "").toLowerCase();
-          setIsSuperAdmin(role === "super admin");
+          const role = (user.role || "").toLowerCase().replace(/\s+/g, "");
+          setIsSuperAdmin(["superadmin", "ketualembaga", "sekjenlembaga"].includes(role));
         } catch (e) {
           console.error("Gagal parsing user:", e);
         }

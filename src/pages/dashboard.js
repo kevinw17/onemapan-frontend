@@ -15,6 +15,7 @@ import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import { useRouter } from "next/router";
 import { useToast } from "@chakra-ui/react";
 import { FiChevronRight, FiHome } from "react-icons/fi";
+import { isNationalRole } from "@/lib/roleUtils";
 
 Chart.register(ChartDataLabels);
 
@@ -133,7 +134,7 @@ export default function Dashboard() {
     if (userRole && isUserLoaded) {
       if (["user", "admin"].includes(userRole) && userArea) {
         setSelectedArea(userArea);
-      } else if (userRole === "super admin") {
+      } else if (isNationalRole(userRole)) {
         setSelectedArea("Nasional");
       }
     }
@@ -253,7 +254,7 @@ export default function Dashboard() {
             <Heading size="lg" mb={2}>Halo, {username}</Heading>
             <Text>Gambaran lengkap komunitas.</Text>
           </Box>
-          {userRole === "super admin" ? (
+          {isNationalRole(userRole) ? (
             <Select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} width="200px">
               {AREA_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </Select>
