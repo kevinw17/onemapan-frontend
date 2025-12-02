@@ -105,116 +105,200 @@ const Header = ({ title, showBackButton, backPath, router, username, handleLogou
 };
 
 // EVENT CALENDAR
-const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelectedEvent }) => {
-  const getEventsForDate = useMemo(() => (selectedDate) => {
-    return events
-      .filter((event) => {
-        if (!event.dateRange || !Array.isArray(event.dateRange)) return false;
-        return event.dateRange.some((eventDate) => (
-          eventDate.getDate() === selectedDate.getDate() &&
-          eventDate.getMonth() === selectedDate.getMonth() &&
-          eventDate.getFullYear() === selectedDate.getFullYear()
-        ));
-      })
-      .sort((a, b) => {
-        const timeA = (a.startTime || "00:00 WIB").replace(" WIB", "").split(":");
-        const timeB = (b.startTime || "00:00 WIB").replace(" WIB", "").split(":");
-        return (parseInt(timeA[0]) * 60 + parseInt(timeA[1])) - (parseInt(timeB[0]) * 60 + parseInt(timeB[1]));
-      });
-  }, [events]);
+const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setSelectedEvent, overrideEvents }) => {
+  const displayEvents = overrideEvents || events;
 
-  const getEventsForMonth = useMemo(() => (selectedDate) => {
-    return events
-      .filter((event) => {
-        if (!event.dateRange || !Array.isArray(event.dateRange)) return false;
-        return event.dateRange.some((eventDate) => (
-          eventDate.getMonth() === selectedDate.getMonth() &&
-          eventDate.getFullYear() === selectedDate.getFullYear()
-        ));
-      })
-      .sort((a, b) => {
-        const dateA = a.dateRange[0] || new Date(a.rawDate || Date.now());
-        const dateB = b.dateRange[0] || new Date(b.rawDate || Date.now());
-        return dateA - dateB;
-      });
-  }, [events]);
+  const normalizedEvents = useMemo(() => {
+    return displayEvents.map(event => {
+      const name = event.event_name || event.name || "Tanpa Nama";
 
-  const handleDateChange = (newDate) => {
-    setDate(newDate);
-    setViewMode("date");
+      // Tanggal
+      const rawDate = event.rawDate || event.date || event.greg_occur_date || event.occurrences?.[0]?.greg_occur_date;
+      const dateObj = rawDate ? new Date(rawDate) : null;
+
+      // === LOKASI ===
+      let location = "Lokasi Tidak Diketahui";
+      if (event.fotang?.location_name) {
+        location = event.fotang.location_name;
+      } else if (event.eventLocation?.location_name) {
+        location = event.eventLocation.location_name;
+      } else if (event.event_type === "Hari_Besar" || event.type === "Hari_Besar") {
+        location = "Seluruh Indonesia";
+      }
+
+      // === CATEGORY — VERSI FINAL & PALING AKURAT ===
+      const category = (() => {
+        // 1. Ada object fotang → pasti Internal
+        if (event.fotang && typeof event.fotang === "object" && event.fotang !== null) {
+          return "Internal";
+        }
+
+        // 2. Ada fotang_id / vihara_id → Internal
+        if (event.fotang_id || event.fotangId || event.vihara_id || event.fotang_id !== undefined) {
+          return "Internal";
+        }
+
+        // 3. Hari Besar → Eksternal (nasional)
+        if (event.event_type === "Hari_Besar" || event.type === "Hari_Besar") {
+          return "Eksternal";
+        }
+
+        // 4. Flag eksplisit is_in_fotang
+        if (
+          event.is_in_fotang === true ||
+          event.is_in_fotang === "true" ||
+          String(event.is_in_fotang).toLowerCase() === "true"
+        ) {
+          return "Internal";
+        }
+
+        // Default → Eksternal
+        return "Eksternal";
+      })();
+
+      // Tipe
+      const rawType = event.event_type || event.type || "Regular";
+      const type = rawType === "Hari_Besar" ? "Hari Besar" 
+                : rawType === "Lembaga" ? "Lembaga" 
+                : rawType;
+
+      const time = dateObj
+        ? dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB"
+        : "00:00 WIB";
+
+      return {
+        ...event,
+        id: event.event_id || event.id || Date.now(),
+        name,
+        location,
+        type,
+        category,                    // ← INI YANG DIPAKAI DI RENDER
+        dateRange: dateObj ? [dateObj] : [],
+        time,
+        dateString: dateObj?.toLocaleDateString("id-ID", { 
+          day: "numeric", 
+          month: "long", 
+          year: "numeric" 
+        }),
+        is_recurring: !!event.is_recurring
+      };
+    }).filter(e => e.dateRange.length > 0);
+  }, [displayEvents]);
+
+  // Sisanya tetap sama
+  const getEventsForDate = (selectedDate) => {
+    return normalizedEvents
+      .filter(event => event.dateRange.some(d => 
+        d.getDate() === selectedDate.getDate() &&
+        d.getMonth() === selectedDate.getMonth() &&
+        d.getFullYear() === selectedDate.getFullYear()
+      ))
+      .sort((a, b) => a.time.localeCompare(b.time));
   };
 
-  const handleActiveDateChange = ({ activeStartDate }) => {
-    setDate(new Date(activeStartDate.getFullYear(), activeStartDate.getMonth(), 1));
-    setViewMode("month");
+  const getEventsForMonth = (selectedDate) => {
+    return normalizedEvents
+      .filter(event => event.dateRange.some(d => 
+        d.getMonth() === selectedDate.getMonth() &&
+        d.getFullYear() === selectedDate.getFullYear()
+      ))
+      .sort((a, b) => a.dateRange[0] - b.dateRange[0]);
   };
 
   return (
     <Box width="360px" bg="gray.50" borderLeft="4px solid" borderColor="gray.200" p={4} overflowY="auto">
       <Calendar
-        onChange={handleDateChange}
-        onActiveStartDateChange={handleActiveDateChange}
+        onChange={(v) => { setDate(v); setViewMode("date"); }}
+        onActiveStartDateChange={({ activeStartDate }) => {
+          setDate(new Date(activeStartDate.getFullYear(), activeStartDate.getMonth(), 1));
+          setViewMode("month");
+        }}
         value={date}
         locale="id-ID"
         className={styles.calendar}
         tileClassName={({ date: tileDate }) => {
-          const today = new Date();
-          const isToday = new Date(tileDate).toDateString() === new Date(today).toDateString();
-          const hasEvents = events.some((event) => {
-            if (!event.dateRange || !Array.isArray(event.dateRange)) return false;
-            return event.dateRange.some((eventDate) => (
-              eventDate.getDate() === tileDate.getDate() &&
-              eventDate.getMonth() === tileDate.getMonth() &&
-              eventDate.getFullYear() === tileDate.getFullYear()
-            ));
-          });
-          return [
-            isToday && styles.highlight,
-            hasEvents && styles.hasEvents
-          ].filter(Boolean).join(" ");
+          const hasEvents = normalizedEvents.some(e => 
+            e.dateRange.some(d => 
+              d.getDate() === tileDate.getDate() &&
+              d.getMonth() === tileDate.getMonth() &&
+              d.getFullYear() === tileDate.getFullYear()
+            )
+          );
+          const isToday = new Date().toDateString() === tileDate.toDateString();
+          return `${isToday ? styles.highlight : ""} ${hasEvents ? styles.hasEvents : ""}`.trim();
         }}
       />
+
       <Box mt={4}>
         {(viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).length > 0 ? (
           (viewMode === "month" ? getEventsForMonth(date) : getEventsForDate(date)).map((event) => (
-            <Flex key={`${event.id}-${event.occurrence_id || event.id}`} justify="space-between" align="center" mb={2} p={2} bg="gray.50" borderRadius="md">
-              <Box>
+            <Flex 
+              key={event.id} 
+              justify="space-between" 
+              align="center" 
+              mb={3} 
+              p={3} 
+              bg="white" 
+              borderRadius="md"
+              boxShadow="sm"
+              _hover={{ boxShadow: "md" }}
+            >
+              <Box flex="1">
                 {viewMode === "month" ? (
-                  <>
-                    <Text fontSize="md" fontWeight="bold" color="blue.600">
-                      {event.dateString || event.dateRange[0]?.toLocaleDateString("id-ID", { day: "numeric", month: "long" }) || "Tanggal tidak tersedia"}
-                    </Text>
-                    {event.time && event.isSameDay && (
-                      <Text fontSize="md" fontWeight="bold" color="blue.600">{event.time}</Text>
-                    )}
-                  </>
+                  <Text fontSize="sm" fontWeight="bold" color="blue.600">
+                    {event.dateString}
+                  </Text>
                 ) : (
-                  event.time && event.isSameDay && (
-                    <Text fontSize="lg" fontWeight="bold" color="blue.600">{event.time}</Text>
-                  )
+                  <Text fontSize="lg" fontWeight="bold" color="blue.600">
+                    {event.time}
+                  </Text>
                 )}
-                <Text fontSize="md" fontWeight="bold">{event.name || "Nama acara tidak tersedia"}</Text>
-                <Text fontSize="sm" color="gray.600">{event.location || "Lokasi tidak tersedia"}</Text>
-                <HStack spacing={2} mt={1}>
-                  <Tag size="sm" variant="solid" colorScheme="blue">{event.type || "Tipe tidak tersedia"}</Tag>
+                <Text fontSize="md" fontWeight="bold" noOfLines={2}>
+                  {event.name}
+                </Text>
+                <Text fontSize="sm" color="gray.600" noOfLines={1} mt={1}>
+                  {event.location}
+                </Text>
+                <HStack spacing={2} mt={2}>
+                  {/* CHIP CATEGORY: INTERNAL / EKSTERNAL — SEKARANG BENAR! */}
+                  <Tag 
+                    size="sm" 
+                    colorScheme={event.category === "Internal" ? "green" : "orange"}
+                    variant="solid"
+                  >
+                    {event.category === "Internal" ? "Internal" : "Eksternal"}
+                  </Tag>
+
+                  {/* CHIP TIPE */}
+                  <Tag 
+                    size="sm" 
+                    colorScheme={
+                      event.type === "Hari Besar" ? "red" : 
+                      event.type === "Lembaga" ? "purple" : "blue"
+                    }
+                  >
+                    {event.type}
+                  </Tag>
+
+                  {/* CHIP BERULANG */}
                   {event.is_recurring && (
-                    <Tag size="sm" variant="solid" colorScheme="green">Berulang</Tag>
+                    <Tag size="sm" colorScheme="teal">Berulang</Tag>
                   )}
                 </HStack>
               </Box>
               <Menu>
-                <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" size="sm" aria-label="More options" />
+                <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" size="sm" />
                 <MenuList>
-                  <MenuItem onClick={() => setSelectedEvent(event)}>Lihat Detail</MenuItem>
+                  <MenuItem onClick={() => setSelectedEvent(event)}>
+                    Lihat Detail
+                  </MenuItem>
                 </MenuList>
               </Menu>
             </Flex>
           ))
         ) : (
-          <Text color="gray.500" textAlign="center">
-            {viewMode === "month"
-              ? `Tidak ada acara di bulan ${date.toLocaleString("id-ID", { month: "long", year: "numeric" })}`
-              : "Tidak ada acara pada tanggal ini."}
+          <Text color="gray.500" textAlign="center" fontSize="sm" mt={6}>
+            Tidak ada acara {viewMode === "month" ? "di bulan ini" : "pada tanggal ini"}
           </Text>
         )}
       </Box>
@@ -222,7 +306,7 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events, setSelect
   );
 };
 
-export default function Layout({ children, title, showCalendar = false }) {
+export default function Layout({ children, title, showCalendar = false, calendarEvents }) {
   const router = useRouter();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [username, setUsername] = useState("");
@@ -322,8 +406,17 @@ export default function Layout({ children, title, showCalendar = false }) {
     }
   }, [router]);
 
-  const { data: fetchedEvents = [] } = useFetchEvents({ event_type: [], provinceId: [] });
-  useEffect(() => setEvents(fetchedEvents), [fetchedEvents]);
+  const { data: allEvents = [] } = useFetchEvents({
+
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    if (saved !== null) setIsSidebarCollapsed(saved === "true");
+  }, []);
+
+
+  useEffect(() => setEvents(allEvents), [allEvents]);
 
   if (isCheckingAuth) {
     return (
@@ -464,7 +557,7 @@ export default function Layout({ children, title, showCalendar = false }) {
               setDate={setDate} 
               viewMode={viewMode} 
               setViewMode={setViewMode} 
-              events={events} 
+              events={calendarEvents || allEvents}
               setSelectedEvent={setSelectedEvent}
             />
           )}

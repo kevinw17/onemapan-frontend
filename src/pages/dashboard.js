@@ -247,7 +247,7 @@ export default function Dashboard() {
   const areaLabel = AREA_OPTIONS.find(o => o.value === selectedArea)?.label || selectedArea;
 
   return (
-    <Layout title="Dashboard" showCalendar tileContent={(p) => <EventTileContent {...p} events={stats?.events || []} />}>
+    <Layout title="Dashboard" showCalendar tileContent={(p) => <EventTileContent {...p} events={stats?.events || []} />} calendarEvents={stats?.events || []}>
       <VStack spacing={6} align="stretch" p={4}>
         <Flex align="center" justify="space-between" mb={4}>
           <Box>

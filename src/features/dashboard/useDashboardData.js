@@ -38,9 +38,13 @@ export const useDashboardData = ({
       const spiritualUsers = Array.isArray(spiritualRes.data) ? spiritualRes.data : spiritualRes.data.data || [];
 
       const events = (eventsRes.data || []).map(e => ({
-        id: e.event_id,
+        ...e, // INI YANG PALING PENTING! JANGAN BUANG FIELD ASLI
+        ...e.occurrences?.[0], // kalau perlu ambil dari occurrence
         name: e.event_name,
-        date: new Date(e.occurrences?.[0]?.greg_occur_date || Date.now()),
+        date: new Date(e.occurrences?.[0]?.greg_occur_date || e.date || Date.now()),
+        fotang_id_exists: !!e.fotang_id || !!e.occurrences?.[0]?.fotang_id,
+        // optional: tambah ini biar lebih jelas
+        event_type: e.event_type || e.occurrences?.[0]?.event_type,
       }));
 
       // === FILTER USERS BERDASARKAN selectedArea (korwil) ===
