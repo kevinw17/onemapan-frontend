@@ -107,10 +107,13 @@ export default function UmatPage() {
   });
 
   const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useFetchUserProfile(userId);
-  const isNotUserRole = isProfileLoading ? false : (userProfile?.role || userRole) !== "User";
-  const isSuperAdmin = isProfileLoading 
-    ? false 
-    : isNationalRole(userProfile?.role || userRole);
+
+  const currentRole = userProfile?.role;
+
+  const isNotUserRole = isProfileLoading ? false : (currentRole !== "User" && currentRole != null);
+  const isNationalLevel = isProfileLoading ? false : isNationalRole(currentRole);
+
+  const isSuperAdmin = isNationalLevel;
 
   const queryParams = useMemo(() => ({
     page,
@@ -123,8 +126,8 @@ export default function UmatPage() {
     is_qing_kou: isNotUserRole ? qingKouFilter : undefined,
     gender: isNotUserRole ? genderFilter : undefined,
     blood_type: isNotUserRole ? bloodTypeFilter : undefined,
-    userId: !isNotUserRole ? userId : undefined,
-  }), [page, limit, searchQuery, searchField, jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter, userId, isNotUserRole]);
+    userId: currentRole === "User" ? userId : undefined,
+  }), [page, limit, searchQuery, searchField, jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter, userId, isNotUserRole, currentRole]);
 
   const { data: users, isLoading, refetch: refetchUsers } = useFetchUsers(queryParams);
   const usersList = useMemo(() => {
