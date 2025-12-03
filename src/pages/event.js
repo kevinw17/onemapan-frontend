@@ -6,9 +6,18 @@ import {
   Checkbox, Image, Spinner, useDisclosure,
   InputGroup, InputRightElement, Collapse,
   Radio,
-  RadioGroup
+  RadioGroup,
+  Drawer,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  GridItem,
+  Grid,
+  CheckboxGroup,
+  DrawerFooter
 } from "@chakra-ui/react";
-import { FiEdit, FiTrash, FiPlus, FiFilter, FiMinus, FiPlus as FiPlusIcon, FiCalendar, FiX } from "react-icons/fi";
+import { FiEdit, FiTrash, FiPlus, FiFilter, FiMinus, FiPlus as FiPlusIcon, FiCalendar, FiX, FiDownload } from "react-icons/fi";
 import Layout from "@/components/layout";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
@@ -29,7 +38,8 @@ import { jwtDecode } from "jwt-decode";
 import { useFetchInstitution } from "@/features/institution/useFetchInstitution";
 import { useFetchFotang } from "@/features/location/useFetchFotang";
 import { isNationalRole } from "@/lib/roleUtils";
-
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 const lunarYears = ["乙巳年"];
 const lunarMonths = [
   "一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月",
@@ -52,18 +62,15 @@ const isRecurringOptions = [
   { value: "true", label: "Berulang" },
   { value: "false", label: "Tidak Berulang" },
 ];
-
 const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) => {
   const today = new Date();
   const [daysBefore, setDaysBefore] = useState("-");
   const [daysAfter, setDaysAfter] = useState("-");
   const formatDate = (date) => format(date, "dd-MM-yyyy");
-
   const handleFilterClick = (filter) => {
     let startDate, endDate;
     const before = daysBefore !== "-" && !isNaN(parseInt(daysBefore)) && parseInt(daysBefore) >= 0 ? parseInt(daysBefore) : null;
     const after = daysAfter !== "-" && !isNaN(parseInt(daysAfter)) && parseInt(daysAfter) >= 0 ? parseInt(daysAfter) : null;
-
     if (before !== null && after !== null) {
       startDate = subDays(today, before);
       endDate = addDays(today, after);
@@ -80,7 +87,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
       setDateRange({ startDate, endDate });
       return;
     }
-
     switch (filter) {
       case "today":
         startDate = today;
@@ -112,7 +118,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
     }
     setDateRange({ startDate, endDate });
   };
-
   const handleDaysBeforeChange = (e) => {
     const value = e.target.value;
     if (value === "" || value === "-") {
@@ -121,7 +126,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
       setDaysBefore(value);
     }
   };
-
   const handleDaysAfterChange = (e) => {
     const value = e.target.value;
     if (value === "" || value === "-") {
@@ -130,11 +134,9 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
       setDaysAfter(value);
     }
   };
-
   const handleApply = () => {
     const before = daysBefore !== "-" && !isNaN(parseInt(daysBefore)) && parseInt(daysBefore) >= 0 ? parseInt(daysBefore) : null;
     const after = daysAfter !== "-" && !isNaN(parseInt(daysAfter)) && parseInt(daysAfter) >= 0 ? parseInt(daysAfter) : null;
-
     if (before !== null && after !== null) {
       setDateRange({
         startDate: subDays(today, before),
@@ -154,7 +156,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
     onApply();
     onClose();
   };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
@@ -246,7 +247,6 @@ const DateRangeModal = ({ isOpen, onClose, onApply, dateRange, setDateRange }) =
     </Modal>
   );
 };
-
 const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
   const getWilayahLabel = (area) => {
     const map = {
@@ -259,7 +259,6 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
     };
     return map[area] || "Wilayah Tidak Diketahui";
   };
-
   if (isLoading) {
     return (
       <VStack h="70vh" justify="center" align="center">
@@ -268,7 +267,6 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
       </VStack>
     );
   }
-
   if (error) {
     return (
       <VStack h="70vh" justify="center" align="center">
@@ -276,7 +274,6 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
       </VStack>
     );
   }
-
   if (!events || events.length === 0) {
     return (
       <VStack h="70vh" justify="center" align="center">
@@ -284,15 +281,13 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
       </VStack>
     );
   }
-
   return events.map((event, index) => {
     if (!event || !event.id || !event.date || !event.day) {
       return null;
     }
-
     return (
       <Box
-          key={`${event.id}-${event.occurrence_id}`}  // <-- GANTI event.id → event.event_id
+          key={`${event.id}-${event.occurrence_id}`} // <-- GANTI event.id → event.event_id
           bg="white"
           p={4}
           mb={4}
@@ -334,10 +329,11 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
     );
   }).filter((event) => event !== null);
 };
-
-const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, isDetailLoading }) => {
+const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, isDetailLoading, userRole }) => {
   const toast = useToast();
   const router = useRouter();
+
+  const canEdit = userRole ? isNationalRole(userRole) : false;
 
   if (isDetailLoading) {
     return (
@@ -354,7 +350,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
       </Modal>
     );
   }
-
   if (!event) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
@@ -372,12 +367,10 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
       </Modal>
     );
   }
-
   const lunarDate = [event.lunar_sui_ci_year, event.lunar_month, event.lunar_day]
     .filter(Boolean)
     .join(" ")
     .trim();
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <ModalOverlay />
@@ -386,22 +379,24 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
           <Flex align="center" justify="space-between" w="100%">
             <Text>{event.name || "Detail Kegiatan"}</Text>
             <Flex align="center">
-              <Button
-                aria-label="Edit"
-                variant="solid"
-                colorScheme="blue"
-                onClick={() => {
-                  if (!event?.id) {
-                    toast({ title: "Gagal", description: "ID kegiatan tidak valid", status: "error" });
-                    return;
-                  }
-                  router.push(`/event/editEvent?eventId=${event.id}`);
-                }}
-                size="sm"
-                mr={2}
-              >
-                Edit
-              </Button>
+              {canEdit && (
+                <Button
+                  aria-label="Edit"
+                  variant="solid"
+                  colorScheme="blue"
+                  onClick={() => {
+                    if (!event?.id) {
+                      toast({ title: "Gagal", description: "ID kegiatan tidak valid", status: "error" });
+                      return;
+                    }
+                    router.push(`/event/editEvent?eventId=${event.id}`);
+                  }}
+                  size="sm"
+                  mr={2}
+                >
+                  Edit
+                </Button>
+              )}
               <IconButton
                 icon={<FiX />}
                 aria-label="Close"
@@ -435,6 +430,9 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
             {event.description && event.description !== "-" && (
               <Text whiteSpace="pre-wrap"><strong>Deskripsi:</strong> {event.description}</Text>
             )}
+            {event.institution_name && event.institution_name !== "-" && (
+              <Text><strong>Lembaga:</strong> {event.institution_name}</Text>
+            )}
           </VStack>
         </ModalBody>
         <ModalFooter>
@@ -452,7 +450,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
     </Modal>
   );
 };
-
 const EventForm = ({
   isOpen, onClose, onSubmit, formData, handleChange, handleAreaChange, handleFotangChange,
   handleProvinceChange, handleCityChange, handleIsRecurringChange, handleImageChange,
@@ -463,17 +460,14 @@ const EventForm = ({
 }) => {
   const isInternal = eventCategory === "Internal"; // ✅ GUNAKAN eventCategory
   const isExternal = eventCategory === "External"; // ✅ GUNAKAN eventCategory
-
   // Cities untuk external location
   const {
     data: citiesForExternalRaw = [],
     isLoading: isCitiesForExternalLoading
   } = useFetchCities(formData.external_provinceId ? parseInt(formData.external_provinceId) : null);
- 
   const citiesForExternal = Array.isArray(citiesForExternalRaw)
     ? citiesForExternalRaw
     : (citiesForExternalRaw.data || []);
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl">
       <ModalOverlay />
@@ -483,8 +477,6 @@ const EventForm = ({
         <ModalBody>
           <form id={title.toLowerCase().replace(" ", "-") + "-form"} onSubmit={onSubmit}>
             <VStack spacing={6} align="stretch">
-              {/* ✅ HAPUS FIELD KATEGORI */}
-              
               {/* Nama Kegiatan */}
               <HStack spacing={4}>
                 <FormControl isRequired flex={1}>
@@ -498,7 +490,6 @@ const EventForm = ({
                   </FormControl>
                 )}
               </HStack>
-
               {/* Tanggal */}
               <HStack spacing={4}>
                 <FormControl isRequired flex={1}>
@@ -510,7 +501,6 @@ const EventForm = ({
                   <Input type="datetime-local" name="greg_end_date" value={formData.greg_end_date || ""} onChange={handleChange} />
                 </FormControl>
               </HStack>
-
               {/* EXTERNAL: Apakah di Vihara? */}
               {isExternal && (
                 <FormControl isRequired>
@@ -548,7 +538,6 @@ const EventForm = ({
                   </RadioGroup>
                 </FormControl>
               )}
-
               {/* WILAYAH */}
               <FormControl isRequired>
                 <FormLabel>Wilayah</FormLabel>
@@ -563,7 +552,6 @@ const EventForm = ({
                   ))}
                 </Select>
               </FormControl>
-
               {/* VIHARA/FOTANG - Internal atau External + di vihara */}
               {(isInternal || (isExternal && formData.is_in_fotang)) && formData.area && (
                 <>
@@ -639,7 +627,6 @@ const EventForm = ({
                   </FormControl>
                 </>
               )}
-
               {/* EXTERNAL + TIDAK DI VIHARA: Lokasi Manual */}
               {isExternal && formData.is_in_fotang === false && formData.area && (
                 <>
@@ -698,7 +685,6 @@ const EventForm = ({
                   </FormControl>
                 </>
               )}
-
               {/* Lembaga (External Only) */}
               {isExternal && (
                 <FormControl isRequired>
@@ -715,7 +701,6 @@ const EventForm = ({
                   </Select>
                 </FormControl>
               )}
-
               {/* ✅ JENIS KEGIATAN - SESUAI TAB AKTIF */}
               <FormControl isRequired>
                 <FormLabel>Jenis Kegiatan</FormLabel>
@@ -741,7 +726,6 @@ const EventForm = ({
                   )}
                 </Select>
               </FormControl>
-
               {/* Lunar & Berulang (Internal Only) */}
               {isInternal && (
                 <>
@@ -782,13 +766,12 @@ const EventForm = ({
                   </FormControl>
                 </>
               )}
-
               {/* Deskripsi & Poster */}
               <FormControl>
                 <FormLabel>Deskripsi (Opsional)</FormLabel>
                 <Textarea name="description" value={formData.description || ""} onChange={handleChange} />
               </FormControl>
-             
+            
               <FormControl>
                 <FormLabel>Poster (Opsional)</FormLabel>
                 <Input type="file" accept="image/*" onChange={handleImageChange} />
@@ -822,7 +805,6 @@ const EventForm = ({
     </Modal>
   );
 };
-
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, eventName, isDeleting }) => (
   <Modal isOpen={isOpen} onClose={onClose} size="xl">
     <ModalOverlay />
@@ -845,19 +827,15 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, eventName, isDeleting 
     </ModalContent>
   </Modal>
 );
-
 export default function Event() {
   const toast = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
-
   // === MODAL STATES ===
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose } = useDisclosure();
   // const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
-  const { isOpen: isDateRangeOpen, onOpen: onDateRangeOpen, onClose: onDateRangeClose } = useDisclosure();
-
   // === APP STATES ===
   const [eventCategory, setEventCategory] = useState("Internal");
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -869,33 +847,76 @@ export default function Event() {
       endDate: endOfMonth(nowInWIB),
     };
   });
+  const { isOpen: isDateRangeOpen, onOpen: onDateRangeOpen, onClose: onDateRangeClose } = useDisclosure();
+  const [reportDateRange, setReportDateRange] = useState(() => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  }));
+  const { isOpen: isReportDateRangeOpen, onOpen: onReportDateRangeOpen, onClose: onReportDateRangeClose } = useDisclosure();
   const [userArea, setUserArea] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-
+  const { isOpen: isReportOpen, onOpen: onReportOpen, onClose: onReportClose } = useDisclosure();
+  const [selectedReportFields, setSelectedReportFields] = useState([]);
+  const [reportExportFormat, setReportExportFormat] = useState("pdf");
+  // Daftar field yang bisa dipilih
+  const EVENT_REPORT_FIELDS = useMemo(() => {
+    const baseFields = [
+      { key: "name", label: "Nama Kegiatan" },
+      { key: "mandarin_name", label: "Nama Kegiatan (Mandarin)" },
+      { key: "type", label: "Jenis Kegiatan" },
+      { key: "date", label: "Tanggal" },
+      { key: "time", label: "Waktu" },
+      { key: "location", label: "Lokasi" },
+      { key: "area", label: "Wilayah" },
+      { key: "lunar_date", label: "Tanggal Lunar" },
+      { key: "description", label: "Deskripsi" },
+    ];
+    if (eventCategory === "External") {
+      baseFields.push({ key: "institution", label: "Lembaga" });
+    }
+    return baseFields;
+  }, [eventCategory]);
+  // Load font Mandarin (sama kayak report.js)
+  const [mandarinFontBase64, setMandarinFontBase64] = useState("");
+  const [mandarinFontLoaded, setMandarinFontLoaded] = useState(false);
+  useEffect(() => {
+    if (mandarinFontLoaded || mandarinFontBase64) return;
+    fetch("/fonts/NotoSansSC-Regular.ttf")
+      .then(res => res.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          setMandarinFontBase64(base64);
+          setMandarinFontLoaded(true);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => console.warn("Font Mandarin gagal dimuat"));
+  }, [mandarinFontLoaded, mandarinFontBase64]);
   // event.js - PERBAIKI INVALIDATION
   const handleFormSuccess = useCallback(async (data) => {
     console.log("✅ Event created/updated:", data);
-    
+   
     try {
       // ✅ INVALIDATE QUERIES
       await queryClient.invalidateQueries({
         queryKey: ['events-final-v3'],
         predicate: (query) => query.queryKey[0] === 'events-final-v3'
       });
-      
+     
       // ✅ REFETCH DAN TUNGGU SAMPAI SELESAI
       console.log("🔄 Starting refetch...");
       await queryClient.refetchQueries({
         queryKey: ['events-final-v3'],
         type: 'active'
       });
-      
+     
       // ✅ CEK APAKAH DATA BARU SUDAH MUNCUL
       const newEvents = queryClient.getQueryData(['events-final-v3']) || [];
       console.log("✅ Refetch completed! New events count:", newEvents.length);
-
-      
+     
     } catch (error) {
       console.error("❌ Refetch failed:", error);
     }
@@ -915,34 +936,31 @@ export default function Event() {
       }
     }
   }, []);
-
   // === JANGKAUAN OPTIONS BERDASARKAN ROLE ===
   const filteredJangkauanOptions = useMemo(() => {
     if (isNationalRole(userRole)) return jangkauanOptions;
     if (!userArea) return [];
     return jangkauanOptions.filter(o => o.value === userArea);
   }, [userRole, userArea]);
-
   // === FORM & IMAGE ===
-  const { 
-    image, 
-    setImage, 
-    previewImage, 
-    setPreviewImage, 
-    isImageLoaded, 
-    cropperRef, 
-    handleImageChange 
+  const {
+    image,
+    setImage,
+    previewImage,
+    setPreviewImage,
+    isImageLoaded,
+    cropperRef,
+    handleImageChange
   } = useImageUpload();
-
   // PASS setImage & setPreviewImage ke useEventForm
-  const { 
-    formData, 
-    setFormData, 
-    isSubmitting, 
-    handleChange, 
-    handleIsRecurringChange, 
-    handleSubmit, 
-    handleUpdate 
+  const {
+    formData,
+    setFormData,
+    isSubmitting,
+    handleChange,
+    handleIsRecurringChange,
+    handleSubmit,
+    handleUpdate
   } = useEventForm({
     onAddClose,
     onDetailClose,
@@ -974,9 +992,7 @@ export default function Event() {
     previewImage,
     onSuccessCallback: handleFormSuccess
   });
-
   const deleteMutation = useDeleteEvent();
-
   // === FILTERS ===
   const {
     filterOpen, setFilterOpen,
@@ -995,16 +1011,12 @@ export default function Event() {
     applyFilters,
     clearFilters,
   } = useEventFilter();
-
   // === DATA FETCHING ===
-
   const { data: provincesRaw = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const provinces = Array.isArray(provincesRaw) ? provincesRaw : (provincesRaw.data || []);
-
   // 2. Cities → tetap fetch berdasarkan provinceId (untuk dropdown)
   const { data: citiesRaw = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId || null);
   const cities = Array.isArray(citiesRaw) ? citiesRaw : (citiesRaw.data || []);
-
   // 3. FOTANG → FETCH SEMUA SEKALI
   const { data: allFotangsRaw = [], isLoading: isAllFotangsLoading } = useFetchFotang({ limit: 1000 });
   const allFotangs = (allFotangsRaw?.data || []).map(f => ({
@@ -1017,7 +1029,6 @@ export default function Event() {
     city_name: f.locality?.district?.city?.name || "-",
     area: f.area || null,
   })).filter(f => f.area);
-
   // === FILTERED FOTANG LIST ===
   const filteredFotangs = useMemo(() => {
     return allFotangs.filter(f => {
@@ -1027,33 +1038,27 @@ export default function Event() {
       return true;
     });
   }, [allFotangs, formData.area, formData.provinceId, formData.cityId]);
-
   // 4. Institutions
   const { data: institutionsRaw = [], isLoading: isInstitutionsLoading } = useFetchInstitution({ limit: 1000 });
   const institutions = (institutionsRaw?.data || []).map(i => ({
     id: i.institution_id,
     name: i.institution_name || "Tanpa Nama",
   }));
-
-  const { 
-    data: citiesForExternalRaw = [], 
-    isLoading: isCitiesForExternalLoading 
+  const {
+    data: citiesForExternalRaw = [],
+    isLoading: isCitiesForExternalLoading
   } = useFetchCities(formData.external_provinceId || null);
-
-  const citiesForExternal = Array.isArray(citiesForExternalRaw) 
-    ? citiesForExternalRaw 
+  const citiesForExternal = Array.isArray(citiesForExternalRaw)
+    ? citiesForExternalRaw
     : (citiesForExternalRaw.data || []);
-
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     category: eventCategory,
     event_type: eventTypeFilter.length > 0 ? eventTypeFilter : undefined,
-
     // LOGIKA BARU: Hanya kirim area kalau TIDAK ADA filter provinsi/kota
     // Ganti bagian ini di useFetchEvents
     area: isNationalRole(userRole)
       ? (areaFilter.length > 0 ? areaFilter : undefined)
       : userArea,
-
     // Kirim provinsi & kota seperti biasa
     province_id: provinceFilter.length > 0 ? provinceFilter : undefined,
     city_id: cityFilter.length > 0 ? cityFilter : undefined,
@@ -1064,7 +1069,33 @@ export default function Event() {
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
   });
-
+    // Query khusus untuk report (mengikuti reportDateRange)
+  const {
+    data: eventsForReport = [],
+    isLoading: isReportLoading,
+    refetch: refetchReport
+  } = useFetchEvents({
+    category: eventCategory,
+    event_type: eventTypeFilter.length > 0 ? eventTypeFilter : undefined,
+    area: isNationalRole(userRole)
+      ? (areaFilter.length > 0 ? areaFilter : undefined)
+      : userArea,
+    province_id: provinceFilter.length > 0 ? provinceFilter : undefined,
+    city_id: cityFilter.length > 0 ? cityFilter : undefined,
+    institution_id: eventCategory === "External" && institutionFilter.length > 0
+      ? institutionFilter
+      : undefined,
+    is_recurring: isRecurringFilter !== null ? isRecurringFilter : undefined,
+    startDate: reportDateRange.startDate,
+    endDate: reportDateRange.endDate,
+    enabled: isReportOpen // hanya jalan saat drawer report dibuka
+  });
+  // Auto refetch saat reportDateRange berubah
+  useEffect(() => {
+    if (isReportOpen) {
+      refetchReport();
+    }
+  }, [reportDateRange, isReportOpen, refetchReport]);
   // === VALID & SORTED EVENTS ===
   const validEvents = useMemo(() => {
     return events
@@ -1072,7 +1103,6 @@ export default function Event() {
       .sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate))
       .filter(e => e.id && e.date && e.day && e.name);
   }, [events]);
-
   // === REFETCH ON FILTER/DATE CHANGE ===
   useEffect(() => {
     refetch();
@@ -1080,12 +1110,11 @@ export default function Event() {
     dateRange,
     eventTypeFilter,
     areaFilter,
-    provinceFilter,     // ← TAMBAH INI
-    cityFilter,         // ← DAN INI
+    provinceFilter, // ← TAMBAH INI
+    cityFilter, // ← DAN INI
     isRecurringFilter,
     refetch
   ]);
-
   // === ERROR TOAST ===
   useEffect(() => {
     if (error) {
@@ -1099,12 +1128,10 @@ export default function Event() {
       refetch();
     }
   }, [error, refetch, toast]);
-
   // === LOCATION HANDLERS ===
   const handleAreaChange = useCallback((e) => {
     const selectedArea = e.target.value;
     const isExternalNonFotang = formData.category === "External" && formData.is_in_fotang === false;
-
     setFormData(prev => ({
       ...prev,
       // Reset field yang nggak dipakai
@@ -1114,13 +1141,11 @@ export default function Event() {
       external_provinceId: "",
       external_cityId: "",
       location_name: "",
-
       // Atur area sesuai kondisi
       area: isExternalNonFotang ? prev.area || selectedArea : selectedArea,
       external_area: isExternalNonFotang ? selectedArea : prev.external_area || selectedArea,
     }));
   }, [setFormData]);
-
   const handleFotangChange = useCallback((e) => {
     const fotangId = e.target.value;
     const fotang = allFotangs.find(f => f.id === parseInt(fotangId));
@@ -1132,7 +1157,6 @@ export default function Event() {
       location_name: "",
     }));
   }, [allFotangs, setFormData]);
-
   const handleProvinceChange = useCallback((e) => {
     const provinceId = e.target.value;
     setFormData(prev => ({
@@ -1141,12 +1165,10 @@ export default function Event() {
       cityId: "",
     }));
   }, [setFormData]);
-
   const handleCityChange = useCallback((e) => {
     const cityId = e.target.value;
     setFormData(prev => ({ ...prev, cityId }));
   }, [setFormData]);
-
   // === EDIT EVENT ===
   const handleEdit = useCallback((event) => {
     const eventId = event.id;
@@ -1157,73 +1179,64 @@ export default function Event() {
     // Langsung arahkan ke halaman edit baru
     router.push(`/event/editEvent?eventId=${eventId}`);
   }, [router, toast]);
-
   // === DELETE EVENT ===
   const handleDelete = useCallback((event) => {
     setSelectedEvent(event);
     onConfirmOpen();
   }, [onConfirmOpen]);
-
   const confirmDelete = useCallback(() => {
     if (!selectedEvent?.id) {
-      toast({ 
-        title: "Error", 
-        description: "ID kegiatan tidak valid", 
-        status: "error" 
+      toast({
+        title: "Error",
+        description: "ID kegiatan tidak valid",
+        status: "error"
       });
       return;
     }
-
     deleteMutation.mutate(selectedEvent.id, {
       onSuccess: () => {
         // ✅ TUTUP POPUP DELETE KONFIRMASI
         onConfirmClose();
-        
+       
         // ✅ REFETCH DATA
         refetch();
-        
+       
         // ✅ SHOW SUCCESS TOAST
-        toast({ 
-          title: "Berhasil", 
-          description: "Kegiatan berhasil dihapus", 
+        toast({
+          title: "Berhasil",
+          description: "Kegiatan berhasil dihapus",
           status: "success",
           duration: 3000
         });
-        
+       
         // ✅ TUTUP DETAIL MODAL JUGA (opsional, biar user langsung lihat list yang udah update)
         onDetailClose();
       },
       onError: (err) => {
         console.error("Delete error:", err);
-        toast({ 
-          title: "Gagal Menghapus", 
-          description: err.response?.data?.message || err.message || "Terjadi kesalahan", 
+        toast({
+          title: "Gagal Menghapus",
+          description: err.response?.data?.message || err.message || "Terjadi kesalahan",
           status: "error",
           duration: 5000
         });
       },
     });
   }, [selectedEvent?.id, deleteMutation, onConfirmClose, refetch, toast, onDetailClose]);
-
   const openEventDetail = useCallback(async (event) => {
-    if (!event?.id) {  // <-- GANTI event.id → event.event_id
+    if (!event?.id) { // <-- GANTI event.id → event.event_id
       toast({ title: "Error", description: "ID kegiatan tidak valid", status: "error" });
       return;
     }
-
     setIsDetailLoading(true);
     setSelectedEvent(null);
     onDetailOpen();
-
     try {
-      const res = await axiosInstance.get(`/event/${event.id}`);  // <-- GANTI event.id
+      const res = await axiosInstance.get(`/event/${event.id}`); // <-- GANTI event.id
       const data = res.data;
       const occ = data.occurrences?.[0];
-
       if (!occ) throw new Error("Data tanggal tidak ditemukan");
-
       const rawDate = new Date(occ.greg_occur_date);
-
       // === LOKASI ===
       let displayLocation = "Lokasi Tidak Diketahui";
       if (data.is_in_fotang && data.fotang?.location_name) {
@@ -1231,7 +1244,6 @@ export default function Event() {
       } else if (!data.is_in_fotang && data.eventLocation?.location_name) {
         displayLocation = data.eventLocation.location_name;
       }
-
       // === WILAYAH ===
       let wilayahValue = "";
       if (data.is_in_fotang && data.fotang?.area) {
@@ -1241,12 +1253,10 @@ export default function Event() {
       } else if (data.area) {
         wilayahValue = data.area;
       }
-
       const getWilayahLabel = (value) => {
         const opt = jangkauanOptions.find(o => o.value === value);
         return opt ? opt.label : "-";
       };
-
       // Format tanggal Indonesia lengkap
       const fullIndonesianDate = rawDate.toLocaleDateString("id-ID", {
         weekday: "long",
@@ -1254,7 +1264,6 @@ export default function Event() {
         month: "long",
         year: "numeric",
       });
-
       setSelectedEvent({
         id: data.event_id,
         name: data.event_name || "Tanpa Nama",
@@ -1262,12 +1271,14 @@ export default function Event() {
         wilayahLabel: getWilayahLabel(wilayahValue),
         type: data.event_type || "Regular",
         description: data.description || "-",
-        fullDate: fullIndonesianDate,           // ← baru: Senin, 17 November 2025
+        fullDate: fullIndonesianDate, // ← baru: Senin, 17 November 2025
         time: `${format(rawDate, "HH:mm")} WIB`, // ← baru: 14:00 WIB
         lunar_sui_ci_year: data.lunar_sui_ci_year || "",
         lunar_month: data.lunar_month || "",
         lunar_day: data.lunar_day || "",
         poster_s3_bucket_link: data.poster_s3_bucket_link || null,
+        institution_name: data.institution?.institution_name || data.institution_name || "-",
+        institution: data.institution || null,
       });
     } catch (err) {
       console.error("Gagal fetch detail event:", err);
@@ -1281,24 +1292,104 @@ export default function Event() {
       setIsDetailLoading(false);
     }
   }, [onDetailOpen, toast]);
-
   // === DATE RANGE DISPLAY ===
   const formatDateRange = () => {
     if (!dateRange.startDate || !dateRange.endDate) return "";
     return `${format(dateRange.startDate, "dd-MM-yyyy")} - ${format(dateRange.endDate, "dd-MM-yyyy")}`;
   };
-
   const handleApplyDateRange = () => {
     refetch();
     onDateRangeClose();
   };
+  const handleEventReportExport = () => {
+    if (selectedReportFields.length === 0) {
+      toast({ title: "Pilih minimal satu field", status: "warning" });
+      return;
+    }
+    // Gunakan data dari query report (sudah difilter sesuai reportDateRange)
+    const totalEvents = eventsForReport.length;
 
+    if (totalEvents === 0) {
+      toast({ title: "Tidak ada data untuk rentang tanggal ini", status: "info" });
+      return;
+    }
+
+    const headers = selectedReportFields.map(k => {
+      const field = EVENT_REPORT_FIELDS.find(f => f.key === k);
+      return field ? field.label : k;
+    });
+
+    const rows = eventsForReport.map(event => {
+      return selectedReportFields.map(key => {
+        switch (key) {
+          case "name": return event.name || "-";
+          case "mandarin_name": return event.event_mandarin_name || "-";
+          case "type": 
+            return event.type === "Hari_Besar" 
+              ? "Hari Besar" 
+              : (event.type || "-");
+          case "date": return event.fullDate || event.date || "-";
+          case "time": return event.time || "-";
+          case "location": return event.location || "-";
+          case "area": 
+            return event.wilayahLabel || 
+                  (event.area ? event.area.replace("Korwil_", "Wilayah ") : "-");
+          case "lunar_date": 
+            return [event.lunar_sui_ci_year, event.lunar_month, event.lunar_day]
+              .filter(Boolean).join(" ") || "-";
+          case "description": return event.description || "-";
+          case "institution":
+            // Coba ambil dari berbagai kemungkinan field yang mungkin ada
+            const instName = 
+              event.institution?.institution_name ||
+              event.institution_name ||
+              event.institution?.name ||
+              event.institutionName ||
+              event.institution_id && institutions.find(i => i.id === event.institution_id)?.name ||
+              "-";
+            return instName;
+          default: return "-";
+        }
+      });
+    });
+
+    const filename = `report-kegiatan-${eventCategory}-${format(reportDateRange.startDate, "yyyy-MM-dd")}_sd_${format(reportDateRange.endDate, "yyyy-MM-dd")}`;
+
+    if (reportExportFormat === "pdf") {
+      const doc = new jsPDF("landscape");
+      if (mandarinFontLoaded && mandarinFontBase64) {
+        doc.addFileToVFS("NotoSansSC-Regular.ttf", mandarinFontBase64);
+        doc.addFont("NotoSansSC-Regular.ttf", "NotoSansSC", "normal");
+      }
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        theme: "grid",
+        styles: { font: mandarinFontLoaded ? "NotoSansSC" : "helvetica", fontSize: 10 },
+        headStyles: { fillColor: [33, 150, 243] },
+        foot: [[`Total: ${totalEvents} kegiatan`]],
+        didParseCell: (data) => {
+          if (data.row.section === "foot") {
+            data.cell.colSpan = headers.length;
+            data.cell.styles.halign = "center";
+            data.cell.styles.fontStyle = "bold";
+          }
+          if (selectedReportFields[data.column.index] === "mandarin_name" && mandarinFontLoaded) {
+            data.cell.styles.font = "NotoSansSC";
+          }
+        }
+      });
+      doc.save(`${filename}.pdf`);
+    }
+    toast({ title: "Berhasil diekspor!", status: "success" });
+    setSelectedReportFields([]);
+    onReportClose();
+  };
   useEffect(() => {
     console.log("allFotangs di event.js:", allFotangs);
     console.log("formData.category:", formData.category);
     console.log("formData.is_in_fotang:", formData.is_in_fotang);
   }, [allFotangs, formData.category, formData.is_in_fotang]);
-
   // === RENDER ===
   return (
     <Layout title="Kegiatan" events={validEvents}>
@@ -1313,7 +1404,6 @@ export default function Event() {
               timeZone: "Asia/Jakarta",
             })}
           </Heading>
-
           {/* CATEGORY TABS */}
           <Flex gap={2}>
             {["Internal", "External"].map(cat => (
@@ -1342,7 +1432,6 @@ export default function Event() {
               </Tag>
             ))}
           </Flex>
-
           <Flex gap={2} align="center" flexShrink={0}>
             {/* FILTER BUTTON - VERSI BARU */}
             <Box position="relative">
@@ -1359,7 +1448,6 @@ export default function Event() {
               >
                 Filter
               </Button>
-
               {filterOpen && (
                 <VStack
                   spacing={3}
@@ -1385,8 +1473,8 @@ export default function Event() {
                     <Collapse in={isEventTypeOpen}>
                       <VStack align="start" mt={2} spacing={1}>
                         {eventTypes
-                          .filter(t => 
-                            eventCategory === "Internal" 
+                          .filter(t =>
+                            eventCategory === "Internal"
                               ? !["Lembaga"].includes(t)
                               : ["Lembaga", "Seasonal"].includes(t)
                           )
@@ -1403,22 +1491,20 @@ export default function Event() {
                       </VStack>
                     </Collapse>
                   </FormControl>
-
                   {/* WILAYAH (KORWIL) */}
                   {/* LOKASI: WILAYAH → PROVINSI → KOTA (CASCADING CHECKBOX - seperti fotang.js) */}
                   <FormControl>
                     <Flex justify="space-between" align="center">
                       <FormLabel mb={0} fontSize="sm">Lokasi</FormLabel>
-                      <IconButton 
-                        size="xs" 
-                        variant="ghost" 
-                        icon={isLocationOpen ? <FiMinus /> : <FiPlus />} 
-                        onClick={() => setIsLocationOpen(!isLocationOpen)} 
+                      <IconButton
+                        size="xs"
+                        variant="ghost"
+                        icon={isLocationOpen ? <FiMinus /> : <FiPlus />}
+                        onClick={() => setIsLocationOpen(!isLocationOpen)}
                       />
                     </Flex>
                     <Collapse in={isLocationOpen}>
                       <VStack align="start" spacing={3} mt={2}>
-
                         {/* === WILAYAH (Korwil) === */}
                         {userRole === "Super Admin" && (
                           <Box w="100%">
@@ -1441,7 +1527,6 @@ export default function Event() {
                             </VStack>
                           </Box>
                         )}
-
                         {/* PROVINSI */}
                         {tempAreaFilter.length > 0 && (
                           <Box w="100%">
@@ -1470,7 +1555,6 @@ export default function Event() {
                             </VStack>
                           </Box>
                         )}
-
                         {/* KOTA */}
                         {tempProvinceFilter.length > 0 && (
                           <Box w="100%">
@@ -1501,7 +1585,6 @@ export default function Event() {
                             </VStack>
                           </Box>
                         )}
-
                         {/* Info jika belum pilih wilayah */}
                         {tempAreaFilter.length === 0 && userRole === "Super Admin" && (
                           <Text fontSize="xs" color="gray.500" mt={2}>
@@ -1513,11 +1596,9 @@ export default function Event() {
                             Filter lokasi hanya tersedia untuk Super Admin
                           </Text>
                         )}
-
                       </VStack>
                     </Collapse>
                   </FormControl>
-
                   {/* LEMBAGA - HANYA EKSTERNAL */}
                   {eventCategory === "External" && (
                     <FormControl>
@@ -1563,9 +1644,7 @@ export default function Event() {
                       </Collapse>
                     </FormControl>
                   )}
-
                   <Divider />
-
                   <HStack justify="flex-end" spacing={2}>
                     <Button size="sm" onClick={clearFilters}>Reset</Button>
                     <Button size="sm" variant="ghost" onClick={() => setFilterOpen(false)}>Batal</Button>
@@ -1574,72 +1653,56 @@ export default function Event() {
                 </VStack>
               )}
             </Box>
-
             {/* TAMBAH KEGIATAN */}
-            <Button
-              colorScheme="blue"
-              borderRadius="full"
-              size="xs"
-              minW="150px"
-              leftIcon={<FiPlus />}
-              onClick={() => {
-                const nowWIB = new Date().toLocaleString('sv-SE', {
-                  timeZone: 'Asia/Jakarta'
-                }).replace(' ', 'T');
-                
-                // ✅ SET EVENT_TYPE SESUAI KATEGORI TAB
-                const defaultEventType = eventCategory === "Internal" ? "Regular" : "Lembaga";
-                
-                setFormData({
-                  category: eventCategory,
-                  event_name: "",
-                  event_mandarin_name: "",
-                  greg_occur_date: nowWIB,
-                  greg_end_date: "",
-                  area: userArea || "",
-                  cityId: "",
-                  fotangId: "",
-                  location_name: "",
-                  is_in_fotang: true,
-                  event_type: defaultEventType, // ✅ SESUAI KATEGORI
-                  description: "",
-                  lunar_sui_ci_year: "",
-                  lunar_month: "",
-                  lunar_day: "",
-                  is_recurring: false,
-                  poster_s3_bucket_link: null,
-                  institutionId: "",
-                  external_area: userArea || "",
-                  external_provinceId: "",
-                  external_cityId: "",
-                });
-                setImage(null);
-                setPreviewImage(null);
-                onAddOpen();
-              }}
-            >
-              Tambah Kegiatan
-            </Button>
-
-            {/* TANGGAL RANGE */}
-            <InputGroup size="xs" w="180px">
-              <Input
-                value={formatDateRange()}
-                isReadOnly
-                cursor="pointer"
-                onClick={onDateRangeOpen}
-                borderRadius="full"
-              />
-              <InputRightElement>
-                <IconButton icon={<FiCalendar />} size="xs" onClick={onDateRangeOpen} />
-              </InputRightElement>
-            </InputGroup>
+            <HStack spacing={3}>
+              <Button leftIcon={<FiDownload />} colorScheme="green" size="sm" onClick={onReportOpen}>
+                Report
+              </Button>
+              <Button
+                colorScheme="blue"
+                leftIcon={<FiPlus />}
+                size="sm"
+                onClick={() => {
+                  const nowWIB = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace(' ', 'T');
+                  const defaultEventType = eventCategory === "Internal" ? "Regular" : "Lembaga";
+                  setFormData({
+                    ...formData,
+                    category: eventCategory,
+                    event_name: "",
+                    event_mandarin_name: "",
+                    greg_occur_date: nowWIB,
+                    greg_end_date: "",
+                    area: userArea || "",
+                    event_type: defaultEventType,
+                    is_recurring: false,
+                    description: "",
+                    lunar_sui_ci_year: "",
+                    lunar_month: "",
+                    lunar_day: "",
+                    institutionId: "",
+                    is_in_fotang: true,
+                    location_name: "",
+                    external_provinceId: "",
+                    external_cityId: "",
+                  });
+                  setImage(null);
+                  setPreviewImage(null);
+                  onAddOpen();
+                }}
+              >
+                Tambah Kegiatan
+              </Button>
+              <InputGroup size="xs" w="180px">
+                <Input value={formatDateRange()} isReadOnly cursor="pointer" onClick={onDateRangeOpen} borderRadius="full" />
+                <InputRightElement>
+                  <IconButton icon={<FiCalendar />} size="xs" onClick={onDateRangeOpen} />
+                </InputRightElement>
+              </InputGroup>
+            </HStack>
           </Flex>
         </Flex>
-
         {/* LIST */}
         <EventList events={validEvents} isLoading={isLoading} error={error} onEventClick={openEventDetail} />
-
         {/* MODALS */}
         <EventDetailModal
           isOpen={isDetailOpen}
@@ -1648,8 +1711,8 @@ export default function Event() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           imageUrl={selectedEvent?.poster_s3_bucket_link || "https://via.placeholder.com/400"}
+          userRole={userRole}
         />
-
         <EventForm
           isOpen={isAddOpen}
           onClose={onAddClose}
@@ -1683,7 +1746,6 @@ export default function Event() {
           isCitiesForExternalLoading={isCitiesForExternalLoading}
           eventCategory={eventCategory} // ✅ HANYA INI
         />
-
         {/* <EventForm
           isOpen={isEditOpen}
           onClose={onEditClose}
@@ -1705,7 +1767,7 @@ export default function Event() {
           provinces={provinces}
           cities={cities}
           fotangs={filteredFotangs}
-          allFotangs={allFotangs}       
+          allFotangs={allFotangs}
           institutions={institutions}
           isProvincesLoading={isProvincesLoading}
           isCitiesLoading={isCitiesLoading}
@@ -1717,7 +1779,6 @@ export default function Event() {
           isCitiesForExternalLoading={isCitiesForExternalLoading}
           eventCategory={eventCategory}
         /> */}
-
         <DeleteConfirmModal
           isOpen={isConfirmOpen}
           onClose={onConfirmClose}
@@ -1725,13 +1786,101 @@ export default function Event() {
           eventName={selectedEvent?.name}
           isDeleting={deleteMutation.isLoading}
         />
-
         <DateRangeModal
           isOpen={isDateRangeOpen}
           onClose={onDateRangeClose}
           onApply={handleApplyDateRange}
           dateRange={dateRange}
           setDateRange={setDateRange}
+        />
+        {/* REPORT DRAWER */}
+        <Drawer isOpen={isReportOpen} onClose={onReportClose} size="xl">
+          <DrawerOverlay />
+          <DrawerContent>
+            <DrawerHeader borderBottomWidth="1px">
+              <Flex justify="space-between" align="center">
+                <Text fontWeight="bold">Report Kegiatan {eventCategory}</Text>
+                <IconButton icon={<FiX />} onClick={onReportClose} aria-label="Tutup" />
+              </Flex>
+            </DrawerHeader>
+            <DrawerBody>
+              <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={6}>
+                {/* Kolom kiri - Pilih Field */}
+                <GridItem>
+                  <Text fontWeight="bold" mb={4} color="blue.600">
+                    Pilih Field yang Ingin Ditampilkan
+                  </Text>
+                  <CheckboxGroup value={selectedReportFields} onChange={setSelectedReportFields}>
+                    <VStack align="start" spacing={2} maxH="70vh" overflowY="auto">
+                      {EVENT_REPORT_FIELDS.map(f => (
+                        <Checkbox key={f.key} value={f.key} size="sm">
+                          {f.label}
+                        </Checkbox>
+                      ))}
+                    </VStack>
+                  </CheckboxGroup>
+                </GridItem>
+                {/* Kolom kanan - Info + Pilih Tanggal */}
+                <GridItem>
+                  <Text fontWeight="bold" mb={4} color="blue.600">Pengaturan Export</Text>
+                  <VStack align="stretch" spacing={5}>
+                    {/* Pilih Rentang Tanggal untuk Export */}
+                    <Box>
+                      <Text fontSize="sm" fontWeight="medium" mb={2}>Rentang Tanggal Export</Text>
+                      <InputGroup size="sm">
+                        <Input
+                          value={`${format(reportDateRange.startDate, "dd-MM-yyyy")} - ${format(reportDateRange.endDate, "dd-MM-yyyy")}`}
+                          isReadOnly
+                          cursor="pointer"
+                          onClick={onReportDateRangeOpen}
+                        />
+                        <InputRightElement>
+                          <IconButton icon={<FiCalendar />} size="xs" onClick={onReportDateRangeOpen} />
+                        </InputRightElement>
+                      </InputGroup>
+                    </Box>
+                    {/* Total kegiatan sesuai rentang yang dipilih */}
+                    <Box>
+                      <Text fontSize="sm" color="gray.600">
+                        Data akan diekspor sesuai rentang tanggal di atas.
+                      </Text>
+                      <Text fontSize="sm" mt={2}>
+                        Total kegiatan: <strong>
+                          {events.filter(e => {
+                            if (!e.rawDate) return false;
+                            const eventDate = new Date(e.rawDate);
+                            return eventDate >= reportDateRange.startDate && eventDate <= reportDateRange.endDate;
+                          }).length}
+                        </strong>
+                      </Text>
+                    </Box>
+                  </VStack>
+                </GridItem>
+              </Grid>
+            </DrawerBody>
+            <DrawerFooter borderTopWidth="1px">
+              <Select size="sm" w="120px" mr={3} value={reportExportFormat} onChange={e => setReportExportFormat(e.target.value)}>
+                <option value="pdf">PDF</option>
+                <option value="excel">Excel</option>
+                <option value="csv">CSV</option>
+              </Select>
+              <Button variant="outline" mr={3} onClick={() => setSelectedReportFields([])}>Reset</Button>
+              <Button
+                colorScheme="green"
+                onClick={handleEventReportExport}
+                isDisabled={selectedReportFields.length === 0}
+              >
+                Ekspor {reportExportFormat.toUpperCase()}
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+        <DateRangeModal
+          isOpen={isReportDateRangeOpen}
+          onClose={onReportDateRangeClose}
+          onApply={onReportDateRangeClose}
+          dateRange={reportDateRange}
+          setDateRange={setReportDateRange}
         />
       </Box>
     </Layout>

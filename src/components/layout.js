@@ -126,35 +126,7 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
         location = "Seluruh Indonesia";
       }
 
-      // === CATEGORY — VERSI FINAL & PALING AKURAT ===
-      const category = (() => {
-        // 1. Ada object fotang → pasti Internal
-        if (event.fotang && typeof event.fotang === "object" && event.fotang !== null) {
-          return "Internal";
-        }
-
-        // 2. Ada fotang_id / vihara_id → Internal
-        if (event.fotang_id || event.fotangId || event.vihara_id || event.fotang_id !== undefined) {
-          return "Internal";
-        }
-
-        // 3. Hari Besar → Eksternal (nasional)
-        if (event.event_type === "Hari_Besar" || event.type === "Hari_Besar") {
-          return "Eksternal";
-        }
-
-        // 4. Flag eksplisit is_in_fotang
-        if (
-          event.is_in_fotang === true ||
-          event.is_in_fotang === "true" ||
-          String(event.is_in_fotang).toLowerCase() === "true"
-        ) {
-          return "Internal";
-        }
-
-        // Default → Eksternal
-        return "Eksternal";
-      })();
+      const category = event.category || "Internal";
 
       // Tipe
       const rawType = event.event_type || event.type || "Regular";
@@ -172,7 +144,7 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
         name,
         location,
         type,
-        category,                    // ← INI YANG DIPAKAI DI RENDER
+        category,
         dateRange: dateObj ? [dateObj] : [],
         time,
         dateString: dateObj?.toLocaleDateString("id-ID", { 

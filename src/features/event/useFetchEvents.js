@@ -192,6 +192,8 @@ export const useFetchEvents = ({
             poster_s3_bucket_link: event.poster_s3_bucket_link || null,
             rawDate: occ.greg_occur_date,
             rawEndDate: occ.greg_end_date || null,
+            institution_name: event.institution?.institution_name || event.institution_name || "-",
+            institution_id: event.institution?.institution_id || event.institution_id || null,
           };
         }).filter(Boolean);
       });
