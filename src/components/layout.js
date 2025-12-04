@@ -60,6 +60,7 @@ const Header = ({ title, showBackButton, backPath, router, username, handleLogou
       "/fotang/editFotang",
       "/dianchuanshi/editDianChuanShi",
       "/event/editEvent",
+      "/institution/editInstitution",
     ];
     return editPaths.includes(router.pathname);
   }, [router.pathname]);
@@ -341,6 +342,8 @@ export default function Layout({ children, title, showCalendar = false, calendar
       "/dianchuanshi/addDianChuanShi",
       "/dianchuanshi/editDianChuanShi",
       "/event/editEvent",
+      "/institution/addInstitution",
+      "/institution/editInstitution",
     ].includes(router.pathname),
     [router.pathname]
   );
@@ -351,6 +354,7 @@ export default function Layout({ children, title, showCalendar = false, calendar
     if (router.pathname.includes("fotang")) return "/fotang";
     if (router.pathname.includes("dianchuanshi")) return "/dianchuanshi";
     if (router.pathname.includes("event")) return "/event";
+    if (router.pathname.includes("institution")) return "/institution";
     return "/";
   }, [router.pathname]);
 
