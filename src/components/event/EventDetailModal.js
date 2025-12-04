@@ -32,10 +32,10 @@ export default function EventDetailModal({ isOpen, onClose, event, imageUrl }) {
     event.institutionName ||
     null;
 
-  // Tentukan kategori: dari field category, atau dari type (Lembaga = Eksternal)
+  // Tentukan kategori: dari field category, atau dari type (Lembaga = External)
   const category =
     event.category ||
-    (event.type === "Lembaga" || event.type === "Seasonal" ? "Eksternal" : "Internal");
+    (event.type === "Lembaga" || event.type === "Seasonal" ? "External" : "Internal");
 
   // Tanggal Lunar
   const lunarDate = [event.lunar_sui_ci_year, event.lunar_month, event.lunar_day]
@@ -101,10 +101,10 @@ export default function EventDetailModal({ isOpen, onClose, event, imageUrl }) {
               </Text>
             )}
 
-            {/* Kategori: Internal / Eksternal */}
+            {/* Kategori: Internal / External */}
             <Text>
               <strong>Kategori:</strong>{" "}
-              {category === "Internal" ? "Internal" : "Eksternal"}
+              {category === "Internal" ? "Internal" : "External"}
             </Text>
 
             {/* Wilayah */}
@@ -114,8 +114,8 @@ export default function EventDetailModal({ isOpen, onClose, event, imageUrl }) {
               </Text>
             )}
 
-            {/* LEMBAGA – PASTI MUNCUL kalau Eksternal dan ada nama lembaga */}
-            {category === "Eksternal" && hasValue(institutionName) && (
+            {/* LEMBAGA – PASTI MUNCUL kalau External dan ada nama lembaga */}
+            {category === "External" && hasValue(institutionName) && (
               <Text>
                 <strong>Lembaga:</strong> {institutionName}
               </Text>

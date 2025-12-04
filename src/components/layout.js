@@ -238,7 +238,7 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
                     colorScheme={event.category === "Internal" ? "green" : "orange"}
                     variant="solid"
                   >
-                    {event.category === "Internal" ? "Internal" : "Eksternal"}
+                    {event.category === "Internal" ? "Internal" : "External"}
                   </Tag>
 
                   {/* CHIP TIPE */}
