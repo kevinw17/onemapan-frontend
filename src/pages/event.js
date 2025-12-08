@@ -333,7 +333,61 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
   const toast = useToast();
   const router = useRouter();
 
-  const canEdit = userRole ? isNationalRole(userRole) : false;
+  // Di dalam EventDetailModal
+  const canEdit = (() => {
+    if (!userRole || !event) return false;
+
+    const role = userRole.toString().toLowerCase().replace(/\s+/g, "");
+
+    // Super Admin & Sekjen Lembaga → bisa edit semua
+    if (role === "superadmin" || role === "sekjenlembaga") {
+      return true;
+    }
+
+    // Admin per wilayah → hanya bisa edit event di wilayahnya sendiri
+    if (role === "admin") {
+      // Ambil area user dari token (paling akurat)
+      let userArea = null;
+      try {
+        const token = localStorage.getItem("token");
+        if (token) {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          userArea = payload.area || null;
+        }
+      } catch (e) {
+        console.error("Gagal decode token:", e);
+      }
+
+      // Jika token tidak ada area, coba dari localStorage
+      if (!userArea) {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userArea = user.area || user.korwil || null;
+          } catch (e) {}
+        }
+      }
+
+      if (!userArea || !userArea.startsWith("Korwil_")) {
+        return false;
+      }
+
+      // === INI YANG BARU: AMBIL AREA EVENT DARI FIELD YANG PASTI ADA ===
+      const eventArea = event.wilayahLabel?.includes("Wilayah") 
+        ? "Korwil_" + event.wilayahLabel.split(" ")[1] 
+        : event.area || 
+          (event.fotang && event.fotang.area) || 
+          (event.eventLocation && event.eventLocation.area) || 
+          null;
+
+      console.log("DEBUG EDIT:", { userArea, eventArea, canEdit: eventArea === userArea });
+
+      return eventArea === userArea;
+    }
+
+    return false;
+  })();
 
   if (isDetailLoading) {
     return (

@@ -131,8 +131,8 @@ export default function InstitutionPage() {
               <Tr>
                 <Th>ID</Th>
                 <Th>Nama Lembaga</Th>
-                <Th>Pimpinan</Th>
                 <Th>Sekretaris Jenderal</Th>
+                <Th>Pimpinan</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -152,8 +152,8 @@ export default function InstitutionPage() {
                   >
                     <Td>{l.institution_id}</Td>
                     <Td>{l.institution_name}</Td>
-                    <Td>{l.institution_leader}</Td>
                     <Td>{l.institution_secretary_general}</Td>
+                    <Td>{l.institution_leader}</Td>
                   </Tr>
                 ))
               )}

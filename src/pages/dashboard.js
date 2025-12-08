@@ -273,6 +273,21 @@ export default function Dashboard() {
           <StatCard label="Total Umat Qingkou" value={stats?.totalQingkou} />
         </SimpleGrid>
 
+        {/* FOOTNOTE */}
+        <Box mt={4} p={4} bg="blue.50" borderRadius="lg" borderLeft="4px solid" borderColor="blue.500">
+          <Text fontSize="sm" color="blue.800" fontWeight="medium">
+            Catatan:
+          </Text>
+          <Text fontSize="sm" color="gray.700" mt={1} lineHeight="1.6">
+            Total Dianchuanshi, Tanzhu, dan Foyuan <strong>dapat beririsan</strong> dengan total Biarawan/Biarawati. 
+            Artinya, seorang Biarawan/Biarawati dapat tercatat sekaligus sebagai Dianchuanshi, Tanzhu, atau Foyuan 
+            sesuai peran dan kontribusinya di vihara.
+          </Text>
+          <Text fontSize="xs" color="gray.600" mt={2} fontStyle="italic">
+            Data ini mencerminkan peran ganda dalam komunitas, bukan duplikasi individu.
+          </Text>
+        </Box>
+
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
           <ChartCard title={title}>
             {labels.length > 0 && values.some(v => v > 0) ? (
