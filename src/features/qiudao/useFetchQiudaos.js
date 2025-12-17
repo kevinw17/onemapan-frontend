@@ -15,8 +15,9 @@ export const useFetchQiudaos = ({
   yin_shi_qd_mandarin_name = [],
   bao_shi_qd_name = [],
   bao_shi_qd_mandarin_name = [],
-  scope = "self",
-  fotang_id = null
+  userId,
+  userArea,
+  fotangId = null
 }) => {
   return useQuery({
     queryKey: [
@@ -26,6 +27,7 @@ export const useFetchQiudaos = ({
       dian_chuan_shi_name, dian_chuan_shi_mandarin_name,
       yin_shi_qd_name, yin_shi_qd_mandarin_name,
       bao_shi_qd_name, bao_shi_qd_mandarin_name,
+      userId, userArea, fotangId
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -72,8 +74,14 @@ export const useFetchQiudaos = ({
         bao_shi_qd_mandarin_name.forEach(val => params.append("bao_shi_qd_mandarin_name[]", val));
       }
 
-      if (scope === "fotang" && fotang_id) {
-          params.append("fotang_id", fotang_id);
+      if (userId) {
+        params.append("userId", userId);
+      }
+      if (userArea) {
+        params.append("userArea", userArea);
+      }
+      if (fotangId) {
+        params.append("fotangId", fotangId);
       }
 
       const url = `/profile/qiudao?${params.toString()}`;

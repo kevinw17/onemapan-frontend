@@ -8,7 +8,6 @@ import {
   Badge
 } from "@chakra-ui/react";
 import { useFetchUsers } from "@/features/user/useFetchUsers";
-import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import Layout from "../components/layout";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useUpdateUser } from "@/features/user/useUpdateUser";
@@ -19,8 +18,6 @@ import UserDetailModal from "@/components/UserDetailModal";
 import { useUpdateLocation } from "@/features/location/useUpdateLocation";
 import { useRouter } from "next/router";
 import { jwtDecode } from "jwt-decode";
-import { useQueryClient } from "@tanstack/react-query";
-import { isNationalRole } from "@/lib/roleUtils";
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
   <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
@@ -73,8 +70,6 @@ export default function UmatPage() {
   const [isGenderFilterOpen, setIsGenderFilterOpen] = useState(false);
   const [isBloodTypeFilterOpen, setIsBloodTypeFilterOpen] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [lastError, setLastError] = useState(null);
-  const [userRole, setUserRole] = useState(null);
   const [columnVisibility, setColumnVisibility] = useState({
     user_info_id: true,
     full_name: true,
@@ -89,6 +84,14 @@ export default function UmatPage() {
     job_name: true,
     last_education_level: true,
   });
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [canCreateUmat, setCanCreateUmat] = useState(false);
+  const [canUpdateUmat, setCanUpdateUmat] = useState(false);
+  const [canDeleteUmat, setCanDeleteUmat] = useState(false);
+  const [umatScope, setUmatScope] = useState(null);
+
+  const isPersonalMode = userId !== null && !isAdminMode;
+
   const [columnFilters, setColumnFilters] = useState({
     job_name: [],
     last_education_level: [],
@@ -106,34 +109,23 @@ export default function UmatPage() {
     blood_type: false,
   });
 
-  const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useFetchUserProfile(userId);
-
-  const currentRole = userProfile?.role;
-
-  const isNotUserRole = isProfileLoading ? false : (currentRole !== "User" && currentRole != null);
-  const isNationalLevel = isProfileLoading ? false : isNationalRole(currentRole);
-
-  const isSuperAdmin = isNationalLevel;
-
   const queryParams = useMemo(() => ({
     page,
     limit,
-    search: isNotUserRole ? searchQuery : undefined,
-    searchField: isNotUserRole ? searchField : undefined,
-    job_name: isNotUserRole ? jobFilter : undefined,
-    last_education_level: isNotUserRole ? educationFilter : undefined,
-    spiritualStatus: isNotUserRole ? spiritualFilter : undefined,
-    is_qing_kou: isNotUserRole ? qingKouFilter : undefined,
-    gender: isNotUserRole ? genderFilter : undefined,
-    blood_type: isNotUserRole ? bloodTypeFilter : undefined,
-    userId: currentRole === "User" ? userId : undefined,
-  }), [page, limit, searchQuery, searchField, jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter, userId, isNotUserRole, currentRole]);
+    search: isAdminMode ? searchQuery : undefined,
+    searchField: isAdminMode ? searchField : undefined,
+    job_name: isAdminMode ? jobFilter : undefined,
+    last_education_level: isAdminMode ? educationFilter : undefined,
+    spiritualStatus: isAdminMode ? spiritualFilter : undefined,
+    is_qing_kou: isAdminMode ? qingKouFilter : undefined,
+    gender: isAdminMode ? genderFilter : undefined,
+    blood_type: isAdminMode ? bloodTypeFilter : undefined,
+    userId: isPersonalMode ? userId : undefined,
+    umatScope: isAdminMode ? umatScope : undefined, // kirim scope untuk filter di backend
+  }), [page, limit, searchQuery, searchField, jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter, userId, isAdminMode, isPersonalMode, umatScope]);
 
   const { data: users, isLoading, refetch: refetchUsers } = useFetchUsers(queryParams);
-  const usersList = useMemo(() => {
-    const rawUsers = users?.data || [];
-    return isNotUserRole ? rawUsers : rawUsers.filter(user => user.user_info_id === userId);
-  }, [users, isNotUserRole, userId]);
+  const usersList = users?.data || [];
   const total = users?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -149,100 +141,62 @@ export default function UmatPage() {
   const updateLocationMutation = useUpdateLocation();
   const router = useRouter();
   const fileInputRef = useRef(null);
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      queryClient.invalidateQueries(["userProfile"]);
-      queryClient.invalidateQueries(["users"]);
-
       const token = localStorage.getItem("token");
-      const storedUserId = localStorage.getItem("userId");
-      const storedRole = localStorage.getItem("role");
-
       if (token) {
         try {
           const decoded = jwtDecode(token);
           const decodedUserId = parseInt(decoded.user_info_id);
-          const decodedRole = decoded.role || "User";
+          const perms = decoded.permissions || {};
 
           if (decodedUserId && !isNaN(decodedUserId)) {
-            localStorage.setItem("userId", decodedUserId.toString());
-            localStorage.setItem("role", decodedRole);
             setUserId(decodedUserId);
-            setUserRole(decodedRole);
-          } else {
-            toast({
-              id: "token-decode-error",
-              title: "Gagal memproses token",
-              description: "Tidak dapat menemukan user_info_id di token.",
-              status: "error",
-              duration: 3000,
-              isClosable: true,
-            });
-            router.push("/login");
           }
+
+          // SET SEMUA PERMISSION DI SINI
+          const create = !!perms.umat?.create;
+          const update = !!perms.umat?.update;
+          const del = !!perms.umat?.delete;
+          const scope = perms.umat?.scope || null;
+
+          setCanCreateUmat(create);
+          setCanUpdateUmat(update);
+          setCanDeleteUmat(del);
+          setUmatScope(scope);
+          setIsAdminMode(create || update || del);
+
+          // DEBUG — LIHAT DI CONSOLE
+          console.log("=== DEBUG UMAT PAGE ===");
+          console.log("Token ditemukan:", !!token);
+          console.log("Permissions umat:", perms.umat);
+          console.log("canCreate:", create);
+          console.log("canUpdate:", update);
+          console.log("canDelete:", del);
+          console.log("scope:", scope);
+          console.log("isAdminMode:", create || update || del);
+          console.log("========================");
         } catch (error) {
-          toast({
-            id: "token-decode-error",
-            title: "Gagal memproses token",
-            description: "Token tidak valid atau tidak dapat diproses.",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-          });
+          console.error("Token invalid atau error decode:", error);
           router.push("/login");
         }
       } else {
-        toast({
-          id: "auth-error",
-          title: "Autentikasi Gagal",
-          description: "Silakan login kembali.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
         router.push("/login");
       }
     }
-  }, [toast, router, queryClient]);
-
+  }, [router]);
+  
   useEffect(() => {
-    if (userProfile?.role) {
-      setUserRole(userProfile.role);
-      localStorage.setItem("role", userProfile.role);
-      if (userProfile.role !== "User") {
-        setColumnVisibility((prev) => ({
-          ...prev,
-          mandarin_name: true,
-          place_of_birth: true,
-          date_of_birth: true,
-        }));
-      } else {
-        setColumnVisibility((prev) => ({
-          ...prev,
-          mandarin_name: false,
-          place_of_birth: false,
-          date_of_birth: false,
-        }));
-      }
+    if (isAdminMode) {
+      setColumnVisibility((prev) => ({
+        ...prev,
+        mandarin_name: true,
+        place_of_birth: true,
+        date_of_birth: true,
+      }));
     }
-  }, [userProfile]);
-
-  useEffect(() => {
-    if (profileError && profileError.message !== lastError) {
-      toast({
-        id: `profile-error-${profileError?.message || "unknown"}`,
-        title: "Gagal memuat profil pengguna",
-        description: profileError?.message || "Terjadi kesalahan saat memuat data profil. Silakan login kembali.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      setLastError(profileError?.message || null);
-      router.push("/login");
-    }
-  }, [profileError, lastError, toast, router]);
+  }, [isAdminMode]);
 
   useEffect(() => {
     setTempJobFilter([...columnFilters.job_name]);
@@ -284,33 +238,15 @@ export default function UmatPage() {
   }, []);
 
   const handleRowClick = (user) => {
-    if (!isNotUserRole && user.user_info_id !== userId) {
-      toast({
-        id: `row-click-error-${user.user_info_id}`,
-        title: "Akses Ditolak",
-        description: "Anda hanya dapat melihat data Anda sendiri.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
     setSelectedUser(user);
     setFormData(user);
     setIsEditing(false);
     onOpen();
   };
 
-  const handleDelete = async (userId) => {
-    if (!isNotUserRole) {
-      toast({
-        id: `delete-error-${userId}`,
-        title: "Akses Ditolak",
-        description: "Anda tidak memiliki izin untuk menghapus data.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+  const handleDelete = (userId) => {
+    if (!canDeleteUmat) {
+      toast({ title: "Akses Ditolak", description: "Anda tidak punya izin hapus.", status: "error" });
       return;
     }
     deleteUserMutation.mutate(userId, {
@@ -343,7 +279,7 @@ export default function UmatPage() {
   };
 
   const confirmBulkDelete = async () => {
-    if (!isNotUserRole) {
+    if (!canDeleteUmat) {
       toast({
         id: `bulk-delete-error`,
         title: "Akses Ditolak",
@@ -396,7 +332,7 @@ export default function UmatPage() {
   };
 
   const handleSave = async () => {
-    if (!isNotUserRole) {
+    if (!canUpdateUmat) {
       toast({
         id: `save-error`,
         title: "Akses Ditolak",
@@ -673,11 +609,10 @@ export default function UmatPage() {
   };
 
   const handleImportUmat = () => {
-    if (!isSuperAdmin) {
+    if (!canCreateUmat) {
       toast({
-        id: "import-permission",
         title: "Akses Ditolak",
-        description: "Hanya Super Admin yang dapat mengimpor data umat.",
+        description: "Anda tidak memiliki izin untuk mengimpor data.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -691,7 +626,7 @@ export default function UmatPage() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!isSuperAdmin) {
+    if (!canCreateUmat) {
       toast({
         id: "import-permission",
         title: "Akses Ditolak",
@@ -753,21 +688,12 @@ export default function UmatPage() {
       <Heading size="md" mb={4} ml={2} fontFamily="inherit">
         Data Umat
         <Box as="span" fontSize="lg" color="gray.500" ml={2}>
-          {isNotUserRole ? total : usersList.length}
+          {isAdminMode ? total : usersList.length}
         </Box>
       </Heading>
-      {isProfileLoading && (
-        <Flex justify="center" py={4}>
-          <Spinner size="sm" />
-        </Flex>
-      )}
-      {!isProfileLoading && profileError && (
-        <Box color="red.500" mb={4}>
-          Gagal memuat profil pengguna. Silakan coba lagi atau login ulang.
-        </Box>
-      )}
+
       <Flex mb={4} justify="space-between" align="center" wrap="nowrap" gap={2}>
-        {isNotUserRole && (
+        {isAdminMode && (
           <Box>
             <Pagination
               page={page}
@@ -788,32 +714,19 @@ export default function UmatPage() {
         )}
 
         <Flex gap={2} align="center" flexWrap="nowrap" flexShrink={0}>
-          {isNotUserRole && selectedIds.length > 0 && (
-            <Button
-              colorScheme="red"
-              borderRadius="full"
-              size="xs"
-              minW="100px"
-              onClick={onConfirmOpen}
-            >
+          {isAdminMode && selectedIds.length > 0 && canDeleteUmat && (
+            <Button colorScheme="red" borderRadius="full" size="xs" onClick={onConfirmOpen}>
               Hapus {selectedIds.length} Data
             </Button>
           )}
 
-          {isNotUserRole && (
+          {isAdminMode && (
             <Box position="relative">
               <Button
-                colorScheme="white"
-                textColor="gray.700"
-                borderRadius="full"
-                borderWidth="1px"
-                borderColor="gray.400"
-                size="xs"
-                minW="80px"
                 leftIcon={<FiFilter />}
                 onClick={() => setFilterOpen(!filterOpen)}
-                fontFamily="inherit"
-                fontSize="sm"
+                size="xs"
+                borderRadius="full"
               >
                 Filter
               </Button>
@@ -1056,16 +969,8 @@ export default function UmatPage() {
           )}
 
           {/* Dropdown search yang sudah dibersihkan */}
-          {isNotUserRole && (
-            <Select
-              size="xs"
-              width="180px"
-              borderRadius="full"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-              fontSize="sm"
-              fontFamily="inherit"
-            >
+          {isAdminMode && (
+            <Select size="xs" width="180px" value={searchField} onChange={(e) => setSearchField(e.target.value)}>
               <option value="full_name">Nama Lengkap</option>
               {columnVisibility.mandarin_name && <option value="mandarin_name">Nama Mandarin</option>}
               {columnVisibility.place_of_birth && <option value="place_of_birth">Tempat Lahir</option>}
@@ -1075,7 +980,7 @@ export default function UmatPage() {
             </Select>
           )}
 
-          {isNotUserRole && (
+          {isAdminMode && (
             <InputGroup size="xs" width="160px">
               <InputLeftElement pointerEvents="none">
                 <FiSearch color="black" />
@@ -1111,7 +1016,7 @@ export default function UmatPage() {
             </InputGroup>
           )}
 
-          {isNotUserRole && (
+          {canCreateUmat && (
             <Button
               colorScheme="blue"
               borderRadius="full"
@@ -1126,7 +1031,7 @@ export default function UmatPage() {
             </Button>
           )}
 
-          {isSuperAdmin && (
+          {canCreateUmat && (
             <Button
               colorScheme="green"
               borderRadius="full"
@@ -1144,13 +1049,15 @@ export default function UmatPage() {
       </Flex>
 
       <Box overflowX="auto" minH="80vh">
-        {isLoading || isProfileLoading ? (
-          <Flex justify="center" py={10} height="60vh"><Spinner size="sm" /></Flex>
+        {isLoading ? (
+          <Flex justify="center" py={10} height="60vh">
+            <Spinner size="sm" />
+          </Flex>
         ) : (
           <Table minWidth="max-content">
             <Thead>
               <Tr>
-                {columnVisibility.user_info_id && isNotUserRole && (
+                {columnVisibility.user_info_id && isAdminMode && canDeleteUmat && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     <Flex align="center" justify="center" gap={2}>
                       <Checkbox
@@ -1172,14 +1079,14 @@ export default function UmatPage() {
                     </Flex>
                   </Th>
                 )}
-                {columnVisibility.user_info_id && !isNotUserRole && (
+                {columnVisibility.user_info_id && isAdminMode && !canDeleteUmat && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">ID</Th>
                 )}
                 {columnVisibility.full_name && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Nama Lengkap</Th>}
                 {columnVisibility.mandarin_name && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Nama Mandarin</Th>}
                 {columnVisibility.spiritual_status && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isNotUserRole ? (
+                    {isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Status Rohani
                         <IconButton
@@ -1242,7 +1149,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.is_qing_kou && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isNotUserRole ? (
+                    {isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Status Vegetarian
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: !prev.is_qing_kou }))} />
@@ -1264,7 +1171,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.gender && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isNotUserRole ? (
+                    {isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Jenis Kelamin
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, gender: !prev.gender }))} />
@@ -1286,7 +1193,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.blood_type && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isNotUserRole ? (
+                    {isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Golongan Darah
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: !prev.blood_type }))} />
@@ -1314,7 +1221,7 @@ export default function UmatPage() {
                 {columnVisibility.phone_number && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">No. HP</Th>}
                 {columnVisibility.job_name && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isNotUserRole ? (
+                    {isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Pekerjaan
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, job_name: !prev.job_name }))} />
@@ -1339,7 +1246,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.last_education_level && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isNotUserRole ? (
+                    {isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Pendidikan Terakhir
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: !prev.last_education_level }))} />
@@ -1376,7 +1283,7 @@ export default function UmatPage() {
             <Tbody>
               {usersList.length === 0 ? (
                 <Tr>
-                  <Td colSpan={Object.values(columnVisibility).filter(Boolean).length + (isNotUserRole ? 1 : 0)} textAlign="center" color="gray.500" fontSize="sm">
+                  <Td colSpan={Object.values(columnVisibility).filter(Boolean).length + (isAdminMode ? 1 : 0)} textAlign="center" color="gray.500" fontSize="sm">
                     Belum ada data
                   </Td>
                 </Tr>
@@ -1388,7 +1295,7 @@ export default function UmatPage() {
                     _hover={{ bg: "gray.50" }}
                     onClick={() => handleRowClick(user)}
                   >
-                    {columnVisibility.user_info_id && isNotUserRole && (
+                    {columnVisibility.user_info_id && isAdminMode && canDeleteUmat && (
                       <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
                         <Flex align="center" justify="center" gap={3}>
                           <Checkbox
@@ -1414,7 +1321,7 @@ export default function UmatPage() {
                         </Flex>
                       </Td>
                     )}
-                    {columnVisibility.user_info_id && !isNotUserRole && (
+                    {columnVisibility.user_info_id && isAdminMode && !canDeleteUmat && (
                       <Td textAlign="center">{user.user_info_id}</Td>
                     )}
                     {columnVisibility.full_name && <Td textAlign="center">{user.full_name}</Td>}
@@ -1498,11 +1405,11 @@ export default function UmatPage() {
         setFormData={setFormData}
         handleSave={handleSave}
         handleDelete={handleDelete}
-        canEdit={isNotUserRole}
-        canDelete={isNotUserRole}
+        canEdit={canUpdateUmat}
+        canDelete={canDeleteUmat}
       />
 
-      {isNotUserRole && (
+      {isAdminMode && canDeleteUmat && (
         <DeleteConfirmModal
           isOpen={isConfirmOpen}
           onClose={onConfirmClose}
@@ -1512,14 +1419,8 @@ export default function UmatPage() {
         />
       )}
 
-      {isSuperAdmin && (
-        <input
-          type="file"
-          accept=".xlsx"
-          ref={fileInputRef}
-          style={{ display: "none" }}
-          onChange={handleFileUmatChange}
-        />
+      {canCreateUmat && (
+        <input type="file" accept=".xlsx" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileUmatChange} />
       )}
     </Layout>
   );

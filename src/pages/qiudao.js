@@ -93,6 +93,9 @@ export default function QiudaoPage() {
   const [userArea, setUserArea] = useState(null);
   const [isUserLoaded, setIsUserLoaded] = useState(false);
   const [lastError, setLastError] = useState(null);
+  const [canCreateQiudao, setCanCreateQiudao] = useState(false);
+  const [canUpdateQiudao, setCanUpdateQiudao] = useState(false);
+  const [canDeleteQiudao, setCanDeleteQiudao] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({
     qiu_dao_id: true,
     qiu_dao_name: true,
@@ -166,7 +169,6 @@ export default function QiudaoPage() {
   const deleteQiudaoMutation = useDeleteQiudao();
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
-
   const isNotSelfScope = userScope !== "self";
 
   useEffect(() => {
@@ -176,7 +178,20 @@ export default function QiudaoPage() {
         try {
           const decoded = jwtDecode(token);
           const decodedUserId = parseInt(decoded.user_info_id);
-          setUserId(decodedUserId);
+          const perms = decoded.permissions || {};
+
+          if (decodedUserId && !isNaN(decodedUserId)) {
+            setUserId(decodedUserId);
+          }
+
+          // TAMBAH INI: PERMISSION QIUDAO
+          const createQiudao = !!perms.qiudao?.create;
+          const updateQiudao = !!perms.qiudao?.update;
+          const deleteQiudao = !!perms.qiudao?.delete;
+
+          setCanCreateQiudao(createQiudao);
+          setCanUpdateQiudao(updateQiudao);
+          setCanDeleteQiudao(deleteQiudao);
           setUserScope(decoded.scope);
           setUserArea(decoded.area || null);
           localStorage.setItem("userId", decodedUserId.toString());
@@ -209,9 +224,11 @@ export default function QiudaoPage() {
   }, [toast, router]);
 
   const { data: userProfile, isLoading: isProfileLoading, error: profileError, refetch: refetchProfile } = useFetchUserProfile(userId);
-  const isSuperAdmin = isProfileLoading 
-    ? false 
-    : isNationalRole(userProfile?.role);
+  const isQiudaoAdminMode = canCreateQiudao || canUpdateQiudao || canDeleteQiudao;
+  const fotangId = userScope === "fotang" ? userProfile?.qiudao?.qiu_dao_location_id : undefined;
+  // const isSuperAdmin = isProfileLoading 
+  //   ? false 
+  //   : isNationalRole(userProfile?.role);
 
   useEffect(() => {
     if (userProfile?.area) {
@@ -292,13 +309,17 @@ export default function QiudaoPage() {
           isNotSelfScope ? values : [],
         ])
       ),
+
+      userId: userScope === "self" ? userId : undefined,
+      userArea: userScope === "wilayah" ? userArea : undefined,
+      fotangId: userScope === "fotang" ? fotangId : undefined,
     };
     return params;
   }, [
     page, limit, searchQuery, searchField, isNotSelfScope,
     locationFilter, locationMandarinFilter,
     dianChuanShiFilter, dianChuanShiMandarinFilter,
-    columnFilters,
+    columnFilters, userId, userArea, fotangId, userScope
   ]);
 
   const { data: qiudaos, isLoading, error, refetch: refetchQiudaos } = useFetchQiudaos(fetchParams);
@@ -575,7 +596,7 @@ export default function QiudaoPage() {
   };
 
   const handleImportQiudao = () => {
-      if (!isSuperAdmin) {
+      if (!canCreateQiudao) {
         toast({
           id: "import-permission",
           title: "Akses Ditolak",
@@ -593,7 +614,7 @@ export default function QiudaoPage() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!isSuperAdmin) {
+    if (!canCreateQiudao) {
       toast({
         id: "import-permission",
         title: "Akses Ditolak",
@@ -891,18 +912,20 @@ export default function QiudaoPage() {
               )}
             </InputGroup>
 
-            <Button
-              colorScheme="blue"
-              borderRadius="full"
-              size="xs"
-              minW="100px"
-              leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
-              onClick={() => router.push("/qiudao/addQiudao")}
-            >
-              Tambah Qiudao
-            </Button>
+            {canCreateQiudao && (
+              <Button
+                colorScheme="blue"
+                borderRadius="full"
+                size="xs"
+                minW="100px"
+                leftIcon={<FiPlus style={{ marginTop: "2px" }} />}
+                onClick={() => router.push("/qiudao/addQiudao")}
+              >
+                Tambah Qiudao
+              </Button>
+            )}
 
-            {isSuperAdmin && (
+            {canCreateQiudao && (
               <Button
                 colorScheme="green"
                 borderRadius="full"
@@ -948,7 +971,7 @@ export default function QiudaoPage() {
                     fontSize="sm"
                   >
                     <Flex align="center" justify="center" gap={1}>
-                      {isNotSelfScope && header.key === "qiu_dao_id" ? (
+                      {isNotSelfScope && canDeleteQiudao && header.key === "qiu_dao_id" ? (
                         <Checkbox
                           size="sm"
                           isChecked={isAllSelected}
@@ -957,12 +980,7 @@ export default function QiudaoPage() {
                             setIsAllSelected(checked);
                             setSelectedIds(checked ? qiudaosList.map((q) => q.qiu_dao_id) : []);
                           }}
-                          sx={{
-                            ".chakra-checkbox__control": {
-                              borderColor: "gray.500",
-                              borderWidth: "1px",
-                            },
-                          }}
+                          sx={{ ".chakra-checkbox__control": { borderColor: "gray.500", borderWidth: "1px" } }}
                         />
                       ) : null}
                       <Box>{header.label}</Box>
@@ -1048,7 +1066,7 @@ export default function QiudaoPage() {
                       fontSize="sm"
                       onClick={header.key === "qiu_dao_id" ? (e) => e.stopPropagation() : undefined}
                     >
-                      {header.key === "qiu_dao_id" && isNotSelfScope ? (
+                      {header.key === "qiu_dao_id" && isNotSelfScope && canDeleteQiudao ? (
                         <Flex align="center" justify="center" gap={2}>
                           <Checkbox
                             size="sm"
@@ -1112,10 +1130,10 @@ export default function QiudaoPage() {
         onClose={handleClose}
         selectedQiudao={selectedQiudao}
         handleDelete={(id) => deleteQiudaoMutation.mutateAsync(id)}
-        canEdit={isNotSelfScope}
+        canEdit={isNotSelfScope && canUpdateQiudao}
       />
 
-      {isNotSelfScope && (
+      {isNotSelfScope && canDeleteQiudao && (
         <DeleteConfirmModal
           isOpen={isConfirmOpen}
           onClose={onConfirmClose}
@@ -1125,7 +1143,7 @@ export default function QiudaoPage() {
         />
       )}
 
-      {isSuperAdmin && (
+      {canCreateQiudao && (
         <input
           type="file"
           accept=".xlsx"

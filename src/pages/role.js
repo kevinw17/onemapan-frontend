@@ -25,37 +25,37 @@ import {
   Input,
   Select,
   useToast,
+  FormControl,
+  FormLabel,
 } from "@chakra-ui/react";
 import Layout from "@/components/layout";
 import { useRoleManagement } from "@/features/role/useRoleManagement";
 
+// Scope yang dipakai: nasional, wilayah, fotang (untuk Admin Vihara)
+const areaOptions = ["nasional", "wilayah", "fotang", "self"];
+
+// HANYA 2 MODUL YANG PERLU DIATUR: umat & qiudao
+// KEGIATAN DIHAPUS → semua orang otomatis bisa lihat kegiatan
 const permissionOptions = [
+  // UMAT
   { mod: "umat", action: "create", label: "Tambah Umat" },
   { mod: "umat", action: "read", label: "Lihat Daftar Umat" },
   { mod: "umat", action: "update", label: "Edit Umat" },
   { mod: "umat", action: "delete", label: "Hapus Umat" },
+  // QIUDAO
   { mod: "qiudao", action: "create", label: "Tambah Qiudao" },
   { mod: "qiudao", action: "read", label: "Lihat Daftar Qiudao" },
   { mod: "qiudao", action: "update", label: "Edit Qiudao" },
   { mod: "qiudao", action: "delete", label: "Hapus Qiudao" },
-  { mod: "account", action: "create_role", label: "Buat Peran" },
-  { mod: "account", action: "edit_role", label: "Edit Peran" },
-  { mod: "account", action: "delete_role", label: "Hapus Peran" },
-  { mod: "kegiatan", action: "create", label: "Tambah Kegiatan" },
-  { mod: "kegiatan", action: "read", label: "Lihat Daftar Kegiatan" },
-  { mod: "kegiatan", action: "update", label: "Edit Kegiatan" },
-  { mod: "kegiatan", action: "delete", label: "Hapus Kegiatan" },
 ];
 
-const areaOptions = ["nasional", "wilayah"];
+const validModules = ["umat", "qiudao"];
 
 const RolePage = () => {
   const {
     roles,
     rolesLoading,
     allUsers,
-    allUsersLoading,
-    allUsersError,
     createRole,
     updateRole,
     deleteRole,
@@ -63,7 +63,6 @@ const RolePage = () => {
     removeRole,
     tokenData,
     permissionsToArray,
-    arrayToPermissions,
     refetchRoles,
     refetchUsers,
   } = useRoleManagement();
@@ -78,14 +77,10 @@ const RolePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
 
-  const validModules = ["umat", "qiudao", "kegiatan", "account"]; // FIXED: Hapus "event"
-
   const getAvailableUsersForRole = (roleId) => {
     if (!allUsers.length || !roles.length) return [];
-
     const role = roles.find((r) => r.role_id === roleId);
     if (!role) return allUsers;
-
     const currentUserIds = role.userRoles?.map((ur) => ur.user?.user_info_id || ur.user_id) || [];
     return allUsers.filter((user) => !currentUserIds.includes(user.user_info_id));
   };
@@ -96,123 +91,85 @@ const RolePage = () => {
       description: "",
       permissions: [],
       scopes: {
-        umat: tokenData.role === "Super_Admin" ? "nasional" : "wilayah",
-        qiudao: tokenData.role === "Super_Admin" ? "nasional" : "wilayah",
-        kegiatan: tokenData.role === "Super_Admin" ? "nasional" : "wilayah",
-        account: tokenData.role === "Super_Admin" ? "nasional" : "wilayah",
+        umat: "nasional",
+        qiudao: "nasional",
       },
     });
     onOpen();
   };
 
   const handleEditRole = (role) => {
-    console.log("✅ [role.js] EDIT ROLE INPUT:", JSON.stringify(role, null, 2));
+    const scopes = {};
+    Object.keys(role.permissions || {}).forEach((mod) => {
+      scopes[mod] = role.permissions[mod]?.scope || "nasional";
+    });
+
     setSelectedRole({
       id: role.role_id,
       name: role.name,
-      description: role.description,
+      description: role.description || "",
       permissions: permissionsToArray(role.permissions),
-      scopes: Object.fromEntries(
-        Object.entries(role.permissions || {}).map(([mod, perms]) => [
-          mod,
-          perms?.scope && perms.scope !== "nasional" ? "wilayah" : "nasional",
-        ])
-      ),
+      scopes,
     });
     onOpen();
   };
 
   const handleSaveRole = async () => {
     if (!selectedRole?.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Nama peran wajib diisi",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ title: "Error", description: "Nama peran wajib diisi", status: "error", isClosable: true });
       return;
     }
 
     if (!selectedRole.permissions.length) {
-      toast({
-        title: "Error",
-        description: "Setidaknya satu izin harus dipilih",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      toast({ title: "Error", description: "Setidaknya satu izin harus dipilih", status: "error", isClosable: true });
       return;
     }
 
     setIsSaving(true);
     try {
-      console.log("✅ [role.js] TOKEN DATA:", JSON.stringify(tokenData, null, 2));
-      console.log("✅ [role.js] SELECTED ROLE BEFORE BUILD:", JSON.stringify(selectedRole, null, 2));
-
+      // INI YANG BARU & BENAR
       const permissions = {};
+
+      // Inisialisasi semua modul dengan scope default dan semua action false
+      validModules.forEach((mod) => {
+        permissions[mod] = {
+          create: false,
+          read: false,
+          update: false,
+          delete: false,
+          scope: selectedRole.scopes[mod] || "nasional",
+        };
+      });
+
+      // Baru set true untuk yang dipilih
       for (const perm of selectedRole.permissions) {
         const [mod, action] = perm.split("_");
-        if (validModules.includes(mod)) {
-          if (!permissions[mod]) {
-            permissions[mod] = {
-              scope: selectedRole.scopes[mod] || "nasional",
-            };
-          }
+        if (validModules.includes(mod) && permissions[mod]) {
           permissions[mod][action] = true;
-        } else {
-          console.warn(`✅ [role.js] SKIPPING INVALID MODULE: ${mod}`);
-        }
-      }
-
-      // Tambah modul yang ada di scopes tapi tidak ada permissions-nya
-      for (const mod of Object.keys(selectedRole.scopes)) {
-        if (validModules.includes(mod) && !permissions[mod] && selectedRole.permissions.some((p) => p.startsWith(mod))) {
-          permissions[mod] = {
-            scope: selectedRole.scopes[mod] || "nasional",
-          };
         }
       }
 
       const roleData = {
-        name: selectedRole.name,
-        description: selectedRole.description || "",
+        name: selectedRole.name.trim(),
+        description: selectedRole.description?.trim() || "",
         permissions,
       };
 
-      console.log("✅ [role.js] SENDING ROLE DATA:", JSON.stringify(roleData, null, 2));
-
       if (selectedRole.id) {
-        const response = await updateRole({ id: selectedRole.id, input: roleData });
-        console.log("✅ [role.js] UPDATE ROLE RESPONSE:", JSON.stringify(response, null, 2));
-        toast({
-          title: "Berhasil",
-          description: `Peran "${selectedRole.name}" berhasil diperbarui`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
+        await updateRole({ id: selectedRole.id, input: roleData });
+        toast({ title: "Berhasil", description: "Peran diperbarui", status: "success", isClosable: true });
       } else {
-        const response = await createRole(roleData);
-        console.log("✅ [role.js] CREATE ROLE RESPONSE:", JSON.stringify(response, null, 2));
-        toast({
-          title: "Berhasil",
-          description: `Peran "${selectedRole.name}" berhasil dibuat`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
+        await createRole(roleData);
+        toast({ title: "Berhasil", description: "Peran dibuat", status: "success", isClosable: true });
       }
 
       await refetchRoles();
       onClose();
     } catch (error) {
-      console.error("❌ [role.js] ERROR SAVE ROLE:", JSON.stringify(error.response?.data || error.message, null, 2));
       toast({
-        title: "Error",
-        description: error.response?.data?.message || error.message || "Gagal menyimpan peran",
+        title: "Gagal",
+        description: error.response?.data?.message || "Terjadi kesalahan",
         status: "error",
-        duration: 5000,
         isClosable: true,
       });
     } finally {
@@ -229,22 +186,14 @@ const RolePage = () => {
     if (roleToDelete) {
       try {
         await deleteRole(roleToDelete.role_id);
-        toast({
-          title: "Berhasil",
-          description: `Peran "${roleToDelete.name}" berhasil dihapus`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
+        toast({ title: "Berhasil", description: "Peran dihapus", status: "success", isClosable: true });
         await refetchRoles();
         onDeleteClose();
       } catch (error) {
-        console.error("❌ [role.js] ERROR DELETE ROLE:", JSON.stringify(error.response?.data || error.message, null, 2));
         toast({
-          title: "Error",
-          description: error.response?.data?.message || error.message || "Gagal menghapus peran",
+          title: "Gagal",
+          description: error.response?.data?.message || "Terjadi kesalahan",
           status: "error",
-          duration: 5000,
           isClosable: true,
         });
       }
@@ -252,150 +201,85 @@ const RolePage = () => {
   };
 
   const handleAssignRole = (role) => {
-    setSelectedRole({
-      id: role.role_id,
-      name: role.name,
-    });
+    setSelectedRole({ id: role.role_id, name: role.name });
     setSelectedUserIds([]);
     onAssignOpen();
   };
 
   const handleSubmitAssign = async () => {
-    if (selectedRole?.id && selectedUserIds.length > 0) {
-      setIsSaving(true);
-      try {
-        for (const user_id of selectedUserIds) {
-          try {
-            const userCurrentRoles = roles
-              .flatMap((r) => r.userRoles?.filter((ur) => (ur.user?.user_info_id || ur.user_id) === user_id) || [])
-              .map((ur) => ur.role_id);
+    if (!selectedRole?.id || selectedUserIds.length === 0) return;
 
-            if (userCurrentRoles.length > 0) {
-              for (const oldRoleId of userCurrentRoles) {
-                if (oldRoleId !== selectedRole.id) {
-                  await removeRole({ user_id, role_id: oldRoleId });
-                }
-              }
-            }
+    setIsSaving(true);
+    try {
+      for (const user_id of selectedUserIds) {
+        const userCurrentRoles = roles
+          .flatMap((r) => r.userRoles?.filter((ur) => (ur.user?.user_info_id || ur.user_id) === user_id) || [])
+          .map((ur) => ur.role_id);
 
-            const response = await assignRole({ user_id, role_id: selectedRole.id });
-            console.log(`✅ [role.js] ASSIGN ROLE RESPONSE for user ${user_id}:`, JSON.stringify(response, null, 2));
-          } catch (userError) {
-            console.error(`❌ [role.js] Error for user ${user_id}:`, JSON.stringify(userError.response?.data || userError.message, null, 2));
+        for (const oldRoleId of userCurrentRoles) {
+          if (oldRoleId !== selectedRole.id) {
+            await removeRole({ user_id, role_id: oldRoleId });
           }
         }
-
-        toast({
-          title: "Berhasil",
-          description: `${selectedUserIds.length} pengguna berhasil diganti rolenya ke "${selectedRole.name}"`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-
-        await refetchUsers();
-        onAssignClose();
-      } catch (error) {
-        console.error("❌ [role.js] ERROR ASSIGN ROLE:", JSON.stringify(error.response?.data || error.message, null, 2));
-        toast({
-          title: "Error",
-          description: error.response?.data?.message || error.message || "Gagal mengassign peran",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsSaving(false);
+        await assignRole({ user_id, role_id: selectedRole.id });
       }
+
+      toast({
+        title: "Berhasil",
+        description: `${selectedUserIds.length} pengguna diganti ke role "${selectedRole.name}"`,
+        status: "success",
+        isClosable: true,
+      });
+      await refetchUsers();
+      onAssignClose();
+    } catch (error) {
+      toast({
+        title: "Gagal",
+        description: error.response?.data?.message || "Gagal assign role",
+        status: "error",
+        isClosable: true,
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleTogglePermission = (perm) => {
-    setSelectedRole((prev) => {
-      if (!prev) return prev;
-      console.log("✅ [role.js] TOGGLING PERMISSION:", perm);
-      const newPermissions = prev.permissions.includes(perm)
+    setSelectedRole((prev) => ({
+      ...prev,
+      permissions: prev.permissions.includes(perm)
         ? prev.permissions.filter((p) => p !== perm)
-        : [...prev.permissions, perm];
-      return { ...prev, permissions: newPermissions };
-    });
+        : [...prev.permissions, perm],
+    }));
   };
 
   const handleScopeChange = (mod, scope) => {
-    setSelectedRole((prev) => {
-      if (!prev) return prev;
-      console.log(`✅ [role.js] CHANGING SCOPE for ${mod}: ${scope}`);
-      return {
-        ...prev,
-        scopes: {
-          ...prev.scopes,
-          [mod]: scope,
-        },
-      };
-    });
+    setSelectedRole((prev) => ({
+      ...prev,
+      scopes: { ...prev.scopes, [mod]: scope },
+    }));
   };
 
   const getPermissionSummary = (permissions) => {
-    const mods = ["umat", "qiudao", "kegiatan", "account"]; // FIXED: Hapus "event"
-    const totalActions = {
-      umat: 4,
-      qiudao: 4,
-      kegiatan: 4,
-      account: 3,
-    };
-
     const lines = [];
-    let hasPermissions = false;
-
-    mods.forEach((mod) => {
-      const perms = permissions?.[mod];
-      if (perms) {
-        const actions = Object.keys(perms).filter((key) => key !== "scope" && perms[key]);
-        const actionCount = actions.length;
-
-        if (actionCount > 0) {
-          hasPermissions = true;
-          let statusText = "";
-          if (actionCount === totalActions[mod]) statusText = "Full features";
-          else if (actionCount >= 3) statusText = "Most features";
-          else if (actionCount === 2) statusText = "Partial";
-          else if (actionCount === 1 && actions.includes("read")) statusText = "Read-only";
-          else statusText = "Limited";
-          lines.push(`${mod.charAt(0).toUpperCase() + mod.slice(1)}: ${statusText}`);
+    validModules.forEach((mod) => {
+      const p = permissions?.[mod];
+      if (p) {
+        const actions = Object.keys(p).filter((k) => k !== "scope" && p[k]).length;
+        if (actions > 0) {
+          lines.push(`${mod}: ${actions} izin (${p.scope})`);
         }
       }
     });
-
-    if (!hasPermissions) {
-      return "No permissions";
-    }
-
-    const scope = mods
-      .map((mod) => permissions?.[mod]?.scope)
-      .filter(Boolean)[0];
-    if (scope) {
-      lines.push(`Scope: ${scope}`);
-    }
-
-    return lines.join("\n");
+    return lines.length ? lines.join(" | ") : "Tidak ada izin";
   };
 
   const getUserNames = (userRoles) => {
-    if (!userRoles || !Array.isArray(userRoles) || userRoles.length === 0) {
-      return "None";
-    }
+    if (!userRoles?.length) return "Tidak ada";
     return userRoles
-      .map((ur) => {
-        return (
-          ur.user?.userCredential?.username ||
-          ur.user?.username ||
-          ur.user?.full_name ||
-          ur.username ||
-          `User ${ur.user_id}`
-        );
-      })
-      .filter(Boolean)
-      .join(", ");
+      .map((ur) => ur.user?.full_name || ur.user?.username || `User ${ur.user_id}`)
+      .slice(0, 3)
+      .join(", ") + (userRoles.length > 3 ? "..." : "");
   };
 
   const availableUsersForAssign = getAvailableUsersForRole(selectedRole?.id || "");
@@ -411,60 +295,35 @@ const RolePage = () => {
         </Flex>
 
         {rolesLoading ? (
-          <Text>Loading roles...</Text>
-        ) : roles.length === 0 ? (
-          <Text>Tidak ada peran</Text>
+          <Text>Memuat peran...</Text>
         ) : (
           <Table variant="simple">
-            <Thead>
+            <Thead bg="gray.50">
               <Tr>
-                <Th>Nama Peran</Th>
-                <Th>Deskripsi</Th>
-                <Th>Izin</Th>
-                <Th>Pengguna</Th>
-                <Th>Aksi</Th>
+                <Th textAlign="center">Nama Peran</Th>
+                <Th textAlign="center">Deskripsi</Th>
+                <Th textAlign="center">Izin</Th>
+                <Th textAlign="center">Pengguna</Th>
+                <Th textAlign="center">Aksi</Th>
               </Tr>
             </Thead>
             <Tbody>
               {roles.map((role) => {
-                const availableUsers = getAvailableUsersForRole(role.role_id);
-                const availableCount = availableUsers.length;
+                const availableCount = getAvailableUsersForRole(role.role_id).length;
                 return (
                   <Tr key={role.role_id}>
-                    <Td>{role.name}</Td>
-                    <Td>{role.description || "None"}</Td>
-                    <Td style={{ whiteSpace: "pre-line" }}>
-                      {getPermissionSummary(role.permissions)}
-                    </Td>
+                    <Td fontWeight="bold">{role.name}</Td>
+                    <Td>{role.description || "-"}</Td>
+                    <Td fontSize="sm">{getPermissionSummary(role.permissions)}</Td>
                     <Td>{getUserNames(role.userRoles)}</Td>
                     <Td>
                       <HStack spacing={2}>
-                        <Button
-                          size="sm"
-                          colorScheme="blue"
-                          variant="outline"
-                          onClick={() => handleEditRole(role)}
-                          isLoading={isSaving}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          colorScheme="red"
-                          variant="outline"
-                          onClick={() => handleDeleteRole(role)}
-                          isLoading={isSaving}
-                        >
+                        <Button size="sm" onClick={() => handleEditRole(role)}>Edit</Button>
+                        <Button size="sm" colorScheme="red" variant="outline" onClick={() => handleDeleteRole(role)}>
                           Hapus
                         </Button>
-                        <Button
-                          size="sm"
-                          colorScheme="green"
-                          variant="outline"
-                          onClick={() => handleAssignRole(role)}
-                          isLoading={isSaving}
-                        >
-                          Assign role ({availableCount})
+                        <Button size="sm" colorScheme="green" variant="outline" onClick={() => handleAssignRole(role)}>
+                          Assign ({availableCount})
                         </Button>
                       </HStack>
                     </Td>
@@ -475,47 +334,57 @@ const RolePage = () => {
           </Table>
         )}
 
+        {/* Modal Tambah/Edit Role */}
         <Modal isOpen={isOpen} onClose={onClose} size="xl">
           <ModalOverlay />
           <ModalContent>
-            <ModalHeader>{selectedRole?.id ? "Edit Peran" : "Tambah Peran"}</ModalHeader>
+            <ModalHeader>{selectedRole?.id ? "Edit" : "Tambah"} Peran</ModalHeader>
             <ModalBody>
-              <VStack spacing={4} align="start">
-                <Text fontWeight="bold">Nama Peran</Text>
-                <Input
-                  value={selectedRole?.name || ""}
-                  onChange={(e) => setSelectedRole((prev) => prev && { ...prev, name: e.target.value })}
-                  placeholder="Masukkan nama peran"
-                  isRequired
-                />
-                <Text fontWeight="bold">Deskripsi</Text>
-                <Input
-                  value={selectedRole?.description || ""}
-                  onChange={(e) => setSelectedRole((prev) => prev && { ...prev, description: e.target.value })}
-                  placeholder="Masukkan deskripsi peran"
-                />
-                <Text fontWeight="bold">Izin</Text>
-                <SimpleGrid columns={2} spacing={4} w="100%">
-                  {validModules.map((mod) => (
-                    <Box key={mod}>
-                      <Text fontWeight="bold" mb={2} textTransform="capitalize">
-                        {mod}
-                      </Text>
-                      <VStack align="start">
-                        <Text>Scope</Text>
+              <VStack spacing={4}>
+                <FormControl>
+                  <FormLabel>Nama Peran</FormLabel>
+                  <Input
+                    value={selectedRole?.name || ""}
+                    onChange={(e) => setSelectedRole((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="contoh: Admin Vihara"
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Deskripsi</FormLabel>
+                  <Input
+                    value={selectedRole?.description || ""}
+                    onChange={(e) => setSelectedRole((p) => ({ ...p, description: e.target.value }))}
+                  />
+                </FormControl>
+
+                <Text fontWeight="bold">Izin per Modul</Text>
+
+                {validModules.map((mod) => (
+                  <Box key={mod} p={4} borderWidth="1px" borderRadius="md" w="100%">
+                    <Text fontWeight="bold" textTransform="capitalize" mb={2}>{mod}</Text>
+                    <SimpleGrid columns={2} spacing={4}>
+                      <FormControl>
+                        <FormLabel>Scope</FormLabel>
                         <Select
                           value={selectedRole?.scopes?.[mod] || "nasional"}
                           onChange={(e) => handleScopeChange(mod, e.target.value)}
-                          disabled={tokenData.role !== "Super_Admin" && tokenData.area}
                         >
                           {areaOptions.map((opt) => (
                             <option key={opt} value={opt}>
-                              {opt === "nasional" ? "Nasional" : "Wilayah"}
+                              {opt === "nasional" 
+                                ? "Nasional" 
+                                : opt === "wilayah" 
+                                  ? "Wilayah" 
+                                  : opt === "fotang" 
+                                    ? "Vihara" 
+                                    : "Hanya Diri Sendiri (Self)"}
                             </option>
                           ))}
                         </Select>
+                      </FormControl>
+                      <VStack align="start" spacing={2}>
                         {permissionOptions
-                          .filter((opt) => opt.mod === mod)
+                          .filter((p) => p.mod === mod)
                           .map(({ action, label }) => (
                             <HStack key={`${mod}_${action}`}>
                               <Switch
@@ -526,15 +395,13 @@ const RolePage = () => {
                             </HStack>
                           ))}
                       </VStack>
-                    </Box>
-                  ))}
-                </SimpleGrid>
+                    </SimpleGrid>
+                  </Box>
+                ))}
               </VStack>
             </ModalBody>
             <ModalFooter>
-              <Button variant="ghost" onClick={onClose} mr={2} isDisabled={isSaving}>
-                Batal
-              </Button>
+              <Button variant="ghost" onClick={onClose} mr={3}>Batal</Button>
               <Button colorScheme="blue" onClick={handleSaveRole} isLoading={isSaving}>
                 Simpan
               </Button>
@@ -542,6 +409,7 @@ const RolePage = () => {
           </ModalContent>
         </Modal>
 
+        {/* Modal Hapus */}
         <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
           <ModalOverlay />
           <ModalContent>
@@ -562,6 +430,7 @@ const RolePage = () => {
           </ModalContent>
         </Modal>
 
+        {/* Modal Assign Role */}
         <Modal isOpen={isAssignOpen} onClose={onAssignClose} size="md">
           <ModalOverlay />
           <ModalContent>

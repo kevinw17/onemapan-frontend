@@ -10,7 +10,7 @@ import { useRouter } from "next/router";
 
 function UserDetailModal(
     { isOpen, onClose, selectedUser, isEditing, setIsEditing, 
-        formData, setFormData, handleSave, handleDelete
+        formData, setFormData, handleSave, handleDelete, canEdit, canDelete
     }) {
     const [showKtpLocation, setShowKtpLocation] = useState(false);
     const [showDomicileLocation, setShowDomicileLocation] = useState(false);
@@ -31,7 +31,7 @@ function UserDetailModal(
                     <Flex align="center" justify="space-between" w="100%">
                         <Text>Detail Umat</Text>
                         <Flex align="center">
-                            {!isEditing && (
+                            {!isEditing && canEdit && (
                                 <>
                                     <Button
                                         aria-label="Edit"

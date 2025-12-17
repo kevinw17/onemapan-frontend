@@ -12,11 +12,11 @@ export const useFetchUsers = ({
     is_qing_kou = [],
     gender = [],
     blood_type = [],
-    scope = "self",
+    umatScope = null,
     fotang_id = null
 }) => {
     return useQuery({
-        queryKey: ["fetch.users", page, limit, search, searchField, job_name, last_education_level, spiritualStatus, is_qing_kou, gender, blood_type, scope, fotang_id],
+        queryKey: ["fetch.users", page, limit, search, searchField, job_name, last_education_level, spiritualStatus, is_qing_kou, gender, blood_type, umatScope, fotang_id],
         queryFn: async () => {
             const params = new URLSearchParams();
             params.append('page', page.toString());
@@ -48,7 +48,11 @@ export const useFetchUsers = ({
                 blood_type.forEach(bt => params.append('blood_type[]', bt));
             }
 
-            if (scope === "fotang" && fotang_id) {
+            if (umatScope) {
+                params.append('scope', umatScope);
+            }
+            
+            if (umatScope === "fotang" && fotang_id) {
                 params.append("fotang_id", fotang_id);
             }
 
