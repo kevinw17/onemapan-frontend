@@ -82,9 +82,7 @@ export default function Dashboard() {
   // === DATA ===
   const { data: stats, isLoading, error } = useDashboardData({
     selectedArea,
-    drillDownLevel: drillDown.level,
-    drillDownKorwil: drillDown.korwil,
-    drillDownProvince: drillDown.province,
+    drillDownProvince: drillDown.province, // tambah ini
   });
 
   // === PIE DATA: SELALU ADA PRIA & WANITA (value 0 jika tidak ada) ===
@@ -171,15 +169,15 @@ export default function Dashboard() {
 
   if (drillDown.level === "korwil") {
     labels = stats?.qiudaoUmatByKorwil?.map(item => `Wilayah ${item.korwil.replace("Korwil_", "")}`) || [];
-    values = stats?.qiudaoUmatByKorwil?.map(item => Math.round(item.umat)) || [];
+    values = stats?.qiudaoUmatByKorwil?.map(item => item.umat) || [];
     title = "Total Umat per Wilayah";
   } else if (drillDown.level === "province") {
     labels = stats?.qiudaoUmatByProvince?.map(item => item.province) || [];
-    values = stats?.qiudaoUmatByProvince?.map(item => Math.round(item.umat)) || [];
-    title = `Total Umat per Provinsi - Wilayah ${drillDown.korwil?.replace("Korwil_", "")}`;
+    values = stats?.qiudaoUmatByProvince?.map(item => item.umat) || [];
+    title = `Total Umat per Provinsi - Wilayah ${drillDown.korwil?.replace("Korwil_", "") || ""}`;
   } else if (drillDown.level === "city") {
     labels = stats?.qiudaoUmatByCity?.map(item => item.city) || [];
-    values = stats?.qiudaoUmatByCity?.map(item => Math.round(item.umat)) || [];
+    values = stats?.qiudaoUmatByCity?.map(item => item.umat) || [];
     title = `Total Umat per Kota - ${drillDown.province}`;
   }
 
