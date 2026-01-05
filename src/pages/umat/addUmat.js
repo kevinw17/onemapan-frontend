@@ -4,7 +4,7 @@ import {
     RadioGroup, Radio, useDisclosure, Modal, ModalOverlay,
     ModalContent, ModalHeader, ModalBody, ModalFooter, SimpleGrid,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout";
 import { axiosInstance } from "@/lib/axios";
@@ -12,62 +12,63 @@ import { Form, Formik } from "formik";
 import * as Yup from "yup";
 import { useFetchQiudaos } from "@/features/qiudao/useFetchQiudaos";
 import { AsyncSelect } from "chakra-react-select";
+import { isNationalRole } from "@/lib/roleUtils";
+import { jwtDecode } from "jwt-decode";
 
-const loadQiuDaoOptions = async (inputValue, callback, toast) => {
-    if (!inputValue || inputValue.length < 1) {
+const WILAYAH_OPTIONS = [
+    { value: "Korwil_1", label: "Wilayah 1" },
+    { value: "Korwil_2", label: "Wilayah 2" },
+    { value: "Korwil_3", label: "Wilayah 3" },
+    { value: "Korwil_4", label: "Wilayah 4" },
+    { value: "Korwil_5", label: "Wilayah 5" },
+    { value: "Korwil_6", label: "Wilayah 6" },
+];
+
+const loadQiuDaoOptions = async (inputValue, callback, toast, area = null) => {
+    if (!inputValue || inputValue.length < 2) {
         callback([]);
         return;
     }
 
     try {
-        const responseName = await axiosInstance.get("/profile/qiudao", {
-            params: {
-            search: inputValue,
-            searchField: "qiu_dao_name",
-            limit: 10,
-            page: 1,
-            },
-        });
+        const params = {
+        search: inputValue,
+        limit: 20,
+        page: 1,
+        };
 
-        const responseMandarin = await axiosInstance.get("/profile/qiudao", {
-            params: {
-            search: inputValue,
-            searchField: "qiu_dao_mandarin_name",
-            limit: 10,
-            page: 1,
-            },
-        });
+        // KALAU ADA AREA, TAMBAHKAN FILTER AREA KE API
+        if (area) {
+        params.area = area;
+        }
 
-        const combinedResults = [
-            ...(responseName.data.data || []),
-            ...(responseMandarin.data.data || []),
-        ];
-        const uniqueResults = Array.from(
-            new Map(
-            combinedResults.map((item) => [item.qiu_dao_id, item])
-            ).values()
-        );
+        const [resName, resMandarin] = await Promise.all([
+        axiosInstance.get("/profile/qiudao", { params: { ...params, searchField: "qiu_dao_name" } }),
+        axiosInstance.get("/profile/qiudao", { params: { ...params, searchField: "qiu_dao_mandarin_name" } }),
+        ]);
 
-        const options = uniqueResults.map((item) => ({
-            value: item.qiu_dao_id,
-            label: `${item.qiu_dao_id} - ${item.qiu_dao_name || ""}${
-            item.qiu_dao_mandarin_name ? ` / ${item.qiu_dao_mandarin_name}` : ""
-            }`,
+        const combined = [...(resName.data.data || []), ...(resMandarin.data.data || [])];
+        const unique = Array.from(new Map(combined.map(item => [item.qiu_dao_id, item])).values());
+
+        const options = unique.map(item => ({
+        value: item.qiu_dao_id,
+        label: `${item.qiu_dao_id} - ${item.qiu_dao_name || ""}${item.qiu_dao_mandarin_name ? ` / ${item.qiu_dao_mandarin_name}` : ""}`,
         }));
 
         callback(options);
     } catch (error) {
+        console.error(error);
+        toast({ title: "Gagal memuat QiuDao", status: "error" });
         callback([]);
-        toast({
-            title: "Gagal memuat data Qiu Dao",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-        });
     }
 };
 
 const addUmatSchema = Yup.object().shape({
+    wilayah: Yup.string().when("$isSuperAdmin", {
+        is: true,
+        then: (schema) => schema.required("Wilayah wajib dipilih"),
+        otherwise: (schema) => schema.optional(),
+    }),
     domicile_location_name: Yup.string().required("Wajib diisi"),
     domicile_country_iso: Yup.string().required("Wajib diisi"),
     domicile_province: Yup.string().required("Wajib diisi"),
@@ -98,12 +99,18 @@ const addUmatSchema = Yup.object().shape({
 });
 
 export default function AddUmatPage() {
-    const { data: qiudaoList, isLoading, isError } = useFetchQiudaos({
+    const { data: qiudaoResponse } = useFetchQiudaos({
         page: 1,
         limit: 9999,
         search: "",
-        searchField: "qiu_dao_mandarin_name",
     });
+
+    const allQiudaos = useMemo(() => {
+        if (Array.isArray(qiudaoResponse)) return qiudaoResponse;
+        if (qiudaoResponse?.data && Array.isArray(qiudaoResponse.data)) return qiudaoResponse.data;
+        return [];
+    }, [qiudaoResponse]);
+
     const [provinces, setProvinces] = useState([]);
     const [domicileCities, setDomicileCities] = useState([]);
     const [domicileDistricts, setDomicileDistricts] = useState([]);
@@ -111,12 +118,48 @@ export default function AddUmatPage() {
     const [ktpCities, setKtpCities] = useState([]);
     const [ktpDistricts, setKtpDistricts] = useState([]);
     const [ktpLocalities, setKtpLocalities] = useState([]);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [userRole, setUserRole] = useState("");
+    const [userArea, setUserArea] = useState(null);
+    const [userFotangId, setUserFotangId] = useState(null);
+    const [selectedWilayah, setSelectedWilayah] = useState(null);
     const [selectedQiuDao, setSelectedQiuDao] = useState(null);
     const [selectedOption, setSelectedOption] = useState(null);
     const [isQiuDaoConfirmed, setIsQiuDaoConfirmed] = useState(false);
+    const [isLoadingRole, setIsLoadingRole] = useState(true);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
     const router = useRouter();
+
+    // Filter berdasarkan wilayah aktif
+    const filteredQiudaos = useMemo(() => {
+        const activeArea = isSuperAdmin ? selectedWilayah : userArea;
+
+        if (!activeArea) {
+        return isSuperAdmin ? [] : allQiudaos;
+        }
+
+        return allQiudaos.filter(q => q.qiu_dao_location?.area === activeArea);
+    }, [allQiudaos, isSuperAdmin, selectedWilayah, userArea]);
+
+    // Cek role
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+        try {
+            const decoded = jwtDecode(token);
+            const scope = decoded.scope?.toLowerCase();
+
+            if (scope === "nasional") {
+            setIsSuperAdmin(true);
+            } else if (decoded.area) {
+            setUserArea(decoded.area);
+            }
+        } catch (err) {
+            console.error("Token invalid:", err);
+        }
+        }
+    }, []);
 
     useEffect(() => {
         const fetchProvinces = async () => {
@@ -129,6 +172,26 @@ export default function AddUmatPage() {
         };
         fetchProvinces();
     }, []);
+
+    const loadQiuDaoOptions = (inputValue, callback) => {
+        if (!inputValue || inputValue.length < 2) {
+            callback([]);
+            return;
+        }
+
+        const lowerInput = inputValue.toLowerCase();
+        const matches = filteredQiudaos.filter(item =>
+            item.qiu_dao_name?.toLowerCase().includes(lowerInput) ||
+            item.qiu_dao_mandarin_name?.toLowerCase().includes(lowerInput)
+        );
+
+        const options = matches.map(item => ({
+            value: item.qiu_dao_id,
+            label: `${item.qiu_dao_id} - ${item.qiu_dao_name || ""}${item.qiu_dao_mandarin_name ? ` / ${item.qiu_dao_mandarin_name}` : ""}`,
+        }));
+
+        callback(options);
+    };
 
     const fetchQiuDaoDetails = async (qiuDaoId) => {
         try {
@@ -428,6 +491,7 @@ export default function AddUmatPage() {
                 education_major: "",
                 job_name: "",
                 spiritual_status: "",
+                wilayah: "",
             }}
             validationSchema={addUmatSchema}
             onSubmit={handleSubmitUser}
@@ -438,43 +502,66 @@ export default function AddUmatPage() {
                     <VStack spacing={4} align="stretch" w="100%">
                         <Heading size="md">Penambahan Data Umat Baru</Heading>
                         <Heading size="md" color={"gray"} py={2}>Data diri</Heading>
-                        {/* Field Qiu Dao ID dengan AsyncSelect */}
-                        <FormControl isInvalid={touched.qiu_dao_id && errors.qiu_dao_id}>
-                            <FormLabel htmlFor="qiu_dao_id">Nama Qiudao (Indonesia atau Mandarin)</FormLabel>
-                            <AsyncSelect
-                                name="qiu_dao_id"
-                                placeholder="Cari Nama Qiudao Indonesia atau Mandarin"
-                                loadOptions={(inputValue, callback) => loadQiuDaoOptions(inputValue, callback, toast)}
-                                value={selectedOption}
-                                onChange={(option) => {
-                                    setSelectedOption(option);
-                                    if (option) {
-                                        fetchQiuDaoDetails(option.value);
-                                    } else {
-                                        setFieldValue("qiu_dao_id", "");
-                                        setSelectedQiuDao(null);
-                                        setIsQiuDaoConfirmed(false);
-                                    }
+
+                        {isSuperAdmin && (
+                            <FormControl isRequired isInvalid={touched.wilayah && errors.wilayah}>
+                                <FormLabel>Pilih Wilayah</FormLabel>
+                                <Select
+                                placeholder="Pilih Wilayah Terlebih Dahulu"
+                                value={values.wilayah}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setFieldValue("wilayah", value);
+                                    setSelectedWilayah(value);
+                                    setFieldValue("qiu_dao_id", "");
+                                    setSelectedOption(null);
+                                    setIsQiuDaoConfirmed(false);
                                 }}
-                                onBlur={handleBlur}
-                                chakraStyles={{
-                                    control: (provided) => ({
-                                        ...provided,
-                                        borderRadius: "md",
-                                    }),
-                                    menu: (provided) => ({
-                                        ...provided,
-                                        zIndex: 9999,
-                                    }),
-                                }}
-                                isClearable
-                            />
-                            {touched.qiu_dao_id && errors.qiu_dao_id && (
-                                <Text color="red.500" fontSize="sm">
-                                {errors.qiu_dao_id}
+                                >
+                                {WILAYAH_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                                </Select>
+                            </FormControl>
+                            )}
+
+                            {/* QIUDAO SEARCH */}
+                            <FormControl isRequired isInvalid={touched.qiu_dao_id && errors.qiu_dao_id}>
+                            <FormLabel>Nama QiuDao (Indonesia atau Mandarin)</FormLabel>
+
+                            {/* Pesan kalau belum ada data */}
+                            {filteredQiudaos.length === 0 && (
+                                <Text color="orange.500" fontStyle="italic" mb={2}>
+                                {isSuperAdmin
+                                    ? selectedWilayah
+                                    ? "Tidak ada QiuDao di wilayah ini"
+                                    : "Pilih wilayah terlebih dahulu"
+                                    : "Tidak ada QiuDao di wilayah Anda"}
                                 </Text>
                             )}
-                        </FormControl>
+
+                            <AsyncSelect
+                                placeholder={
+                                isSuperAdmin
+                                    ? selectedWilayah ? "Ketik untuk cari QiuDao..." : "Pilih wilayah dulu..."
+                                    : "Ketik untuk cari QiuDao..."
+                                }
+                                isDisabled={isSuperAdmin && !selectedWilayah}
+                                value={selectedOption}
+                                onChange={(option) => {
+                                setSelectedOption(option);
+                                if (option) {
+                                    fetchQiuDaoDetails(option.value);
+                                } else {
+                                    setFieldValue("qiu_dao_id", "");
+                                    setIsQiuDaoConfirmed(false);
+                                }
+                                }}
+                                loadOptions={loadQiuDaoOptions}
+                                isClearable
+                                noOptionsMessage={() => "Tidak ditemukan QiuDao yang cocok"}
+                            />
+                            </FormControl>
 
                         <HStack spacing={4} w="100%">
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
