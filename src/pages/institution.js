@@ -6,15 +6,12 @@ import {
   SimpleGrid, useDisclosure
 } from "@chakra-ui/react";
 import { useFetchInstitution } from "@/features/institution/useFetchInstitution";
-import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { FiPlus } from "react-icons/fi";
-import { isNationalRole } from "@/lib/roleUtils";
 
 export default function InstitutionPage() {
-  const [userId, setUserId] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(null);
   const router = useRouter();
 
@@ -25,13 +22,15 @@ export default function InstitutionPage() {
       if (token) {
         try {
           const decoded = jwtDecode(token);
-          const decodedUserId = parseInt(decoded.user_info_id);
-          if (decodedUserId && !isNaN(decodedUserId)) {
-            setUserId(decodedUserId);
-          } else {
-            router.push("/login");
-          }
+          const scope = decoded.scope?.toLowerCase();
+          const role = decoded.role?.toLowerCase();
+
+          const isNasional = scope === "nasional" || 
+            ["superadmin", "ketualembaga", "sekjenlembaga"].includes(role);
+
+          setIsSuperAdmin(isNasional);
         } catch (err) {
+          console.error("Token invalid:", err);
           router.push("/login");
         }
       } else {
@@ -40,19 +39,10 @@ export default function InstitutionPage() {
     }
   }, [router]);
 
-  // === PROFILE ===
-  const { data: userProfile, isLoading: isProfileLoading } = useFetchUserProfile(userId);
-
-  useEffect(() => {
-    if (userProfile?.role) {
-      setIsSuperAdmin(isNationalRole(userProfile?.role));
-    }
-  }, [userProfile]);
-
   // === DATA ===
   const { data: institutions, isLoading: isDataLoading } = useFetchInstitution({ limit: 1000 });
 
-  const isLoading = isProfileLoading || isDataLoading || isSuperAdmin === null;
+  const isLoading = isDataLoading || isSuperAdmin === null;
 
   // === MAPPING DATA ===
   const lembagas = (institutions?.data || [])
@@ -87,7 +77,7 @@ export default function InstitutionPage() {
     );
   }
 
-  if (!isNationalRole(userProfile?.role)) {
+  if (!isSuperAdmin) {
     return (
       <Layout title="Akses Ditolak">
         <Flex direction="column" align="center" justify="center" h="80vh" color="red.500">

@@ -116,10 +116,10 @@ export default function ReportBuilder() {
     queryKey: ["report-builder-data"],
     queryFn: async () => {
       const [usersRes, qiudaoRes, fotangRes, dcsRes] = await Promise.all([
-        axiosInstance.get("/profile/user").catch(() => ({ data: [] })),
-        axiosInstance.get("/profile/qiudao").catch(() => ({ data: [] })),
-        axiosInstance.get("/fotang").catch(() => ({ data: [] })),
-        axiosInstance.get("/dianchuanshi").catch(() => ({ data: [] })),
+        axiosInstance.get("/profile/user", { params: { limit: 9999 } }),
+        axiosInstance.get("/profile/qiudao", { params: { limit: 9999 } }),
+        axiosInstance.get("/fotang", { params: { limit: 9999 } }),
+        axiosInstance.get("/dianchuanshi", { params: { limit: 9999 } }),
       ]);
 
       const users = Array.isArray(usersRes.data) ? usersRes.data : usersRes.data.data || [];
@@ -293,44 +293,54 @@ export default function ReportBuilder() {
 
       if (mandarinFontLoaded && window.mandarinFontBase64) {
         try {
-          // NAMA FILE HARUS SAMA DENGAN YANG DI addFileToVFS
           doc.addFileToVFS("NotoSansSC-Regular.ttf", window.mandarinFontBase64);
           doc.addFont("NotoSansSC-Regular.ttf", "NotoSansSC", "normal");
-          console.log("Font NotoSansSC berhasil ditambahkan ke jsPDF");
         } catch (e) {
           console.error("Error addFont:", e);
         }
       }
 
+      // Tambahkan baris total sebagai bagian dari body (paling akhir)
+      const bodyWithTotal = [...rows, Array(headers.length).fill("")];
+
+      // Isi kolom pertama dengan totalText, sisanya kosong
+      bodyWithTotal[bodyWithTotal.length - 1][0] = totalText;
+
       autoTable(doc, {
         head: [headers],
-        body: rows,
+        body: bodyWithTotal,
         theme: "grid",
         styles: { 
           fontSize: 11, 
           font: mandarinFontLoaded ? "NotoSansSC" : "helvetica"
         },
         headStyles: { fillColor: [33, 150, 243] },
-        foot: [[totalText]],
+        startY: 20,
         didParseCell: (data) => {
           const isMandarin = mandarinColumns.includes(data.column.index);
           if (mandarinFontLoaded && isMandarin) {
             data.cell.styles.font = "NotoSansSC";
           }
-          if (data.row.section === "foot") {
+
+          // Style khusus untuk baris total (baris terakhir)
+          if (data.row.index === rows.length) { // index dimulai dari 0, jadi rows.length = baris total
             data.cell.colSpan = headers.length;
             data.cell.styles.halign = "center";
+            data.cell.styles.valign = "middle";
             data.cell.styles.fontStyle = "bold";
-            data.cell.styles.fontSize = 11;
+            data.cell.styles.fontSize = 14;
             data.cell.styles.fillColor = [220, 252, 231];
             data.cell.styles.textColor = [34, 139, 34];
-            if (mandarinFontLoaded) data.cell.styles.font = "NotoSansSC";
+            if (mandarinFontLoaded) {
+              data.cell.styles.font = "NotoSansSC";
+            }
           }
         }
       });
 
       doc.save(`${filename}.pdf`);
     }
+    
     else if (exportFormat === "excel") {
       const totalRow = Array(headers.length).fill("");
       totalRow[0] = totalText;
@@ -491,7 +501,7 @@ export default function ReportBuilder() {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {filteredData.slice(0, 100).map((d, i) => (
+                  {filteredData.map((d, i) => (
                     <Tr key={i}>
                       {selectedFields.map((key, idx) => {
                         let val = d[key];

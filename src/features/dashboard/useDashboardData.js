@@ -92,7 +92,14 @@ export const useDashboardData = ({ selectedArea, drillDownLevel, drillDownKorwil
         .sort((a, b) => a.province.localeCompare(b.province));
 
       // Bar chart kota
-      const cityMap = filteredUsers.reduce((acc, u) => {
+      let usersForCity = filteredUsers;
+      if (drillDownLevel === "city" && drillDownProvince) {
+        usersForCity = filteredUsers.filter(u => 
+          u.qiudao?.qiu_dao_location?.locality?.district?.city?.province?.name === drillDownProvince
+        );
+      }
+
+      const cityMap = usersForCity.reduce((acc, u) => {
         const city = u.qiudao?.qiu_dao_location?.locality?.district?.city?.name || "Unknown";
         acc[city] = (acc[city] || 0) + 1;
         return acc;

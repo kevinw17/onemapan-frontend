@@ -1075,7 +1075,7 @@ export default function UmatPage() {
                           }
                         }}
                       />
-                      <Box>ID</Box>
+                      <Box>ID Umat</Box>
                     </Flex>
                   </Th>
                 )}

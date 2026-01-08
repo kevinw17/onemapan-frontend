@@ -77,7 +77,7 @@ const addUmatSchema = Yup.object().shape({
     ktp_country_iso: Yup.string().required("Wajib diisi"),
     ktp_province: Yup.string().required("Wajib diisi"),
     ktp_city: Yup.string().required("Wajib diisi"),
-    qiu_dao_id: Yup.number().required("QiuDao ID wajib diisi"),
+    qiu_dao_id: Yup.string().required("QiuDao ID wajib diisi"),
     full_name: Yup.string().required("Nama Lengkap wajib diisi"),
     mandarin_name: Yup.string(),
     is_qing_kou: Yup.boolean().required("Status Qing Kou wajib diisi"),

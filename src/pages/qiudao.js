@@ -51,9 +51,7 @@ import QiudaoDetailModal from "@/components/QiudaoDetailModal";
 import { useDeleteQiudao } from "@/features/qiudao/useDeleteQiudao";
 import { useUpdateQiudao } from "@/features/qiudao/useUpdateQiudao";
 import { jwtDecode } from "jwt-decode";
-import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import { useQueryClient } from "@tanstack/react-query";
-import { isNationalRole } from "@/lib/roleUtils";
 
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, selectedCount, isDeleting }) => (
   <Modal isOpen={isOpen} onClose={onClose} maxW="600px">
@@ -143,7 +141,7 @@ export default function QiudaoPage() {
   ];
 
   const tableHeaders = [
-    { key: "qiu_dao_id", label: "ID" },
+    { key: "qiu_dao_id", label: "ID Qiudao" },
     { key: "qiu_dao_name", label: "Nama Indonesia" },
     { key: "qiu_dao_mandarin_name", label: "Nama Mandarin Qiudao" },
     { key: "location_name", label: "Nama Vihara (Indonesia)" },
@@ -172,71 +170,62 @@ export default function QiudaoPage() {
   const isNotSelfScope = userScope !== "self";
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decoded = jwtDecode(token);
-          const decodedUserId = parseInt(decoded.user_info_id);
-          const perms = decoded.permissions || {};
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        const decodedUserId = decoded.user_info_id;
+        const perms = decoded.permissions || {};
 
-          if (decodedUserId && !isNaN(decodedUserId)) {
-            setUserId(decodedUserId);
-          }
-
-          // TAMBAH INI: PERMISSION QIUDAO
-          const createQiudao = !!perms.qiudao?.create;
-          const updateQiudao = !!perms.qiudao?.update;
-          const deleteQiudao = !!perms.qiudao?.delete;
-
-          setCanCreateQiudao(createQiudao);
-          setCanUpdateQiudao(updateQiudao);
-          setCanDeleteQiudao(deleteQiudao);
-          setUserScope(decoded.scope);
-          setUserArea(decoded.area || null);
-          localStorage.setItem("userId", decodedUserId.toString());
-          localStorage.setItem("scope", decoded.scope);
-          localStorage.setItem("area", decoded.area || "");
-        } catch (error) {
-          toast({
-            id: "token-decode-error",
-            title: "Gagal memproses token",
-            description: "Token tidak valid atau tidak dapat diproses.",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-          });
-          router.push("/login");
+        if (decodedUserId) {
+          setUserId(decodedUserId);
         }
-      } else {
+
+        const createQiudao = !!perms.qiudao?.create;
+        const updateQiudao = !!perms.qiudao?.update;
+        const deleteQiudao = !!perms.qiudao?.delete;
+
+        setCanCreateQiudao(createQiudao);
+        setCanUpdateQiudao(updateQiudao);
+        setCanDeleteQiudao(deleteQiudao);
+        setUserScope(decoded.scope);
+        setUserArea(decoded.area || null);
+
+        // SIMPAN fotang_id kalau scope fotang
+        if (decoded.scope === "fotang" && decoded.fotang_id) {
+          localStorage.setItem("fotang_id", decoded.fotang_id);
+        }
+
+        localStorage.setItem("userId", decodedUserId);
+        localStorage.setItem("scope", decoded.scope);
+        localStorage.setItem("area", decoded.area || "");
+      } catch (error) {
         toast({
-          id: "auth-error",
-          title: "Autentikasi Gagal",
-          description: "Silakan login kembali.",
+          id: "token-decode-error",
+          title: "Gagal memproses token",
+          description: "Token tidak valid atau tidak dapat diproses.",
           status: "error",
           duration: 3000,
           isClosable: true,
         });
         router.push("/login");
       }
-      setIsUserLoaded(true);
+    } else {
+      router.push("/login");
     }
-  }, [toast, router]);
+    setIsUserLoaded(true);
+  }
+}, [toast, router]);
 
-  const { data: userProfile, isLoading: isProfileLoading, error: profileError, refetch: refetchProfile } = useFetchUserProfile(userId);
   const isQiudaoAdminMode = canCreateQiudao || canUpdateQiudao || canDeleteQiudao;
-  const fotangId = userScope === "fotang" ? userProfile?.qiudao?.qiu_dao_location_id : undefined;
-  // const isSuperAdmin = isProfileLoading 
-  //   ? false 
-  //   : isNationalRole(userProfile?.role);
+  const fotangId = userScope === "fotang" ? decoded.fotang_id || null : undefined;
 
   useEffect(() => {
-    if (userProfile?.area) {
-      setUserArea(userProfile.area);
-      localStorage.setItem("area", userProfile.area);
-    } else if (userScope === "wilayah") {
-      console.warn("DEBUG: userProfile.area is missing:", userProfile);
+    if (userArea) {
+      localStorage.setItem("area", userArea);
     }
+
     if (userScope) {
       setColumnVisibility({
         qiu_dao_id: true,
@@ -253,32 +242,14 @@ export default function QiudaoPage() {
         date: true,
       });
     }
-  }, [userProfile, userScope]);
+  }, [userScope, userArea]);
 
   useEffect(() => {
     if (userId && typeof window !== "undefined") {
-      queryClient.invalidateQueries(["userProfile"]);
       queryClient.invalidateQueries(["qiudaos"]);
-      refetchProfile();
     }
-  }, [userId, queryClient, refetchProfile]);
+  }, [userId, queryClient]);
 
-  useEffect(() => {
-    if (profileError && profileError.message !== lastError) {
-      toast({
-        id: `profile-error-${profileError?.message || "unknown"}`,
-        title: "Gagal memuat profil pengguna",
-        description: profileError?.message || "Terjadi kesalahan saat memuat data profil. Silakan login kembali.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      setLastError(profileError?.message || null);
-      router.push("/login");
-    }
-  }, [profileError, lastError, toast, router]);
-
-  // === SYNC TEMP FILTERS WHEN FILTER PANEL OPENS ===
   useEffect(() => {
     if (filterOpen) {
       setTempLocationFilter([...locationFilter]);
@@ -288,7 +259,6 @@ export default function QiudaoPage() {
     }
   }, [filterOpen, locationFilter, locationMandarinFilter, dianChuanShiFilter, dianChuanShiMandarinFilter]);
 
-  // === FETCH PARAMS DENGAN COLUMN FILTERS ===
   const fetchParams = useMemo(() => {
     const params = {
       page: isNotSelfScope ? page : undefined,
@@ -326,10 +296,10 @@ export default function QiudaoPage() {
   const qiudaosList = useMemo(() => {
     const rawQiudaos = qiudaos?.data || [];
     const filteredQiudaos = userScope === "self"
-      ? rawQiudaos.filter(q => q.qiu_dao_id === userProfile?.qiu_dao_id)
+      ? rawQiudaos.filter(q => q.qiu_dao_id === userId)
       : rawQiudaos;
     return filteredQiudaos;
-  }, [qiudaos, userScope, userProfile]);
+  }, [qiudaos, userScope, userId]);
   const total = isNotSelfScope ? qiudaos?.total || 0 : qiudaosList.length;
   const totalPages = isNotSelfScope ? Math.max(1, Math.ceil(total / limit)) : 1;
 
@@ -440,7 +410,7 @@ export default function QiudaoPage() {
         return;
       }
     }
-    if (userScope === "self" && qiudao.qiu_dao_id !== userProfile?.qiu_dao_id) {
+    if (userScope === "self" && qiudao.qiu_dao_id !== userId) {
       toast({
         id: `row-click-error-${qiudao.qiu_dao_id}`,
         title: "Tidak Diizinkan",
@@ -667,7 +637,7 @@ export default function QiudaoPage() {
     }
   };
 
-  if (!isUserLoaded || isProfileLoading) {
+  if (!isUserLoaded) {
     return (
       <Layout title="Qiudao">
         <Flex justify="center" align="center" height="100vh">

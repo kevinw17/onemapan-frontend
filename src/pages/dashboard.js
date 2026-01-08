@@ -82,7 +82,9 @@ export default function Dashboard() {
   // === DATA ===
   const { data: stats, isLoading, error } = useDashboardData({
     selectedArea,
-    drillDownProvince: drillDown.province, // tambah ini
+    drillDownLevel: drillDown.level,
+    drillDownKorwil: drillDown.korwil,
+    drillDownProvince: drillDown.province
   });
 
   // === PIE DATA: SELALU ADA PRIA & WANITA (value 0 jika tidak ada) ===
@@ -103,30 +105,27 @@ export default function Dashboard() {
       if (token) {
         try {
           const decoded = jwtDecode(token);
-          const decodedUserId = parseInt(decoded.user_info_id);
-          if (decodedUserId && !isNaN(decodedUserId)) setUserId(decodedUserId);
-          else throw new Error("Invalid user_info_id");
+
+          const fullName = decoded.full_name || decoded.mandarin_name || "";
+          setUsername(fullName || "User");
+
+          const scope = decoded.scope?.toLowerCase();
+          const roleFromToken = decoded.role?.toLowerCase() || scope;
+
+          setUserRole(roleFromToken);
+
+          if (scope !== "nasional" && decoded.area) {
+            setUserArea(decoded.area);
+            setSelectedArea(decoded.area);
+          }
+
         } catch (err) {
-          toast({ title: "Token tidak valid", status: "error" });
-          router.push("/login");
+          console.error("Token decode error:", err);
         }
-      } else {
-        toast({ title: "Silakan login", status: "error" });
-        router.push("/login");
       }
       setIsUserLoaded(true);
     }
-  }, [toast, router]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useFetchUserProfile(userId);
-
-  useEffect(() => {
-    if (userProfile) {
-      setUserRole(userProfile.role?.toLowerCase() || "user");
-      setUserArea(userProfile.qiudao?.qiu_dao_location?.area || null);
-      setUsername(userProfile.username || userProfile.full_name || "");
-    }
-  }, [userProfile]);
+  }, []);
 
   useEffect(() => {
     if (userRole && isUserLoaded) {
@@ -239,7 +238,7 @@ export default function Dashboard() {
   };
 
   // === RENDER ===
-  if (isLoading || isProfileLoading) return <VStack h="100vh" justify="center"><Text>Memuat...</Text></VStack>;
+  if (isLoading) return <VStack h="100vh" justify="center"><Text>Memuat...</Text></VStack>;
   if (error) return <VStack h="100vh" justify="center"><Text>Error: {error.message}</Text></VStack>;
 
   const areaLabel = AREA_OPTIONS.find(o => o.value === selectedArea)?.label || selectedArea;
