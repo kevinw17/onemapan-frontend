@@ -1,5 +1,3 @@
-// pages/settings.js
-
 import Layout from "@/components/layout";
 import {
     Box,
@@ -35,7 +33,6 @@ export default function SettingsPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validasi frontend
         if (!oldPassword || !newPassword || !confirmPassword) {
         toast({
             title: "Error",
@@ -72,7 +69,6 @@ export default function SettingsPage() {
         setIsLoading(true);
 
         try {
-        // GUNAKAN axiosInstance — otomatis bawa token & baseURL
         const response = await axiosInstance.post("/change-password", {
             oldPassword,
             newPassword,
@@ -86,7 +82,6 @@ export default function SettingsPage() {
             isClosable: true,
         });
 
-        // Logout otomatis
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         setTimeout(() => router.push("/login"), 2000);
@@ -126,7 +121,6 @@ export default function SettingsPage() {
 
                 <form onSubmit={handleSubmit}>
                 <VStack spacing={5} align="stretch">
-                    {/* Password Lama */}
                     <FormControl isRequired>
                     <FormLabel>Password Lama</FormLabel>
                     <InputGroup>
@@ -149,7 +143,6 @@ export default function SettingsPage() {
                     </InputGroup>
                     </FormControl>
 
-                    {/* Password Baru */}
                     <FormControl isRequired>
                     <FormLabel>Password Baru</FormLabel>
                     <InputGroup>
@@ -172,7 +165,6 @@ export default function SettingsPage() {
                     </InputGroup>
                     </FormControl>
 
-                    {/* Konfirmasi Password */}
                     <FormControl isRequired>
                     <FormLabel>Konfirmasi Password Baru</FormLabel>
                     <InputGroup>

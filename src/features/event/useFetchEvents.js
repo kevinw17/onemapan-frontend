@@ -1,11 +1,9 @@
-// src/features/event/useFetchEvents.js
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
 import { jwtDecode } from "jwt-decode";
 import { useEffect, useMemo, useRef } from "react";
 import { format } from "date-fns";
 
-// Helper stabil untuk queryKey
 const stableKey = (arr) => {
   const array = Array.isArray(arr) ? arr : [];
   if (array.length === 0) return "none";
@@ -40,10 +38,8 @@ export const useFetchEvents = ({
     } catch {}
   }, []);
 
-  // LOG HANYA KALAU BENAR-BENAR BERUBAH
   const prevParamsRef = useRef(null);
   const queryParams = useMemo(() => {
-    // PASTIKAN SEMUA ADALAH ARRAY (ini yang fix error null.length)
     const safeEventType = Array.isArray(event_type) ? event_type : [];
     const safeArea = Array.isArray(area) ? area : [];
     const safeProvince = Array.isArray(province_id) ? province_id : [];

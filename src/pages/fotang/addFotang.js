@@ -1,4 +1,3 @@
-// src/pages/fotang/addFotang.js
 import {
   Box, Button, FormControl, FormLabel, Heading,
   Input, Select, Text, VStack, HStack, useToast, Textarea,
@@ -100,20 +99,17 @@ export default function AddFotangPage() {
 
     const handleSubmitFotang = async (values) => {
         try {
-            // 1. AMBIL SEMUA FOTANG UNTUK CEK ID TERAKHIR
             const res = await axiosInstance.get("/fotang");
             const fotangs = res.data;
 
-            // 2. HITUNG ID TERAKHIR
             const lastId = fotangs.length > 0 
             ? Math.max(...fotangs.map(f => f.fotang_id))
             : 0;
 
             const nextId = lastId + 1;
 
-            // 3. BENTUK PAYLOAD DENGAN fotang_id
             const payload = {
-            fotang_id: nextId,  // KIRIM MANUAL!
+            fotang_id: nextId,
             location_name: values.location_name,
             location_mandarin_name: values.location_mandarin_name || null,
             area: values.area,
@@ -122,16 +118,14 @@ export default function AddFotangPage() {
             postal_code: values.postal_code || null,
             };
 
-            // 4. TAMBAHKAN locality JIKA ADA
             if (values.locality) {
             payload.locality = {
                 connect: { id: Number(values.locality) },
             };
             }
 
-            console.log("Payload dikirim:", payload); // DEBUG
+            console.log("Payload dikirim:", payload);
 
-            // 5. KIRIM KE BACKEND
             await axiosInstance.post("/fotang", payload);
 
             toast({
@@ -176,7 +170,6 @@ export default function AddFotangPage() {
               <VStack spacing={4} align="stretch" w="100%">
                 <Heading size="md">Penambahan Data Vihara Baru</Heading>
 
-                {/* 1. Nama Vihara & Nama Mandarin */}
                 <HStack spacing={4} w="100%">
                   <FormControl isRequired flex={1}>
                     <FormLabel>Nama Vihara</FormLabel>
@@ -202,7 +195,6 @@ export default function AddFotangPage() {
                   </FormControl>
                 </HStack>
 
-                {/* 2. Provinsi & Kota */}
                 <HStack spacing={4} w="100%">
                   <FormControl isRequired flex={1}>
                     <FormLabel>Provinsi</FormLabel>
@@ -242,7 +234,6 @@ export default function AddFotangPage() {
                   </FormControl>
                 </HStack>
 
-                {/* 3. Kecamatan & Kelurahan */}
                 <HStack spacing={4} w="100%">
                   <FormControl flex={1}>
                     <FormLabel>Kecamatan</FormLabel>
@@ -277,7 +268,6 @@ export default function AddFotangPage() {
                   </FormControl>
                 </HStack>
 
-                {/* 4. Kode Pos & Korda Wilayah */}
                 <HStack spacing={4} w="100%">
                   <FormControl flex={1}>
                     <FormLabel>Kode Pos</FormLabel>
@@ -310,7 +300,6 @@ export default function AddFotangPage() {
                   </FormControl>
                 </HStack>
 
-                {/* 5. Alamat Jalan (1 baris penuh, textarea panjang) */}
                 <FormControl w="100%">
                   <FormLabel>Alamat Jalan</FormLabel>
                   <Textarea
@@ -325,7 +314,6 @@ export default function AddFotangPage() {
                   />
                 </FormControl>
 
-                {/* 6. Tombol Simpan */}
                 <Button
                   type="submit"
                   colorScheme="green"

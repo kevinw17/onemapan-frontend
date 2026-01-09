@@ -109,30 +109,21 @@ export default function QiudaoPage() {
     date: true,
   });
 
-  // === FILTER STATES (HANYA VIhara & Pandita) ===
   const [filterOpen, setFilterOpen] = useState(false);
   const [locationFilter, setLocationFilter] = useState([]);
   const [locationMandarinFilter, setLocationMandarinFilter] = useState([]);
   const [dianChuanShiFilter, setDianChuanShiFilter] = useState([]);
   const [dianChuanShiMandarinFilter, setDianChuanShiMandarinFilter] = useState([]);
-
-  // TEMP FILTERS
   const [tempLocationFilter, setTempLocationFilter] = useState([]);
   const [tempLocationMandarinFilter, setTempLocationMandarinFilter] = useState([]);
   const [tempDianChuanShiFilter, setTempDianChuanShiFilter] = useState([]);
   const [tempDianChuanShiMandarinFilter, setTempDianChuanShiMandarinFilter] = useState([]);
-
-  // COLLAPSE STATES
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isLocationMandarinOpen, setIsLocationMandarinOpen] = useState(false);
   const [isDianChuanShiOpen, setIsDianChuanShiOpen] = useState(false);
   const [isDianChuanShiMandarinOpen, setIsDianChuanShiMandarinOpen] = useState(false);
-
-  // === PER COLUMN FILTER STATES ===
   const [columnFilters, setColumnFilters] = useState({});
   const [columnSearch, setColumnSearch] = useState({});
-
-  // === KOLOM YANG BOLEH DIFILTER (HANYA VIhara & Pandita) ===
   const filterableColumns = [
     "location_name",
     "location_mandarin_name",
@@ -192,7 +183,6 @@ export default function QiudaoPage() {
         setUserScope(decoded.scope);
         setUserArea(decoded.area || null);
 
-        // SIMPAN fotang_id kalau scope fotang
         if (decoded.scope === "fotang" && decoded.fotang_id) {
           localStorage.setItem("fotang_id", decoded.fotang_id);
         }
@@ -266,13 +256,11 @@ export default function QiudaoPage() {
       search: isNotSelfScope ? searchQuery : undefined,
       searchField: isNotSelfScope ? searchField : undefined,
 
-      // GLOBAL FILTERS
       location_name: isNotSelfScope ? locationFilter : [],
       location_mandarin_name: isNotSelfScope ? locationMandarinFilter : [],
       dian_chuan_shi_name: isNotSelfScope ? dianChuanShiFilter : [],
       dian_chuan_shi_mandarin_name: isNotSelfScope ? dianChuanShiMandarinFilter : [],
 
-      // COLUMN FILTERS (PER KOLOM)
       ...Object.fromEntries(
         Object.entries(columnFilters).map(([key, values]) => [
           key,
@@ -319,7 +307,6 @@ export default function QiudaoPage() {
     }
   }, [error, lastError, toast]);
 
-  // === GLOBAL FILTER HANDLERS ===
   const applyFilters = () => {
     setLocationFilter([...tempLocationFilter]);
     setLocationMandarinFilter([...tempLocationMandarinFilter]);
@@ -350,7 +337,6 @@ export default function QiudaoPage() {
     setter(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
   };
 
-  // === COLUMN FILTER HANDLERS ===
   const handleColumnFilterChange = (key, value) => {
     setColumnFilters(prev => ({
       ...prev,
@@ -694,7 +680,6 @@ export default function QiudaoPage() {
               </Button>
             )}
 
-            {/* FILTER BUTTON + PANEL */}
             <Box position="relative">
               <Button
                 colorScheme="white"
@@ -727,7 +712,6 @@ export default function QiudaoPage() {
                   maxH="70vh"
                   overflowY="auto"
                 >
-                  {/* Vihara (Indonesia) */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0}>Vihara (Indonesia)</FormLabel>
@@ -746,7 +730,6 @@ export default function QiudaoPage() {
                     </Collapse>
                   </FormControl>
 
-                  {/* Vihara (Mandarin) */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0}>Vihara (Mandarin)</FormLabel>
@@ -765,7 +748,6 @@ export default function QiudaoPage() {
                     </Collapse>
                   </FormControl>
 
-                  {/* Pandita (Indonesia) */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0}>Pandita (Indonesia)</FormLabel>
@@ -784,7 +766,6 @@ export default function QiudaoPage() {
                     </Collapse>
                   </FormControl>
 
-                  {/* Pandita (Mandarin) */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0}>Pandita (Mandarin)</FormLabel>
@@ -812,7 +793,6 @@ export default function QiudaoPage() {
               )}
             </Box>
 
-            {/* DROPDOWN SEARCH DENGAN GURU PENGAJAK & PENANGGUNG */}
             <Select
               size="xs"
               width="320px"
@@ -823,27 +803,16 @@ export default function QiudaoPage() {
                 setPage(1);
               }}
             >
-              {/* Qiudao */}
               <option value="qiu_dao_name">Nama Qiudao (Indonesia)</option>
               <option value="qiu_dao_mandarin_name">Nama Qiudao (Mandarin)</option>
-
-              {/* Vihara */}
               <option value="qiu_dao_location.name">Nama Vihara (Indonesia)</option>
               <option value="qiu_dao_location.location_mandarin_name">Nama Vihara (Mandarin)</option>
-
-              {/* Pandita */}
               <option value="dian_chuan_shi.name">Nama Pandita (Indonesia)</option>
               <option value="dian_chuan_shi.mandarin_name">Nama Pandita (Mandarin)</option>
-
-              {/* Guru Pengajak */}
               <option value="yin_shi_qd_name">Guru Pengajak (Indonesia)</option>
               <option value="yin_shi_qd_mandarin_name">Guru Pengajak (Mandarin)</option>
-
-              {/* Guru Penanggung */}
               <option value="bao_shi_qd_name">Guru Penanggung (Indonesia)</option>
               <option value="bao_shi_qd_mandarin_name">Guru Penanggung (Mandarin)</option>
-
-              {/* Tanggal Lunar */}
               <option value="lunar_sui_ci_year">Tahun Lunar</option>
               <option value="lunar_month">Bulan Lunar</option>
               <option value="lunar_day">Tanggal Lunar</option>
@@ -911,7 +880,6 @@ export default function QiudaoPage() {
         </Flex>
       )}
 
-      {/* TABEL DENGAN FILTER PER KOLOM */}
       <Box overflowX="auto" minH="80vh">
         {isLoading ? (
           <Flex justify="center" py={10} height="60vh">

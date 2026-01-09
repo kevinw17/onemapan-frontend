@@ -1,4 +1,3 @@
-// src/pages/institution/institution.js
 import Layout from "@/components/layout";
 import {
   Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Spinner, Flex, Text, Button,
@@ -15,7 +14,6 @@ export default function InstitutionPage() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(null);
   const router = useRouter();
 
-  // === AUTH ===
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -39,12 +37,8 @@ export default function InstitutionPage() {
     }
   }, [router]);
 
-  // === DATA ===
   const { data: institutions, isLoading: isDataLoading } = useFetchInstitution({ limit: 1000 });
-
   const isLoading = isDataLoading || isSuperAdmin === null;
-
-  // === MAPPING DATA ===
   const lembagas = (institutions?.data || [])
     .map(i => ({
       institution_id: i.institution_id,
@@ -53,10 +47,7 @@ export default function InstitutionPage() {
       institution_secretary_general: i.institution_secretary_general || "-",
     }))
     .sort((a, b) => a.institution_id - b.institution_id);
-
   const totalLembaga = lembagas.length;
-
-  // === MODAL DETAIL ===
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedLembaga, setSelectedLembaga] = useState(null);
 
@@ -65,7 +56,6 @@ export default function InstitutionPage() {
     onOpen();
   };
 
-  // === RENDER ===
   if (isLoading) {
     return (
       <Layout title="List Lembaga">
@@ -91,7 +81,6 @@ export default function InstitutionPage() {
   return (
     <Layout title="List Lembaga">
       <Box p={4}>
-        {/* JUDUL + TOMBOL */}
         <Flex align="center" justify="space-between" mb={6} flexWrap="wrap" gap={2}>
           <Heading size="md" fontFamily="inherit">
             Daftar Lembaga
@@ -114,7 +103,6 @@ export default function InstitutionPage() {
           </Button>
         </Flex>
 
-        {/* TABEL */}
         <Box overflowX="auto">
           <Table variant="striped" colorScheme="gray" size="sm">
             <Thead>

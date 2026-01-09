@@ -11,7 +11,6 @@ import ChartDataLabels from "chartjs-plugin-datalabels";
 import { useDashboardData } from "@/features/dashboard/useDashboardData";
 import { AREA_OPTIONS } from "@/features/dashboard/dashboardConstants";
 import { jwtDecode } from "jwt-decode";
-import { useFetchUserProfile } from "@/features/user/useFetchUserProfile";
 import { useRouter } from "next/router";
 import { useToast } from "@chakra-ui/react";
 import { FiChevronRight, FiHome } from "react-icons/fi";
@@ -19,10 +18,9 @@ import { isNationalRole } from "@/lib/roleUtils";
 
 Chart.register(ChartDataLabels);
 
-// === WARNA KONSISTEN: PRIA BIRU, WANITA PINK ===
 const GENDER_COLORS = {
-  Pria: "#160ee7ff",   // Biru
-  Wanita: "#e331c8ff", // Pink
+  Pria: "#160ee7ff",
+  Wanita: "#e331c8ff",
 };
 
 const StatCard = ({ label, value }) => (
@@ -79,7 +77,6 @@ export default function Dashboard() {
   const toast = useToast();
   const chartRef = useRef(null);
 
-  // === DATA ===
   const { data: stats, isLoading, error } = useDashboardData({
     selectedArea,
     drillDownLevel: drillDown.level,
@@ -87,7 +84,6 @@ export default function Dashboard() {
     drillDownProvince: drillDown.province
   });
 
-  // === PIE DATA: SELALU ADA PRIA & WANITA (value 0 jika tidak ada) ===
   const pieData = [
     { name: "Pria", value: 0 },
     { name: "Wanita", value: 0 },
@@ -98,7 +94,6 @@ export default function Dashboard() {
     if (entry.gender === "Wanita") pieData[1].value = Math.round(entry.value);
   });
 
-  // === AUTH & PROFILE (sama) ===
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -137,7 +132,6 @@ export default function Dashboard() {
     }
   }, [userRole, userArea, isUserLoaded]);
 
-  // === SINKRONKAN DROPDOWN ===
   useEffect(() => {
     if (selectedArea === "Nasional") {
       setDrillDown({ level: "korwil", korwil: null, province: null });
@@ -148,7 +142,6 @@ export default function Dashboard() {
     }
   }, [drillDown.korwil, drillDown.level, selectedArea]);
 
-  // === BAR CLICK ===
   const handleBarClick = (event, elements) => {
     if (!elements.length) return;
     const index = elements[0].index;
@@ -163,7 +156,6 @@ export default function Dashboard() {
     }
   };
 
-  // === CHART DATA ===
   let labels = [], values = [], title = "";
 
   if (drillDown.level === "korwil") {
@@ -202,7 +194,6 @@ export default function Dashboard() {
     cursor: drillDown.level !== "city" ? "pointer" : "default",
   };
 
-  // === BREADCRUMB: TANPA DUP (hanya tampilkan jika level > province) ===
   const renderBreadcrumb = () => {
     if (drillDown.level === "korwil") return null;
 
@@ -237,7 +228,6 @@ export default function Dashboard() {
     );
   };
 
-  // === RENDER ===
   if (isLoading) return <VStack h="100vh" justify="center"><Text>Memuat...</Text></VStack>;
   if (error) return <VStack h="100vh" justify="center"><Text>Error: {error.message}</Text></VStack>;
 

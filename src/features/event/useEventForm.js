@@ -1,4 +1,3 @@
-// src/features/event/useEventForm.js
 import { useState, useCallback } from "react";
 import { useToast } from "@chakra-ui/react";
 import { useRouter } from "next/router";
@@ -24,17 +23,13 @@ export const useEventForm = ({
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
 
-  // ✅ DETECT EVENT ID - FIX ERROR selectedEvent.id
   const getEventId = () => {
-    // Prioritas 1: Dari selectedEvent
     if (selectedEvent?.id) return parseInt(selectedEvent.id);
     
-    // Prioritas 2: Dari router query (edit mode)
     if (router.query?.eventId) {
       return parseInt(router.query.eventId);
     }
     
-    // Prioritas 3: Dari router pathname
     if (router.pathname && router.pathname.includes('/edit')) {
       return parseInt(router.query?.id || router.query?.eventId || 0);
     }
@@ -119,7 +114,6 @@ export const useEventForm = ({
   const handleChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
 
-    // ✅ RESET FIELDS KETIKA CATEGORY BERUBAH
     if (name === "category") {
       const isInternal = value === "Internal";
       const isExternal = value === "External";
@@ -127,15 +121,13 @@ export const useEventForm = ({
       setFormData(prev => ({
         ...prev,
         [name]: value,
-        // Reset semua field lokasi
         provinceId: "",
         cityId: "",
         fotangId: "",
         external_provinceId: "",
         external_cityId: "",
         location_name: "",
-        is_in_fotang: true, // Default ke vihara
-        // Reset field spesifik berdasarkan kategori
+        is_in_fotang: true,
         ...(isInternal
           ? {
               event_mandarin_name: "",
@@ -153,33 +145,28 @@ export const useEventForm = ({
             }
         )
       }));
+
       return;
     }
 
-    // ✅ RESET FIELDS KETIKA is_in_fotang BERUBAH (External only)
     if (name === "is_in_fotang" && formData.category === "External") {
       const boolValue = checked;
       setFormData(prev => ({
         ...prev,
         is_in_fotang: boolValue,
-        // Reset fields sesuai pilihan
         ...(boolValue
           ? {
-              // Pindah ke vihara/fotang
               external_provinceId: "",
               external_cityId: "",
               location_name: "",
-              // Set default untuk fotang
               provinceId: "",
               cityId: "",
               fotangId: ""
             }
           : {
-              // Pindah ke lokasi manual
               fotangId: "",
               provinceId: "",
               cityId: "",
-              // Reset wilayah untuk external manual
               external_area: prev.area || ""
             }
         )
@@ -187,7 +174,6 @@ export const useEventForm = ({
       return;
     }
 
-    // Handle field biasa
     if (name === "is_in_fotang") {
       setFormData(prev => ({
         ...prev,
@@ -240,7 +226,6 @@ export const useEventForm = ({
   }, []);
 
   const buildPayload = useCallback((posterUrl = null) => {
-    // ✅ FIXED: Case-sensitive correct
     const category = formData.category === "External" ? "External" : "Internal";
 
     const gregOccurDateISO = fromLocalToWIBISO(formData.greg_occur_date);
@@ -259,7 +244,7 @@ export const useEventForm = ({
     }
 
     const payload = {
-      category, // ✅ Sekarang benar: "External" atau "Internal"
+      category,
       event_type,
       event_name: formData.event_name.trim(),
       event_mandarin_name: formData.category === "Internal" ? formData.event_mandarin_name?.trim() || null : null,
@@ -274,7 +259,6 @@ export const useEventForm = ({
       }],
     };
 
-    // ✅ FIXED: Gunakan category yang sudah benar
     if (formData.is_in_fotang && formData.fotangId) {
       payload.fotangId = parseInt(formData.fotangId);
     }
@@ -286,12 +270,10 @@ export const useEventForm = ({
       payload.area = formData.external_area || formData.area;
     }
 
-    // ✅ FIXED: Institution hanya untuk External
     if (category === "External" && formData.institutionId) {
       payload.institutionId = parseInt(formData.institutionId);
     }
 
-    // ✅ FIXED: Lunar hanya untuk Internal
     if (category === "Internal") {
       payload.lunar_sui_ci_year = formData.lunar_sui_ci_year || null;
       payload.lunar_month = formData.lunar_month || null;
@@ -321,7 +303,6 @@ export const useEventForm = ({
 
     let finalPosterUrl = formData.poster_s3_bucket_link || null;
 
-    // Upload poster jika ada cropper
     if (previewImage && cropperRef?.current?.cropper) {
       try {
         const croppedFile = await getCroppedImage(cropperRef);
@@ -349,7 +330,6 @@ export const useEventForm = ({
 
     const payload = buildPayload(finalPosterUrl);
 
-    // ✅ FIXED: Logic yang aman untuk update/create
     let mutation, mutateArg;
 
     if (isUpdate && eventId) {
@@ -423,13 +403,13 @@ export const useEventForm = ({
     formData,
     setFormData,
     isSubmitting,
-    isEditMode,        // ✅ Untuk debug
-    eventId,           // ✅ Untuk debug
+    isEditMode,
+    eventId,
     handleChange,
     handleIsRecurringChange,
     handleSubmit,
     handleUpdate,
-    handleImageChange, // ✅ Tambahan untuk image
+    handleImageChange,
     validateForm,
   };
 };

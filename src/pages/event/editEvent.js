@@ -1,4 +1,3 @@
-// src/pages/event/editEvent.js
 import Layout from "@/components/layout";
 import { 
   Box, 
@@ -33,10 +32,9 @@ import { isNationalRole } from "@/lib/roleUtils";
 export default function EditEvent() {
   const router = useRouter();
   const { eventId } = router.query;
-  const toast = useToast(); // ✅ ADD TOAST
+  const toast = useToast();
   const cropperRef = useRef(null);
 
-  // ✅ DELETE MODAL & MUTATION
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const deleteEventMutation = useDeleteEvent();
 
@@ -44,7 +42,7 @@ export default function EditEvent() {
   const [userArea, setUserArea] = useState("Korwil_1");
   const [previewImage, setPreviewImage] = useState(null);
   const [formLoaded, setFormLoaded] = useState(false);
-  const [userRole, setUserRole] = useState(null); // ✅ ADD USER ROLE
+  const [userRole, setUserRole] = useState(null);
 
   const {
     formData,
@@ -63,7 +61,6 @@ export default function EditEvent() {
     previewImage,
   });
 
-  // ✅ TOKEN HANDLING - ADD ROLE
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -77,7 +74,7 @@ export default function EditEvent() {
           setUserArea(area);
         }
         
-        setUserRole(decoded.role || null); // ✅ SET USER ROLE
+        setUserRole(decoded.role || null);
       } catch (e) {
         setUserArea("Korwil_1");
         setUserRole(null);
@@ -88,7 +85,6 @@ export default function EditEvent() {
     }
   }, []);
 
-  // ✅ DELETE HANDLERS
   const handleDelete = () => {
     onConfirmOpen();
   };
@@ -118,8 +114,6 @@ export default function EditEvent() {
       onConfirmClose();
     }
   };
-
-  // ... (sisa kode fetchFotangDetails, handleAreaChange, dll tetap sama)
 
   const fetchFotangDetails = useCallback(async (fotangId) => {
     if (!fotangId) return null;
@@ -172,7 +166,6 @@ export default function EditEvent() {
     setFormData(prev => ({ ...prev, fotangId }));
   }, [setFormData]);
 
-  // Data pendukung
   const { data: provinces = [] } = useFetchProvinces();
   const { data: citiesForExternal = [] } = useFetchCities(formData.external_provinceId || null);
   const { data: allFotangsRaw = [] } = useFetchFotang({ limit: 1000 });
@@ -202,7 +195,6 @@ export default function EditEvent() {
     { value: "Korwil_6", label: "Wilayah 6" },
   ];
 
-  // Token handling
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -224,7 +216,6 @@ export default function EditEvent() {
     }
   }, []);
 
-  // Form load
   useEffect(() => {
     if (!eventId) return;
 
@@ -253,7 +244,6 @@ export default function EditEvent() {
         const isInternal = event.category === "Internal";
         const isInFotang = Boolean(event.is_in_fotang);
 
-        // ✅ INITIALIZE
         let area = "Korwil_1";
         let fotangId = "";
         let provinceId = "";
@@ -262,9 +252,8 @@ export default function EditEvent() {
         let external_provinceId = "";
         let external_cityId = "";
         let location_name = "";
-        let institutionId = ""; // ✅ INI YANG MASALAH
+        let institutionId = "";
 
-        // ✅ CASE 1: INTERNAL / EXTERNAL + FOTANG
         if ((isInternal || (event.category === "External" && isInFotang)) && event.fotang) {
           fotangId = String(event.fotang.fotang_id || "");
           area = event.fotang.area || "Korwil_1";
@@ -277,7 +266,6 @@ export default function EditEvent() {
           }
         }
 
-        // ✅ CASE 2: EXTERNAL + NON-FOTANG
         if (event.category === "External" && !isInFotang && event.eventLocation) {
           console.log("🔍 EVENTLOCATION DATA:", event.eventLocation);
           
@@ -306,7 +294,6 @@ export default function EditEvent() {
           });
         }
 
-        // ✅ CASE 3: INSTITUTION - FIXED VERSION!
         console.log("🔍 FULL EVENT STRUCTURE FOR INSTITUTION:", {
           eventLocation_institution_id: event.eventLocation?.institution_id,
           eventLocation_institutionId: event.eventLocation?.institutionId,
@@ -318,15 +305,12 @@ export default function EditEvent() {
         });
 
         if (event.category === "External") {
-          // ✅ PRIORITAS 1: event.institutionId (WORKING!)
           institutionId = String(event.institutionId || "");
           
-          // ✅ PRIORITAS 2: event.institution.institution_id
           if (!institutionId && event.institution?.institution_id) {
             institutionId = String(event.institution.institution_id);
           }
           
-          // ✅ PRIORITAS 3: Direct fields
           if (!institutionId) {
             institutionId = String(
               event.institution_id || 
@@ -335,18 +319,8 @@ export default function EditEvent() {
               ""
             );
           }
-          
-          console.log("✅ INSTITUTION RESOLUTION:", {
-            final_institutionId: institutionId,
-            found_in: institutionId ? "SUCCESS" : "NOT_FOUND",
-            source: institutionId ? 
-              (event.institutionId ? "event.institutionId" : 
-              event.institution?.institution_id ? "event.institution.institution_id" : 
-              "other") : "none"
-          });
         }
 
-        // ✅ FORM DATA - INI YANG PENTING!
         const formDataToSet = {
           category: event.category || "Internal",
           event_name: event.event_name || "",
@@ -362,14 +336,12 @@ export default function EditEvent() {
           external_provinceId,
           external_cityId,
           location_name,
-          institutionId, // ✅ INI YANG HARUS MASUK!
+          institutionId,
           event_type: event.event_type || "Regular",
           description: event.description || "",
           is_recurring: !!event.is_recurring,
           poster_s3_bucket_link: event.poster_s3_bucket_link || null,
         };
-
-        console.log("✅ FINAL FORM DATA:", formDataToSet);
 
         setFormData(formDataToSet);
         setPreviewImage(event.poster_s3_bucket_link || null);
@@ -394,9 +366,9 @@ export default function EditEvent() {
     
     const institutionExists = institutions.some(i => String(i.id) === String(formData.institutionId));
     if (institutionExists) {
-      console.log("✅ Institution auto-selected:", formData.institutionId);
+      console.log("Institution auto-selected:", formData.institutionId);
     } else {
-      console.log("⚠️ Institution not found in list:", formData.institutionId);
+      console.log("Institution not found in list:", formData.institutionId);
     }
   }, [formLoaded, institutions, formData.institutionId]);
 
@@ -440,7 +412,6 @@ export default function EditEvent() {
             eventCategory={formData.category}
           />
 
-          {/* ✅ BUTTONS - SAMA PERSIS SEPERTI EDITUMAT */}
           <Flex gap={4} mt={8}>
             {canDelete && (
               <Button 
@@ -473,7 +444,6 @@ export default function EditEvent() {
         </VStack>
       </Box>
 
-      {/* ✅ DELETE CONFIRMATION MODAL - SAMA PERSIS SEPERTI EDITUMAT */}
       {canDelete && (
         <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="xs" isCentered>
           <ModalOverlay />

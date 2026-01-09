@@ -1,4 +1,3 @@
-// src/components/EventFormContent.jsx
 import {
   Box, VStack, HStack, FormControl, FormLabel, Input, Select, Textarea,
   Checkbox, RadioGroup, Radio
@@ -21,12 +20,10 @@ export default function EventFormContent({
   const isExternal = formData.category === "External";
   const isInFotang = formData.is_in_fotang === true;
   
-  // EventFormContent.jsx - UPDATE LOGIC ACTIVEAREA
   const activeArea = isExternal && !isInFotang
-    ? (formData.external_area || formData.area || "") // ✅ Prioritas external_area
+    ? (formData.external_area || formData.area || "")
     : (formData.area || "");
 
-  // Filter provinsi berdasarkan area dari allFotangs
   const filteredProvinces = activeArea 
     ? allFotangs
         .filter(f => f.area === activeArea)
@@ -40,7 +37,6 @@ export default function EventFormContent({
         .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
-  // Filter kota berdasarkan area + provinsi dari allFotangs
   const filteredCities = activeArea && formData.provinceId
     ? allFotangs
         .filter(f => 
@@ -57,7 +53,6 @@ export default function EventFormContent({
         .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
-  // Filter fotang: area + city
   const filteredFotangs = allFotangs.filter(f => {
     const matchesArea = f.area === activeArea;
     const matchesCity = !formData.cityId || f.city_id === parseInt(formData.cityId);
@@ -67,7 +62,6 @@ export default function EventFormContent({
   return (
     <Box as="form" onSubmit={(e) => e.preventDefault()}>
       <VStack spacing={6} align="stretch">
-        {/* Nama Kegiatan */}
         <HStack spacing={4}>
           <FormControl isRequired>
             <FormLabel>Nama Kegiatan</FormLabel>
@@ -81,7 +75,6 @@ export default function EventFormContent({
           )}
         </HStack>
 
-        {/* Tanggal */}
         <HStack spacing={4}>
           <FormControl isRequired>
             <FormLabel>Tanggal Mulai</FormLabel>
@@ -93,7 +86,6 @@ export default function EventFormContent({
           </FormControl>
         </HStack>
 
-        {/* External: Di vihara atau tidak */}
         {isExternal && (
           <FormControl isRequired>
             <FormLabel>Di vihara/fotang?</FormLabel>
@@ -119,7 +111,6 @@ export default function EventFormContent({
           </FormControl>
         )}
 
-        {/* Wilayah */}
         <FormControl isRequired>
           <FormLabel>Wilayah</FormLabel>
           <Select 
@@ -133,10 +124,8 @@ export default function EventFormContent({
           </Select>
         </FormControl>
 
-        {/* Internal atau External + Di Fotang */}
         {(isInternal || (isExternal && isInFotang)) && activeArea && (
           <>
-            {/* Provinsi */}
             <Box>
               <HStack spacing={8} mb={2} align="flex-start">
                 <FormLabel flex={1} fontSize="sm" fontWeight="medium" mb={0} isRequired>
@@ -188,7 +177,6 @@ export default function EventFormContent({
               </HStack>
             </Box>
 
-            {/* Vihara/Fotang */}
             <FormControl isRequired>
               <FormLabel>Vihara</FormLabel>
               <Select
@@ -213,7 +201,6 @@ export default function EventFormContent({
           </>
         )}
 
-        {/* External + Tidak Di Fotang */}
         {isExternal && !isInFotang && activeArea && (
           <>
             <HStack spacing={4}>
@@ -240,7 +227,7 @@ export default function EventFormContent({
                 <Select
                   value={formData.external_cityId || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, external_cityId: e.target.value }))}
-                  isDisabled={!formData.external_provinceId}  // ✅ TERGANTUNG external_provinceId
+                  isDisabled={!formData.external_provinceId}
                   placeholder={
                     formData.external_provinceId 
                       ? (citiesForExternal.length === 0 ? "Memuat kota..." : "Pilih Kota")
@@ -273,7 +260,6 @@ export default function EventFormContent({
           </>
         )}
 
-        {/* Lembaga (External only) */}
         {isExternal && (
         <FormControl isRequired>
           <FormLabel>Lembaga</FormLabel>
@@ -292,7 +278,6 @@ export default function EventFormContent({
         </FormControl>
         )}
 
-        {/* Jenis Kegiatan */}
         <FormControl isRequired>
           <FormLabel>Jenis Kegiatan</FormLabel>
           <Select
@@ -310,7 +295,6 @@ export default function EventFormContent({
           </Select>
         </FormControl>
 
-        {/* Lunar Date (Internal only) */}
         {isInternal && (
           <>
             <HStack spacing={4}>
@@ -356,13 +340,11 @@ export default function EventFormContent({
           </>
         )}
 
-        {/* Deskripsi */}
         <FormControl>
           <FormLabel>Deskripsi (Opsional)</FormLabel>
           <Textarea name="description" value={formData.description || ""} onChange={handleChange} />
         </FormControl>
 
-        {/* Poster */}
         <FormControl>
           <FormLabel>Poster (Opsional)</FormLabel>
           <Input type="file" accept="image/*" onChange={handleImageChange} />

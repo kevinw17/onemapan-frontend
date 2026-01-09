@@ -26,7 +26,6 @@ const AddQiudaoPage = () => {
     const [provinces, setProvinces] = useState([]);
     const [selectedProvince, setSelectedProvince] = useState("");
 
-    // Token & Role
     const [userScope, setUserScope] = useState("self");
     const [userFotangId, setUserFotangId] = useState(null);
     const [userArea, setUserArea] = useState(null);
@@ -36,7 +35,6 @@ const AddQiudaoPage = () => {
     const toast = useToast();
     const router = useRouter();
 
-    // Decode token sekali saja
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (token) {
@@ -51,7 +49,6 @@ const AddQiudaoPage = () => {
         }
     }, []);
 
-    // Fetch data
     useEffect(() => {
         const fetchDianChuanShis = async () => {
         try {
@@ -94,7 +91,6 @@ const AddQiudaoPage = () => {
         fetchTemples();
     }, [userScope, userFotangId, userArea]);
 
-    // Filter berdasarkan provinsi
     const finalTemples = selectedProvince
         ? displayTemples.filter((t) => {
             const loc = t.locality;
@@ -103,7 +99,6 @@ const AddQiudaoPage = () => {
         })
         : displayTemples;
 
-    // Auto-set provinsi & vihara untuk Admin Vihara
     useEffect(() => {
         if (userScope === "fotang" && finalTemples.length === 1 && setFieldValueRef.current) {
         const loc = finalTemples[0];
@@ -183,7 +178,6 @@ const AddQiudaoPage = () => {
                 <Form>
                     <VStack spacing={6} align="stretch">
 
-                    {/* Nama QiuDao */}
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                         <FormControl>
                         <FormLabel>Nama QiuDao</FormLabel>
@@ -196,7 +190,6 @@ const AddQiudaoPage = () => {
                     </SimpleGrid>
 
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                        {/* PROVINSI */}
                         <FormControl isRequired={userScope !== "fotang"}>
                         <FormLabel>Pilih Provinsi Lokasi Qiudao</FormLabel>
                         <Select
@@ -221,7 +214,6 @@ const AddQiudaoPage = () => {
                                 {finalTemples[0]?.locality?.district?.city?.province?.name}
                             </option>
                             ) : (
-                            // HANYA PROVINSI YANG ADA DI DISPLAYTEMPLES (SUDAH DIFILTER WILAYAH)
                             [...new Set(
                                 displayTemples
                                 .map((t) => t.locality?.district?.city?.province)
@@ -239,7 +231,6 @@ const AddQiudaoPage = () => {
                         </Select>
                         </FormControl>
 
-                        {/* LOKASI VIHARA */}
                         <FormControl isRequired>
                         <FormLabel>Lokasi Vihara</FormLabel>
                         <Select
@@ -282,7 +273,6 @@ const AddQiudaoPage = () => {
                         </FormControl>
                     </SimpleGrid>
 
-                    {/* Pilih Pandita */}
                     <FormControl>
                         <FormLabel>Pilih Pandita</FormLabel>
                         <Select
@@ -304,7 +294,6 @@ const AddQiudaoPage = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Guru Pengajak & Penanggung */}
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                         <FormControl>
                         <FormLabel>Nama Guru Pengajak</FormLabel>
@@ -327,7 +316,6 @@ const AddQiudaoPage = () => {
                         </FormControl>
                     </SimpleGrid>
 
-                    {/* Tanggal Lunar */}
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                         <FormControl isRequired>
                         <FormLabel>Tahun Lunar (岁次)</FormLabel>

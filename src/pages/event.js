@@ -287,7 +287,7 @@ const EventList = ({ events, isLoading, error, dateRange, onEventClick }) => {
     }
     return (
       <Box
-          key={`${event.id}-${event.occurrence_id}`} // <-- GANTI event.id → event.event_id
+          key={`${event.id}-${event.occurrence_id}`}
           bg="white"
           p={4}
           mb={4}
@@ -333,20 +333,16 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
   const toast = useToast();
   const router = useRouter();
 
-  // Di dalam EventDetailModal
   const canEdit = (() => {
     if (!userRole || !event) return false;
 
     const role = userRole.toString().toLowerCase().replace(/\s+/g, "");
 
-    // Super Admin & Sekjen Lembaga → bisa edit semua
     if (role === "superadmin" || role === "sekjenlembaga") {
       return true;
     }
 
-    // Admin per wilayah → hanya bisa edit event di wilayahnya sendiri
     if (role === "admin") {
-      // Ambil area user dari token (paling akurat)
       let userArea = null;
       try {
         const token = localStorage.getItem("token");
@@ -358,7 +354,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
         console.error("Gagal decode token:", e);
       }
 
-      // Jika token tidak ada area, coba dari localStorage
       if (!userArea) {
         const userStr = localStorage.getItem("user");
         if (userStr) {
@@ -373,7 +368,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
         return false;
       }
 
-      // === INI YANG BARU: AMBIL AREA EVENT DARI FIELD YANG PASTI ADA ===
       const eventArea = event.wilayahLabel?.includes("Wilayah") 
         ? "Korwil_" + event.wilayahLabel.split(" ")[1] 
         : event.area || 
@@ -489,17 +483,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
             )}
           </VStack>
         </ModalBody>
-        <ModalFooter>
-          <Flex w="100%" justify="space-between">
-            {/* <Button
-              colorScheme="red"
-              leftIcon={<FiTrash />}
-              onClick={() => onDelete(event)}
-            >
-              Hapus
-            </Button> */}
-          </Flex>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   );
@@ -510,11 +493,10 @@ const EventForm = ({
   isSubmitting, previewImage, setPreviewImage, cropperRef,
   provinces, cities, fotangs, allFotangs, institutions,
   isProvincesLoading, isCitiesLoading, isFotangsLoading, isInstitutionsLoading,
-  title, filteredJangkauanOptions, setFormData, userArea, eventCategory // ← HANYA eventCategory
+  title, filteredJangkauanOptions, setFormData, userArea, eventCategory
 }) => {
-  const isInternal = eventCategory === "Internal"; // ✅ GUNAKAN eventCategory
-  const isExternal = eventCategory === "External"; // ✅ GUNAKAN eventCategory
-  // Cities untuk external location
+  const isInternal = eventCategory === "Internal";
+  const isExternal = eventCategory === "External";
   const {
     data: citiesForExternalRaw = [],
     isLoading: isCitiesForExternalLoading
@@ -531,7 +513,6 @@ const EventForm = ({
         <ModalBody>
           <form id={title.toLowerCase().replace(" ", "-") + "-form"} onSubmit={onSubmit}>
             <VStack spacing={6} align="stretch">
-              {/* Nama Kegiatan */}
               <HStack spacing={4}>
                 <FormControl isRequired flex={1}>
                   <FormLabel>Nama Kegiatan</FormLabel>
@@ -544,7 +525,6 @@ const EventForm = ({
                   </FormControl>
                 )}
               </HStack>
-              {/* Tanggal */}
               <HStack spacing={4}>
                 <FormControl isRequired flex={1}>
                   <FormLabel>Tanggal Mulai</FormLabel>
@@ -555,7 +535,6 @@ const EventForm = ({
                   <Input type="datetime-local" name="greg_end_date" value={formData.greg_end_date || ""} onChange={handleChange} />
                 </FormControl>
               </HStack>
-              {/* EXTERNAL: Apakah di Vihara? */}
               {isExternal && (
                 <FormControl isRequired>
                   <FormLabel>Apakah kegiatan di vihara / fotang?</FormLabel>
@@ -592,7 +571,6 @@ const EventForm = ({
                   </RadioGroup>
                 </FormControl>
               )}
-              {/* WILAYAH */}
               <FormControl isRequired>
                 <FormLabel>Wilayah</FormLabel>
                 <Select
@@ -606,7 +584,6 @@ const EventForm = ({
                   ))}
                 </Select>
               </FormControl>
-              {/* VIHARA/FOTANG - Internal atau External + di vihara */}
               {(isInternal || (isExternal && formData.is_in_fotang)) && formData.area && (
                 <>
                   <HStack spacing={4}>
@@ -681,7 +658,6 @@ const EventForm = ({
                   </FormControl>
                 </>
               )}
-              {/* EXTERNAL + TIDAK DI VIHARA: Lokasi Manual */}
               {isExternal && formData.is_in_fotang === false && formData.area && (
                 <>
                   <HStack spacing={4}>
@@ -739,7 +715,6 @@ const EventForm = ({
                   </FormControl>
                 </>
               )}
-              {/* Lembaga (External Only) */}
               {isExternal && (
                 <FormControl isRequired>
                   <FormLabel>Lembaga</FormLabel>
@@ -755,7 +730,6 @@ const EventForm = ({
                   </Select>
                 </FormControl>
               )}
-              {/* ✅ JENIS KEGIATAN - SESUAI TAB AKTIF */}
               <FormControl isRequired>
                 <FormLabel>Jenis Kegiatan</FormLabel>
                 <Select
@@ -780,7 +754,6 @@ const EventForm = ({
                   )}
                 </Select>
               </FormControl>
-              {/* Lunar & Berulang (Internal Only) */}
               {isInternal && (
                 <>
                   <HStack spacing={4}>
@@ -820,7 +793,6 @@ const EventForm = ({
                   </FormControl>
                 </>
               )}
-              {/* Deskripsi & Poster */}
               <FormControl>
                 <FormLabel>Deskripsi (Opsional)</FormLabel>
                 <Textarea name="description" value={formData.description || ""} onChange={handleChange} />
@@ -885,12 +857,9 @@ export default function Event() {
   const toast = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
-  // === MODAL STATES ===
   const { isOpen: isDetailOpen, onOpen: onDetailOpen, onClose: onDetailClose } = useDisclosure();
   const { isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose } = useDisclosure();
-  // const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
-  // === APP STATES ===
   const [eventCategory, setEventCategory] = useState("Internal");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [dateRange, setDateRange] = useState(() => {
@@ -913,7 +882,6 @@ export default function Event() {
   const { isOpen: isReportOpen, onOpen: onReportOpen, onClose: onReportClose } = useDisclosure();
   const [selectedReportFields, setSelectedReportFields] = useState([]);
   const [reportExportFormat, setReportExportFormat] = useState("pdf");
-  // Daftar field yang bisa dipilih
   const EVENT_REPORT_FIELDS = useMemo(() => {
     const baseFields = [
       { key: "name", label: "Nama Kegiatan" },
@@ -931,7 +899,6 @@ export default function Event() {
     }
     return baseFields;
   }, [eventCategory]);
-  // Load font Mandarin (sama kayak report.js)
   const [mandarinFontBase64, setMandarinFontBase64] = useState("");
   const [mandarinFontLoaded, setMandarinFontLoaded] = useState(false);
   useEffect(() => {
@@ -949,33 +916,30 @@ export default function Event() {
       })
       .catch(() => console.warn("Font Mandarin gagal dimuat"));
   }, [mandarinFontLoaded, mandarinFontBase64]);
-  // event.js - PERBAIKI INVALIDATION
+
   const handleFormSuccess = useCallback(async (data) => {
     console.log("✅ Event created/updated:", data);
-   
-    try {
-      // ✅ INVALIDATE QUERIES
-      await queryClient.invalidateQueries({
-        queryKey: ['events-final-v3'],
-        predicate: (query) => query.queryKey[0] === 'events-final-v3'
-      });
-     
-      // ✅ REFETCH DAN TUNGGU SAMPAI SELESAI
-      console.log("🔄 Starting refetch...");
-      await queryClient.refetchQueries({
-        queryKey: ['events-final-v3'],
-        type: 'active'
-      });
-     
-      // ✅ CEK APAKAH DATA BARU SUDAH MUNCUL
-      const newEvents = queryClient.getQueryData(['events-final-v3']) || [];
-      console.log("✅ Refetch completed! New events count:", newEvents.length);
-     
-    } catch (error) {
-      console.error("❌ Refetch failed:", error);
-    }
+    
+      try {
+        await queryClient.invalidateQueries({
+          queryKey: ['events-final-v3'],
+          predicate: (query) => query.queryKey[0] === 'events-final-v3'
+        });
+      
+        console.log("🔄 Starting refetch...");
+        await queryClient.refetchQueries({
+          queryKey: ['events-final-v3'],
+          type: 'active'
+        });
+      
+        const newEvents = queryClient.getQueryData(['events-final-v3']) || [];
+        console.log("✅ Refetch completed! New events count:", newEvents.length);
+      
+      } catch (error) {
+        console.error("❌ Refetch failed:", error);
+      }
   }, [queryClient, toast]);
-  // === USER ROLE & AREA ===
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -990,13 +954,13 @@ export default function Event() {
       }
     }
   }, []);
-  // === JANGKAUAN OPTIONS BERDASARKAN ROLE ===
+  
   const filteredJangkauanOptions = useMemo(() => {
     if (isNationalRole(userRole)) return jangkauanOptions;
     if (!userArea) return [];
     return jangkauanOptions.filter(o => o.value === userArea);
   }, [userRole, userArea]);
-  // === FORM & IMAGE ===
+
   const {
     image,
     setImage,
@@ -1006,7 +970,7 @@ export default function Event() {
     cropperRef,
     handleImageChange
   } = useImageUpload();
-  // PASS setImage & setPreviewImage ke useEventForm
+
   const {
     formData,
     setFormData,
@@ -1047,7 +1011,7 @@ export default function Event() {
     onSuccessCallback: handleFormSuccess
   });
   const deleteMutation = useDeleteEvent();
-  // === FILTERS ===
+
   const {
     filterOpen, setFilterOpen,
     eventTypeFilter, areaFilter, provinceFilter, cityFilter, isRecurringFilter, institutionFilter,
@@ -1065,13 +1029,10 @@ export default function Event() {
     applyFilters,
     clearFilters,
   } = useEventFilter();
-  // === DATA FETCHING ===
   const { data: provincesRaw = [], isLoading: isProvincesLoading } = useFetchProvinces();
   const provinces = Array.isArray(provincesRaw) ? provincesRaw : (provincesRaw.data || []);
-  // 2. Cities → tetap fetch berdasarkan provinceId (untuk dropdown)
   const { data: citiesRaw = [], isLoading: isCitiesLoading } = useFetchCities(formData.provinceId || null);
   const cities = Array.isArray(citiesRaw) ? citiesRaw : (citiesRaw.data || []);
-  // 3. FOTANG → FETCH SEMUA SEKALI
   const { data: allFotangsRaw = [], isLoading: isAllFotangsLoading } = useFetchFotang({ limit: 1000 });
   const allFotangs = (allFotangsRaw?.data || []).map(f => ({
     id: f.fotang_id,
@@ -1083,7 +1044,6 @@ export default function Event() {
     city_name: f.locality?.district?.city?.name || "-",
     area: f.area || null,
   })).filter(f => f.area);
-  // === FILTERED FOTANG LIST ===
   const filteredFotangs = useMemo(() => {
     return allFotangs.filter(f => {
       if (formData.area && f.area !== formData.area) return false;
@@ -1092,7 +1052,6 @@ export default function Event() {
       return true;
     });
   }, [allFotangs, formData.area, formData.provinceId, formData.cityId]);
-  // 4. Institutions
   const { data: institutionsRaw = [], isLoading: isInstitutionsLoading } = useFetchInstitution({ limit: 1000 });
   const institutions = (institutionsRaw?.data || []).map(i => ({
     id: i.institution_id,
@@ -1108,12 +1067,9 @@ export default function Event() {
   const { data: events = [], isLoading, error, refetch } = useFetchEvents({
     category: eventCategory,
     event_type: eventTypeFilter.length > 0 ? eventTypeFilter : undefined,
-    // LOGIKA BARU: Hanya kirim area kalau TIDAK ADA filter provinsi/kota
-    // Ganti bagian ini di useFetchEvents
     area: isNationalRole(userRole)
       ? (areaFilter.length > 0 ? areaFilter : undefined)
       : userArea,
-    // Kirim provinsi & kota seperti biasa
     province_id: provinceFilter.length > 0 ? provinceFilter : undefined,
     city_id: cityFilter.length > 0 ? cityFilter : undefined,
     institution_id: eventCategory === "External" && institutionFilter.length > 0
@@ -1123,7 +1079,6 @@ export default function Event() {
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
   });
-    // Query khusus untuk report (mengikuti reportDateRange)
   const {
     data: eventsForReport = [],
     isLoading: isReportLoading,
@@ -1142,34 +1097,31 @@ export default function Event() {
     is_recurring: isRecurringFilter !== null ? isRecurringFilter : undefined,
     startDate: reportDateRange.startDate,
     endDate: reportDateRange.endDate,
-    enabled: isReportOpen // hanya jalan saat drawer report dibuka
+    enabled: isReportDateRangeOpen
   });
-  // Auto refetch saat reportDateRange berubah
   useEffect(() => {
     if (isReportOpen) {
       refetchReport();
     }
   }, [reportDateRange, isReportOpen, refetchReport]);
-  // === VALID & SORTED EVENTS ===
   const validEvents = useMemo(() => {
     return events
       .filter(e => e.rawDate && isValid(new Date(e.rawDate)))
       .sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate))
       .filter(e => e.id && e.date && e.day && e.name);
   }, [events]);
-  // === REFETCH ON FILTER/DATE CHANGE ===
   useEffect(() => {
     refetch();
   }, [
     dateRange,
     eventTypeFilter,
     areaFilter,
-    provinceFilter, // ← TAMBAH INI
-    cityFilter, // ← DAN INI
+    provinceFilter, 
+    cityFilter,
     isRecurringFilter,
     refetch
   ]);
-  // === ERROR TOAST ===
+
   useEffect(() => {
     if (error) {
       toast({
@@ -1182,24 +1134,23 @@ export default function Event() {
       refetch();
     }
   }, [error, refetch, toast]);
-  // === LOCATION HANDLERS ===
+
   const handleAreaChange = useCallback((e) => {
     const selectedArea = e.target.value;
     const isExternalNonFotang = formData.category === "External" && formData.is_in_fotang === false;
     setFormData(prev => ({
       ...prev,
-      // Reset field yang nggak dipakai
       provinceId: "",
       cityId: "",
       fotangId: "",
       external_provinceId: "",
       external_cityId: "",
       location_name: "",
-      // Atur area sesuai kondisi
       area: isExternalNonFotang ? prev.area || selectedArea : selectedArea,
       external_area: isExternalNonFotang ? selectedArea : prev.external_area || selectedArea,
     }));
   }, [setFormData]);
+
   const handleFotangChange = useCallback((e) => {
     const fotangId = e.target.value;
     const fotang = allFotangs.find(f => f.id === parseInt(fotangId));
@@ -1211,6 +1162,7 @@ export default function Event() {
       location_name: "",
     }));
   }, [allFotangs, setFormData]);
+
   const handleProvinceChange = useCallback((e) => {
     const provinceId = e.target.value;
     setFormData(prev => ({
@@ -1219,25 +1171,26 @@ export default function Event() {
       cityId: "",
     }));
   }, [setFormData]);
+
   const handleCityChange = useCallback((e) => {
     const cityId = e.target.value;
     setFormData(prev => ({ ...prev, cityId }));
   }, [setFormData]);
-  // === EDIT EVENT ===
+  
   const handleEdit = useCallback((event) => {
     const eventId = event.id;
     if (!eventId) {
       toast({ title: "Error", description: "ID event tidak ditemukan", status: "error" });
       return;
     }
-    // Langsung arahkan ke halaman edit baru
     router.push(`/event/editEvent?eventId=${eventId}`);
   }, [router, toast]);
-  // === DELETE EVENT ===
+
   const handleDelete = useCallback((event) => {
     setSelectedEvent(event);
     onConfirmOpen();
   }, [onConfirmOpen]);
+
   const confirmDelete = useCallback(() => {
     if (!selectedEvent?.id) {
       toast({
@@ -1249,21 +1202,14 @@ export default function Event() {
     }
     deleteMutation.mutate(selectedEvent.id, {
       onSuccess: () => {
-        // ✅ TUTUP POPUP DELETE KONFIRMASI
         onConfirmClose();
-       
-        // ✅ REFETCH DATA
         refetch();
-       
-        // ✅ SHOW SUCCESS TOAST
         toast({
           title: "Berhasil",
           description: "Kegiatan berhasil dihapus",
           status: "success",
           duration: 3000
         });
-       
-        // ✅ TUTUP DETAIL MODAL JUGA (opsional, biar user langsung lihat list yang udah update)
         onDetailClose();
       },
       onError: (err) => {
@@ -1277,8 +1223,9 @@ export default function Event() {
       },
     });
   }, [selectedEvent?.id, deleteMutation, onConfirmClose, refetch, toast, onDetailClose]);
+
   const openEventDetail = useCallback(async (event) => {
-    if (!event?.id) { // <-- GANTI event.id → event.event_id
+    if (!event?.id) {
       toast({ title: "Error", description: "ID kegiatan tidak valid", status: "error" });
       return;
     }
@@ -1286,19 +1233,17 @@ export default function Event() {
     setSelectedEvent(null);
     onDetailOpen();
     try {
-      const res = await axiosInstance.get(`/event/${event.id}`); // <-- GANTI event.id
+      const res = await axiosInstance.get(`/event/${event.id}`);
       const data = res.data;
       const occ = data.occurrences?.[0];
       if (!occ) throw new Error("Data tanggal tidak ditemukan");
       const rawDate = new Date(occ.greg_occur_date);
-      // === LOKASI ===
       let displayLocation = "Lokasi Tidak Diketahui";
       if (data.is_in_fotang && data.fotang?.location_name) {
         displayLocation = data.fotang.location_name;
       } else if (!data.is_in_fotang && data.eventLocation?.location_name) {
         displayLocation = data.eventLocation.location_name;
       }
-      // === WILAYAH ===
       let wilayahValue = "";
       if (data.is_in_fotang && data.fotang?.area) {
         wilayahValue = data.fotang.area;
@@ -1311,7 +1256,6 @@ export default function Event() {
         const opt = jangkauanOptions.find(o => o.value === value);
         return opt ? opt.label : "-";
       };
-      // Format tanggal Indonesia lengkap
       const fullIndonesianDate = rawDate.toLocaleDateString("id-ID", {
         weekday: "long",
         day: "numeric",
@@ -1325,8 +1269,8 @@ export default function Event() {
         wilayahLabel: getWilayahLabel(wilayahValue),
         type: data.event_type || "Regular",
         description: data.description || "-",
-        fullDate: fullIndonesianDate, // ← baru: Senin, 17 November 2025
-        time: `${format(rawDate, "HH:mm")} WIB`, // ← baru: 14:00 WIB
+        fullDate: fullIndonesianDate,
+        time: `${format(rawDate, "HH:mm")} WIB`,
         lunar_sui_ci_year: data.lunar_sui_ci_year || "",
         lunar_month: data.lunar_month || "",
         lunar_day: data.lunar_day || "",
@@ -1346,7 +1290,6 @@ export default function Event() {
       setIsDetailLoading(false);
     }
   }, [onDetailOpen, toast]);
-  // === DATE RANGE DISPLAY ===
   const formatDateRange = () => {
     if (!dateRange.startDate || !dateRange.endDate) return "";
     return `${format(dateRange.startDate, "dd-MM-yyyy")} - ${format(dateRange.endDate, "dd-MM-yyyy")}`;
@@ -1360,7 +1303,6 @@ export default function Event() {
       toast({ title: "Pilih minimal satu field", status: "warning" });
       return;
     }
-    // Gunakan data dari query report (sudah difilter sesuai reportDateRange)
     const totalEvents = eventsForReport.length;
 
     if (totalEvents === 0) {
@@ -1393,7 +1335,6 @@ export default function Event() {
               .filter(Boolean).join(" ") || "-";
           case "description": return event.description || "-";
           case "institution":
-            // Coba ambil dari berbagai kemungkinan field yang mungkin ada
             const instName = 
               event.institution?.institution_name ||
               event.institution_name ||
@@ -1444,7 +1385,6 @@ export default function Event() {
     console.log("formData.category:", formData.category);
     console.log("formData.is_in_fotang:", formData.is_in_fotang);
   }, [allFotangs, formData.category, formData.is_in_fotang]);
-  // === RENDER ===
   return (
     <Layout title="Kegiatan" events={validEvents}>
       <Box p={2}>
@@ -1458,7 +1398,6 @@ export default function Event() {
               timeZone: "Asia/Jakarta",
             })}
           </Heading>
-          {/* CATEGORY TABS */}
           <Flex gap={2}>
             {["Internal", "External"].map(cat => (
               <Tag
@@ -1487,7 +1426,6 @@ export default function Event() {
             ))}
           </Flex>
           <Flex gap={2} align="center" flexShrink={0}>
-            {/* FILTER BUTTON - VERSI BARU */}
             <Box position="relative">
               <Button
                 colorScheme="white"
@@ -1517,7 +1455,6 @@ export default function Event() {
                   right={0}
                   mt={2}
                 >
-                  {/* JENIS KEGIATAN */}
                   <FormControl>
                     <Flex justify="space-between" align="center">
                       <FormLabel mb={0} fontSize="sm">Jenis Kegiatan</FormLabel>
@@ -1545,8 +1482,6 @@ export default function Event() {
                       </VStack>
                     </Collapse>
                   </FormControl>
-                  {/* WILAYAH (KORWIL) */}
-                  {/* LOKASI: WILAYAH → PROVINSI → KOTA (CASCADING CHECKBOX - seperti fotang.js) */}
                   <FormControl>
                     <Flex justify="space-between" align="center">
                       <FormLabel mb={0} fontSize="sm">Lokasi</FormLabel>
@@ -1559,7 +1494,6 @@ export default function Event() {
                     </Flex>
                     <Collapse in={isLocationOpen}>
                       <VStack align="start" spacing={3} mt={2}>
-                        {/* === WILAYAH (Korwil) === */}
                         {userRole === "Super Admin" && (
                           <Box w="100%">
                             <FormLabel fontSize="xs" color="gray.600" mb={1}>Wilayah</FormLabel>
@@ -1581,7 +1515,6 @@ export default function Event() {
                             </VStack>
                           </Box>
                         )}
-                        {/* PROVINSI */}
                         {tempAreaFilter.length > 0 && (
                           <Box w="100%">
                             <FormLabel fontSize="xs" color="gray.600" mb={1}>Provinsi</FormLabel>
@@ -1609,7 +1542,6 @@ export default function Event() {
                             </VStack>
                           </Box>
                         )}
-                        {/* KOTA */}
                         {tempProvinceFilter.length > 0 && (
                           <Box w="100%">
                             <FormLabel fontSize="xs" color="gray.600" mb={1}>Kota/Kabupaten</FormLabel>
@@ -1639,7 +1571,6 @@ export default function Event() {
                             </VStack>
                           </Box>
                         )}
-                        {/* Info jika belum pilih wilayah */}
                         {tempAreaFilter.length === 0 && userRole === "Super Admin" && (
                           <Text fontSize="xs" color="gray.500" mt={2}>
                             Pilih wilayah terlebih dahulu untuk melihat provinsi
@@ -1653,7 +1584,6 @@ export default function Event() {
                       </VStack>
                     </Collapse>
                   </FormControl>
-                  {/* LEMBAGA - HANYA EKSTERNAL */}
                   {eventCategory === "External" && (
                     <FormControl>
                       <Flex justify="space-between" align="center">
@@ -1707,7 +1637,6 @@ export default function Event() {
                 </VStack>
               )}
             </Box>
-            {/* TAMBAH KEGIATAN */}
             <HStack spacing={3}>
               <Button leftIcon={<FiDownload />} colorScheme="green" size="sm" onClick={onReportOpen}>
                 Report
@@ -1755,9 +1684,7 @@ export default function Event() {
             </HStack>
           </Flex>
         </Flex>
-        {/* LIST */}
         <EventList events={validEvents} isLoading={isLoading} error={error} onEventClick={openEventDetail} />
-        {/* MODALS */}
         <EventDetailModal
           isOpen={isDetailOpen}
           onClose={onDetailClose}
@@ -1798,41 +1725,9 @@ export default function Event() {
           filteredJangkauanOptions={filteredJangkauanOptions}
           citiesForExternal={citiesForExternal}
           isCitiesForExternalLoading={isCitiesForExternalLoading}
-          eventCategory={eventCategory} // ✅ HANYA INI
-        />
-        {/* <EventForm
-          isOpen={isEditOpen}
-          onClose={onEditClose}
-          onSubmit={(e) => handleSubmit(e, cropperRef.current)}
-          formData={formData}
-          setFormData={setFormData}
-          handleChange={handleChange}
-          handleAreaChange={handleAreaChange}
-          handleFotangChange={handleFotangChange}
-          handleProvinceChange={handleProvinceChange}
-          handleCityChange={handleCityChange}
-          handleIsRecurringChange={handleIsRecurringChange}
-          handleImageChange={handleImageChange}
-          isSubmitting={isSubmitting}
-          isImageLoaded={isImageLoaded}
-          previewImage={previewImage}
-          setPreviewImage={setPreviewImage}
-          cropperRef={cropperRef}
-          provinces={provinces}
-          cities={cities}
-          fotangs={filteredFotangs}
-          allFotangs={allFotangs}
-          institutions={institutions}
-          isProvincesLoading={isProvincesLoading}
-          isCitiesLoading={isCitiesLoading}
-          isFotangsLoading={isAllFotangsLoading}
-          isInstitutionsLoading={isInstitutionsLoading}
-          title="Edit Kegiatan"
-          filteredJangkauanOptions={filteredJangkauanOptions}
-          citiesForExternal={citiesForExternal}
-          isCitiesForExternalLoading={isCitiesForExternalLoading}
           eventCategory={eventCategory}
-        /> */}
+        />
+
         <DeleteConfirmModal
           isOpen={isConfirmOpen}
           onClose={onConfirmClose}
@@ -1840,6 +1735,7 @@ export default function Event() {
           eventName={selectedEvent?.name}
           isDeleting={deleteMutation.isLoading}
         />
+
         <DateRangeModal
           isOpen={isDateRangeOpen}
           onClose={onDateRangeClose}
@@ -1847,7 +1743,7 @@ export default function Event() {
           dateRange={dateRange}
           setDateRange={setDateRange}
         />
-        {/* REPORT DRAWER */}
+        
         <Drawer isOpen={isReportOpen} onClose={onReportClose} size="xl">
           <DrawerOverlay />
           <DrawerContent>
@@ -1859,7 +1755,6 @@ export default function Event() {
             </DrawerHeader>
             <DrawerBody>
               <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={6}>
-                {/* Kolom kiri - Pilih Field */}
                 <GridItem>
                   <Text fontWeight="bold" mb={4} color="blue.600">
                     Pilih Field yang Ingin Ditampilkan
@@ -1874,11 +1769,9 @@ export default function Event() {
                     </VStack>
                   </CheckboxGroup>
                 </GridItem>
-                {/* Kolom kanan - Info + Pilih Tanggal */}
                 <GridItem>
                   <Text fontWeight="bold" mb={4} color="blue.600">Pengaturan Export</Text>
                   <VStack align="stretch" spacing={5}>
-                    {/* Pilih Rentang Tanggal untuk Export */}
                     <Box>
                       <Text fontSize="sm" fontWeight="medium" mb={2}>Rentang Tanggal Export</Text>
                       <InputGroup size="sm">
@@ -1893,7 +1786,6 @@ export default function Event() {
                         </InputRightElement>
                       </InputGroup>
                     </Box>
-                    {/* Total kegiatan sesuai rentang yang dipilih */}
                     <Box>
                       <Text fontSize="sm" color="gray.600">
                         Data akan diekspor sesuai rentang tanggal di atas.

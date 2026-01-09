@@ -1,4 +1,3 @@
-// src/pages/dianchuanshi/editDianChuanShi.js
 import {
   Box, VStack, Text, FormControl, FormLabel, Input, Select, Flex, Grid, GridItem,
   Button, Heading, useToast, Spinner, Modal, ModalOverlay, ModalContent,
@@ -34,7 +33,6 @@ export default function EditDianChuanShi() {
 
   const [loading, setLoading] = useState(true);
 
-  // === AUTH ===
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -48,7 +46,6 @@ export default function EditDianChuanShi() {
     }
   }, [router]);
 
-  // === FETCH DATA ===
   useEffect(() => {
     if (!dianChuanShiId) return;
 
@@ -82,7 +79,6 @@ export default function EditDianChuanShi() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // === PATCH UPDATE ===
   const updateMutation = useMutation({
     mutationFn: async (payload) => {
       await axiosInstance.patch(`/dianchuanshi/${dianChuanShiId}`, payload);
@@ -156,7 +152,6 @@ export default function EditDianChuanShi() {
         <VStack spacing={6} align="stretch">
           <Heading size="lg">Edit Pandita</Heading>
 
-          {/* NAMA INDONESIA & MANDARIN */}
           <Grid templateColumns="repeat(2, 1fr)" gap={4}>
             <FormControl>
               <FormLabel fontWeight="bold">Nama Indonesia</FormLabel>
@@ -172,7 +167,6 @@ export default function EditDianChuanShi() {
             </FormControl>
           </Grid>
 
-          {/* KORDA WILAYAH */}
           <FormControl>
             <FormLabel fontWeight="bold">Wilayah</FormLabel>
             <Select
@@ -188,7 +182,6 @@ export default function EditDianChuanShi() {
             </Select>
           </FormControl>
 
-          {/* STATUS FUWUYUAN */}
           <FormControl>
             <FormLabel fontWeight="bold">Status Fuwuyuan</FormLabel>
             <Select
@@ -201,7 +194,6 @@ export default function EditDianChuanShi() {
             </Select>
           </FormControl>
 
-          {/* LING MING TIME — BULAN & TAHUN */}
           <FormControl>
             <FormLabel fontWeight="bold">Waktu Ling Ming</FormLabel>
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
@@ -233,7 +225,6 @@ export default function EditDianChuanShi() {
             </Grid>
           </FormControl>
 
-          {/* TOMBOL AKSI */}
           <Flex gap={3} mt={6}>
             <Button colorScheme="red" w="120px" onClick={handleDelete}>Hapus</Button>
             <Button colorScheme="gray" flex="1" onClick={() => router.push("/dianchuanshi")}>Batal</Button>
@@ -249,7 +240,6 @@ export default function EditDianChuanShi() {
         </VStack>
       </Box>
 
-      {/* MODAL HAPUS */}
       <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
         <ModalOverlay />
         <ModalContent>

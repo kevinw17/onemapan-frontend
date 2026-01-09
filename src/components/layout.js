@@ -18,7 +18,6 @@ import { isAuthenticated } from "@/lib/auth/checkAuth";
 import { useFetchEvents } from "@/features/event/useFetchEvents";
 import styles from "./css/event/eventCalendar.module.css";
 
-// NAV ITEM
 const NavItem = ({ item, isActive, isCollapsed }) => (
   <Tooltip label={isCollapsed ? item.label : undefined} placement="right" hasArrow>
     <Box
@@ -51,7 +50,6 @@ const NavItem = ({ item, isActive, isCollapsed }) => (
   </Tooltip>
 );
 
-// HEADER — DENGAN LOGIKA "Tambah manual" / "Edit manual"
 const Header = ({ title, showBackButton, backPath, router, username, handleLogout }) => {
   const isEditPage = useMemo(() => {
     const editPaths = [
@@ -105,7 +103,6 @@ const Header = ({ title, showBackButton, backPath, router, username, handleLogou
   );
 };
 
-// EVENT CALENDAR
 const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setSelectedEvent, overrideEvents }) => {
   const displayEvents = overrideEvents || events;
 
@@ -113,11 +110,9 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
     return displayEvents.map(event => {
       const name = event.event_name || event.name || "Tanpa Nama";
 
-      // Tanggal
       const rawDate = event.rawDate || event.date || event.greg_occur_date || event.occurrences?.[0]?.greg_occur_date;
       const dateObj = rawDate ? new Date(rawDate) : null;
 
-      // === LOKASI ===
       let location = "Lokasi Tidak Diketahui";
       if (event.fotang?.location_name) {
         location = event.fotang.location_name;
@@ -129,7 +124,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
 
       const category = event.category || "Internal";
 
-      // Tipe
       const rawType = event.event_type || event.type || "Regular";
       const type = rawType === "Hari_Besar" ? "Hari Besar" 
                 : rawType === "Lembaga" ? "Lembaga" 
@@ -158,7 +152,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
     }).filter(e => e.dateRange.length > 0);
   }, [displayEvents]);
 
-  // Sisanya tetap sama
   const getEventsForDate = (selectedDate) => {
     return normalizedEvents
       .filter(event => event.dateRange.some(d => 
@@ -233,7 +226,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
                   {event.location}
                 </Text>
                 <HStack spacing={2} mt={2}>
-                  {/* CHIP CATEGORY: INTERNAL / EKSTERNAL — SEKARANG BENAR! */}
                   <Tag 
                     size="sm" 
                     colorScheme={event.category === "Internal" ? "green" : "orange"}
@@ -242,7 +234,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
                     {event.category === "Internal" ? "Internal" : "External"}
                   </Tag>
 
-                  {/* CHIP TIPE */}
                   <Tag 
                     size="sm" 
                     colorScheme={
@@ -253,7 +244,6 @@ const EventCalendar = ({ date, setDate, viewMode, setViewMode, events = [], setS
                     {event.type}
                   </Tag>
 
-                  {/* CHIP BERULANG */}
                   {event.is_recurring && (
                     <Tag size="sm" colorScheme="teal">Berulang</Tag>
                   )}
@@ -289,7 +279,6 @@ export default function Layout({ children, title, showCalendar = false, calendar
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [viewMode, setViewMode] = useState("month");
 
-  // SIDEBAR COLLAPSE: PERSISTENT
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -358,7 +347,6 @@ export default function Layout({ children, title, showCalendar = false, calendar
     return "/";
   }, [router.pathname]);
 
-  // Di dalam useEffect yang baca user
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const userStr = localStorage.getItem("user");
@@ -417,7 +405,6 @@ export default function Layout({ children, title, showCalendar = false, calendar
           overflow="hidden"
         >
           <Flex direction="column" h="full" justify="space-between">
-            {/* MAIN CONTENT */}
             <Box p={isSidebarCollapsed ? 3 : 6} overflowY="auto" flex="1">
               <Box mb={6} textAlign="center">
                 <Image
@@ -430,12 +417,10 @@ export default function Layout({ children, title, showCalendar = false, calendar
               </Box>
 
               <Flex direction="column" gap={2}>
-                {/* DASHBOARD, KEGIATAN, LAPORAN */}
                 {navItems.slice(0, 3).map((item) => (
                   <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                 ))}
 
-                {/* NON-COLLAPSED: KELOMPOK */}
                 {!isSidebarCollapsed && (
                   <>
                     <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Umat</Text>
@@ -468,14 +453,12 @@ export default function Layout({ children, title, showCalendar = false, calendar
                   </>
                 )}
 
-                {/* COLLAPSED: SEMUA NAV */}
                 {isSidebarCollapsed && navItems.slice(3).map((item) => (
                   <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                 ))}
               </Flex>
             </Box>
 
-            {/* TOGGLE BUTTON - ALWAYS AT BOTTOM */}
             <Box
               p={isSidebarCollapsed ? 2 : 3}
               display="flex"

@@ -1,4 +1,3 @@
-// src/pages/institution/editInstitution.js
 import {
   Box, Button, FormControl, FormLabel, Heading,
   Input, VStack, Grid, GridItem, useToast, Text,
@@ -27,7 +26,6 @@ export default function EditInstitutionPage() {
   const [initialData, setInitialData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // === LOAD DATA ===
   useEffect(() => {
     if (!institutionId) return;
 
@@ -70,7 +68,6 @@ export default function EditInstitutionPage() {
     fetchData();
   }, [institutionId, router, toast]);
 
-  // === SUBMIT EDIT ===
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
       const payload = {
@@ -102,7 +99,6 @@ export default function EditInstitutionPage() {
     }
   };
 
-  // === HAPUS DENGAN MODAL ===
   const confirmDelete = async () => {
     try {
       await axiosInstance.delete(`/institution/${institutionId}`);
@@ -160,7 +156,6 @@ export default function EditInstitutionPage() {
               <VStack spacing={6} align="stretch">
                 <Heading size="lg">Edit Lembaga</Heading>
 
-                {/* NAMA LEMBAGA */}
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Nama Lembaga</FormLabel>
                   <Input
@@ -174,7 +169,6 @@ export default function EditInstitutionPage() {
                   )}
                 </FormControl>
 
-                {/* PIMPINAN & SEKRETARIS JENDERAL */}
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                   <FormControl isRequired>
                     <FormLabel fontWeight="bold">Pimpinan</FormLabel>
@@ -203,7 +197,6 @@ export default function EditInstitutionPage() {
                   </FormControl>
                 </Grid>
 
-                {/* TOMBOL AKSI — SAMA PERSIS DENGAN editFotang.js */}
                 <Flex gap={3} mt={6}>
                   <Button
                     colorScheme="red"
@@ -238,7 +231,6 @@ export default function EditInstitutionPage() {
         </Formik>
       </Box>
 
-      {/* MODAL KONFIRMASI HAPUS */}
       <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
         <ModalOverlay />
         <ModalContent>

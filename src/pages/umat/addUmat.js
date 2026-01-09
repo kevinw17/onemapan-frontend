@@ -12,7 +12,6 @@ import { Form, Formik } from "formik";
 import * as Yup from "yup";
 import { useFetchQiudaos } from "@/features/qiudao/useFetchQiudaos";
 import { AsyncSelect } from "chakra-react-select";
-import { isNationalRole } from "@/lib/roleUtils";
 import { jwtDecode } from "jwt-decode";
 
 const WILAYAH_OPTIONS = [
@@ -37,7 +36,6 @@ const loadQiuDaoOptions = async (inputValue, callback, toast, area = null) => {
         page: 1,
         };
 
-        // KALAU ADA AREA, TAMBAHKAN FILTER AREA KE API
         if (area) {
         params.area = area;
         }
@@ -131,7 +129,6 @@ export default function AddUmatPage() {
     const toast = useToast();
     const router = useRouter();
 
-    // Filter berdasarkan wilayah aktif
     const filteredQiudaos = useMemo(() => {
         const activeArea = isSuperAdmin ? selectedWilayah : userArea;
 
@@ -142,7 +139,6 @@ export default function AddUmatPage() {
         return allQiudaos.filter(q => q.qiu_dao_location?.area === activeArea);
     }, [allQiudaos, isSuperAdmin, selectedWilayah, userArea]);
 
-    // Cek role
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (token) {
@@ -525,11 +521,9 @@ export default function AddUmatPage() {
                             </FormControl>
                             )}
 
-                            {/* QIUDAO SEARCH */}
                             <FormControl isRequired isInvalid={touched.qiu_dao_id && errors.qiu_dao_id}>
                             <FormLabel>Nama QiuDao (Indonesia atau Mandarin)</FormLabel>
 
-                            {/* Pesan kalau belum ada data */}
                             {filteredQiudaos.length === 0 && (
                                 <Text color="orange.500" fontStyle="italic" mb={2}>
                                 {isSuperAdmin
@@ -862,7 +856,6 @@ export default function AddUmatPage() {
                             <Input name="ktp_postal_code" value={values.ktp_postal_code} onChange={handleChange} />
                         </FormControl>
 
-                        {/* Konfirmasi alamat domisili */}
                         <FormControl isRequired w="100%" isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Apakah alamat domisili saat ini sama dengan alamat sesuai identitas?</FormLabel>
                             <RadioGroup

@@ -1,4 +1,3 @@
-// src/pages/institution/addInstitution.js
 import {
   Box, Button, FormControl, FormLabel, Heading,
   Input, VStack, Grid, GridItem, useToast, Text
@@ -22,7 +21,6 @@ export default function AddInstitutionPage() {
   const { data: institutions, isLoading } = useFetchInstitution({ limit: 1000 });
   const [nextId, setNextId] = useState(null);
 
-  // === HITUNG ID TERAKHIR + 1 ===
   useEffect(() => {
     if (institutions?.data) {
       const ids = institutions.data
@@ -47,7 +45,7 @@ export default function AddInstitutionPage() {
 
     try {
       const payload = {
-        institution_id: nextId, // KIRIM ID SECARA MANUAL
+        institution_id: nextId,
         institution_name: values.institution_name,
         institution_leader: values.institution_leader,
         institution_secretary_general: values.institution_secretary_general || null,
@@ -106,7 +104,6 @@ export default function AddInstitutionPage() {
               <VStack spacing={6} align="stretch">
                 <Heading size="lg">Tambah Lembaga</Heading>
 
-                {/* NAMA LEMBAGA */}
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Nama Lembaga</FormLabel>
                   <Input
@@ -120,7 +117,6 @@ export default function AddInstitutionPage() {
                   )}
                 </FormControl>
 
-                {/* PIMPINAN & SEKRETARIS */}
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                   <FormControl isRequired>
                     <FormLabel fontWeight="bold">Pimpinan</FormLabel>
@@ -146,7 +142,6 @@ export default function AddInstitutionPage() {
                   </FormControl>
                 </Grid>
 
-                {/* TOMBOL SIMPAN */}
                 <Button
                   type="submit"
                   colorScheme="green"

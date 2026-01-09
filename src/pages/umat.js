@@ -121,7 +121,7 @@ export default function UmatPage() {
     gender: isAdminMode ? genderFilter : undefined,
     blood_type: isAdminMode ? bloodTypeFilter : undefined,
     userId: isPersonalMode ? userId : undefined,
-    umatScope: isAdminMode ? umatScope : undefined, // kirim scope untuk filter di backend
+    umatScope: isAdminMode ? umatScope : undefined,
   }), [page, limit, searchQuery, searchField, jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter, userId, isAdminMode, isPersonalMode, umatScope]);
 
   const { data: users, isLoading, refetch: refetchUsers } = useFetchUsers(queryParams);
@@ -155,7 +155,6 @@ export default function UmatPage() {
             setUserId(decodedUserId);
           }
 
-          // SET SEMUA PERMISSION DI SINI
           const create = !!perms.umat?.create;
           const update = !!perms.umat?.update;
           const del = !!perms.umat?.delete;
@@ -167,7 +166,6 @@ export default function UmatPage() {
           setUmatScope(scope);
           setIsAdminMode(create || update || del);
 
-          // DEBUG — LIHAT DI CONSOLE
           console.log("=== DEBUG UMAT PAGE ===");
           console.log("Token ditemukan:", !!token);
           console.log("Permissions umat:", perms.umat);
@@ -968,7 +966,6 @@ export default function UmatPage() {
             </Box>
           )}
 
-          {/* Dropdown search yang sudah dibersihkan */}
           {isAdminMode && (
             <Select size="xs" width="180px" value={searchField} onChange={(e) => setSearchField(e.target.value)}>
               <option value="full_name">Nama Lengkap</option>

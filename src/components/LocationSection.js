@@ -134,18 +134,6 @@ export default function LocationSection({ location = {}, onChange, hideMandarinN
                 />
             </Box>
 
-            {/* {!hideMandarinName && (
-                <GridItem>
-                    <Box w="100%">
-                        <Text fontWeight="bold" mb={1}>{labels.location_mandarin_name}</Text>
-                        <Input
-                            value={location.location_mandarin_name || ""}
-                            onChange={(e) => onChange({ ...location, location_mandarin_name: e.target.value })}
-                        />
-                    </Box>
-                </GridItem>
-            )} */}
-
             <Grid templateColumns="repeat(2, 1fr)" gap={4} w="100%">
                 <GridItem>
                     <Box w="100%">

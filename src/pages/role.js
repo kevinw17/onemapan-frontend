@@ -31,18 +31,12 @@ import {
 import Layout from "@/components/layout";
 import { useRoleManagement } from "@/features/role/useRoleManagement";
 
-// Scope yang dipakai: nasional, wilayah, fotang (untuk Admin Vihara)
 const areaOptions = ["nasional", "wilayah", "fotang", "self"];
-
-// HANYA 2 MODUL YANG PERLU DIATUR: umat & qiudao
-// KEGIATAN DIHAPUS → semua orang otomatis bisa lihat kegiatan
 const permissionOptions = [
-  // UMAT
   { mod: "umat", action: "create", label: "Tambah Umat" },
   { mod: "umat", action: "read", label: "Lihat Daftar Umat" },
   { mod: "umat", action: "update", label: "Edit Umat" },
   { mod: "umat", action: "delete", label: "Hapus Umat" },
-  // QIUDAO
   { mod: "qiudao", action: "create", label: "Tambah Qiudao" },
   { mod: "qiudao", action: "read", label: "Lihat Daftar Qiudao" },
   { mod: "qiudao", action: "update", label: "Edit Qiudao" },
@@ -127,10 +121,8 @@ const RolePage = () => {
 
     setIsSaving(true);
     try {
-      // INI YANG BARU & BENAR
       const permissions = {};
 
-      // Inisialisasi semua modul dengan scope default dan semua action false
       validModules.forEach((mod) => {
         permissions[mod] = {
           create: false,
@@ -141,7 +133,6 @@ const RolePage = () => {
         };
       });
 
-      // Baru set true untuk yang dipilih
       for (const perm of selectedRole.permissions) {
         const [mod, action] = perm.split("_");
         if (validModules.includes(mod) && permissions[mod]) {
@@ -334,7 +325,6 @@ const RolePage = () => {
           </Table>
         )}
 
-        {/* Modal Tambah/Edit Role */}
         <Modal isOpen={isOpen} onClose={onClose} size="xl">
           <ModalOverlay />
           <ModalContent>
@@ -409,7 +399,6 @@ const RolePage = () => {
           </ModalContent>
         </Modal>
 
-        {/* Modal Hapus */}
         <Modal isOpen={isDeleteOpen} onClose={onDeleteClose} size="sm">
           <ModalOverlay />
           <ModalContent>
@@ -430,7 +419,6 @@ const RolePage = () => {
           </ModalContent>
         </Modal>
 
-        {/* Modal Assign Role */}
         <Modal isOpen={isAssignOpen} onClose={onAssignClose} size="md">
           <ModalOverlay />
           <ModalContent>

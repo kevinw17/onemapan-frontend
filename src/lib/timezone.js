@@ -1,7 +1,5 @@
-// src/lib/timezone.js
 export const WIB_TIMEZONE = 'Asia/Jakarta';
 
-// Convert ISO string ke WIB datetime-local format
 export const toWIBLocalString = (isoString) => {
     if (!isoString) return '';
     
@@ -9,7 +7,6 @@ export const toWIBLocalString = (isoString) => {
         const date = new Date(isoString);
         if (isNaN(date.getTime())) return '';
         
-        // Set timezone ke WIB
         return date.toLocaleString('sv-SE', { 
         timeZone: WIB_TIMEZONE 
         }).replace(' ', 'T');
@@ -19,15 +16,12 @@ export const toWIBLocalString = (isoString) => {
     }
 };
 
-// Convert datetime-local ke WIB ISO string (untuk kirim ke server)
 export const fromLocalToWIBISO = (localString) => {
     if (!localString) return null;
     
     try {
-        // Parse datetime-local (tanpa timezone)
         const date = new Date(localString);
         
-        // Buat ISO string dengan WIB timezone
         const wibDate = new Date(date.toLocaleString('en-US', { 
         timeZone: WIB_TIMEZONE 
         }));
@@ -39,7 +33,6 @@ export const fromLocalToWIBISO = (localString) => {
     }
 };
 
-// Format untuk display (HH:mm WIB)
 export const formatWIBTime = (isoString) => {
     if (!isoString) return '';
     

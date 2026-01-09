@@ -1,4 +1,3 @@
-// src/features/qiudao/useFetchQiudaos.js
 import { useQuery } from "@tanstack/react-query";
 import { axiosInstance } from "@/lib/axios";
 
@@ -42,13 +41,11 @@ export const useFetchQiudaos = ({
         bao_shi_qd_name, bao_shi_qd_mandarin_name,
       });
 
-      // 1. Basic search
       if (search) {
         params.append("search", search);
         params.append("searchField", searchField);
       }
 
-      // 2. Multiple filters → pakai [] seperti useFetchUsers
       if (Array.isArray(location_name) && location_name.length > 0) {
         location_name.forEach(val => params.append("location_name[]", val));
       }

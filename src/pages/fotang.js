@@ -1,4 +1,3 @@
-// pages/fotang.js
 import Layout from "@/components/layout";
 import {
   Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Spinner, Flex, Text, Button,
@@ -16,31 +15,24 @@ export default function FotangPage() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(null);
   const router = useRouter();
 
-  // === FILTER STATE ===
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Temp filters (untuk modal)
   const [tempAreaFilter, setTempAreaFilter] = useState([]);
   const [tempProvinceFilter, setTempProvinceFilter] = useState([]);
   const [tempCityFilter, setTempCityFilter] = useState([]);
   const [tempDistrictFilter, setTempDistrictFilter] = useState([]);
   const [tempLocalityFilter, setTempLocalityFilter] = useState([]);
-
-  // Applied filters
   const [areaFilter, setAreaFilter] = useState([]);
   const [provinceFilter, setProvinceFilter] = useState([]);
   const [cityFilter, setCityFilter] = useState([]);
   const [districtFilter, setDistrictFilter] = useState([]);
   const [localityFilter, setLocalityFilter] = useState([]);
-
-  // Collapse state
   const [isAreaOpen, setIsAreaOpen] = useState(false);
   const [isProvinceOpen, setIsProvinceOpen] = useState(false);
   const [isCityOpen, setIsCityOpen] = useState(false);
   const [isDistrictOpen, setIsDistrictOpen] = useState(false);
   const [isLocalityOpen, setIsLocalityOpen] = useState(false);
 
-  // === AUTH ===
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -50,7 +42,6 @@ export default function FotangPage() {
           const scope = decoded.scope?.toLowerCase();
           const role = decoded.role?.toLowerCase();
 
-          // Super admin = nasional scope atau role superadmin/ketua/sekjen
           const isNasional = scope === "nasional" || 
             ["superadmin", "ketualembaga", "sekjenlembaga"].includes(role);
 
@@ -65,12 +56,8 @@ export default function FotangPage() {
     }
   }, [router]);
 
-  // === DATA ===
   const { data: locations, isLoading: isDataLoading } = useFetchFotang({ limit: 1000 });
-
   const isLoading = isDataLoading || isSuperAdmin === null;
-
-  // === MAPPING DATA ===
   const viharas = (locations?.data || []).map(f => {
     const areaRaw = f.area || null;
     const areaDisplay = areaRaw ? `Wilayah ${areaRaw.replace("Korwil_", "")}` : "-";
@@ -94,7 +81,6 @@ export default function FotangPage() {
     };
   }).sort((a, b) => a.location_id - b.location_id);
 
-  // === DERIVED FILTER OPTIONS (CASCADING) ===
   const availableProvinces = useMemo(() => {
     if (tempAreaFilter.length === 0) return [];
     return [...new Set(
@@ -135,7 +121,6 @@ export default function FotangPage() {
     )].sort();
   }, [viharas, tempDistrictFilter]);
 
-  // === FILTER LOGIC ===
   const filteredList = useMemo(() => {
     return viharas.filter(v => {
       const matchArea = areaFilter.length === 0 || areaFilter.includes(v.area_raw);
@@ -150,7 +135,6 @@ export default function FotangPage() {
 
   const totalVihara = filteredList.length;
 
-  // === MODAL DETAIL ===
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedVihara, setSelectedVihara] = useState(null);
 
@@ -159,12 +143,10 @@ export default function FotangPage() {
     onOpen();
   };
 
-  // === FILTER HANDLERS ===
   const handleAreaChange = (value) => {
     setTempAreaFilter(prev =>
       prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
     );
-    // Reset lower levels
     setTempProvinceFilter([]);
     setTempCityFilter([]);
     setTempDistrictFilter([]);
@@ -224,7 +206,6 @@ export default function FotangPage() {
     setFilterOpen(false);
   };
 
-  // === RENDER ===
   if (isLoading) {
     return (
       <Layout title="List Vihara">
@@ -250,7 +231,6 @@ export default function FotangPage() {
   return (
     <Layout title="List Vihara">
       <Box p={4}>
-        {/* JUDUL + FILTER + TOMBOL TAMBAH */}
         <Flex align="center" justify="space-between" mb={6} flexWrap="wrap" gap={3}>
           <Heading size="md" fontFamily="inherit">
             Daftar Vihara (Fotang)
@@ -260,7 +240,6 @@ export default function FotangPage() {
           </Heading>
 
           <Flex gap={2} align="center" flexWrap="nowrap" flexShrink={0}>
-            {/* TOMBOL FILTER */}
             <Box position="relative">
               <Button
                 colorScheme="white"
@@ -297,7 +276,6 @@ export default function FotangPage() {
                   fontFamily="inherit"
                   fontSize="sm"
                 >
-                  {/* WILAYAH */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0} fontSize="sm">Wilayah</FormLabel>
@@ -328,7 +306,6 @@ export default function FotangPage() {
                     </Collapse>
                   </FormControl>
 
-                  {/* PROVINSI */}
                   {tempAreaFilter.length > 0 && (
                     <FormControl>
                       <Flex align="center" justify="space-between">
@@ -358,7 +335,6 @@ export default function FotangPage() {
                     </FormControl>
                   )}
 
-                  {/* KOTA */}
                   {tempProvinceFilter.length > 0 && (
                     <FormControl>
                       <Flex align="center" justify="space-between">
@@ -388,7 +364,6 @@ export default function FotangPage() {
                     </FormControl>
                   )}
 
-                  {/* KECAMATAN */}
                   {tempCityFilter.length > 0 && (
                     <FormControl>
                       <Flex align="center" justify="space-between">
@@ -418,7 +393,6 @@ export default function FotangPage() {
                     </FormControl>
                   )}
 
-                  {/* KELURAHAN */}
                   {tempDistrictFilter.length > 0 && (
                     <FormControl>
                       <Flex align="center" justify="space-between">
@@ -457,7 +431,6 @@ export default function FotangPage() {
               )}
             </Box>
 
-            {/* TOMBOL TAMBAH VIHARA */}
             <Button
               colorScheme="blue"
               borderRadius="full"
@@ -473,7 +446,6 @@ export default function FotangPage() {
           </Flex>
         </Flex>
 
-        {/* TABEL RESPONSIF */}
         <Box
           overflowX="auto"
           borderRadius="md"
@@ -537,7 +509,6 @@ export default function FotangPage() {
           </Table>
         </Box>
 
-        {/* MODAL DETAIL */}
         <Modal isOpen={isOpen} onClose={onClose} size="xl">
           <ModalOverlay />
           <ModalContent>

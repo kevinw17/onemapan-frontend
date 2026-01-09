@@ -1,4 +1,3 @@
-// src/pages/dianchuanshi/addDianChuanShi.js
 import {
   Box, Button, FormControl, FormLabel, Heading,
   Input, Select, VStack, Grid, GridItem, useToast, Text
@@ -13,7 +12,6 @@ const addPanditaSchema = Yup.object().shape({
   name: Yup.string().required("Nama Indonesia wajib diisi"),
   area: Yup.string().required("Wilayah wajib dipilih"),
   is_fuwuyuan: Yup.string().required("Status Fuwuyuan wajib dipilih"),
-  // ling_ming_month & ling_ming_year TIDAK WAJIB
 });
 
 const months = [
@@ -31,25 +29,21 @@ export default function AddDianChuanShiPage() {
 
   const handleSubmitPandita = async (values) => {
     try {
-      // 1. AMBIL SEMUA PANDITA UNTUK CEK ID TERAKHIR
       const res = await axiosInstance.get("/dianchuanshi");
       const panditas = res.data;
 
-      // 2. HITUNG ID TERAKHIR
       const lastId = panditas.length > 0 
         ? Math.max(...panditas.map(p => p.id))
         : 0;
 
       const nextId = lastId + 1;
 
-      // 3. BENTUK ling_ming_time JIKA ADA
       let lingMingDate = null;
       if (values.ling_ming_month && values.ling_ming_year) {
         const monthIndex = months.indexOf(values.ling_ming_month);
         lingMingDate = new Date(parseInt(values.ling_ming_year), monthIndex, 1);
       }
 
-      // 4. PAYLOAD
       const payload = {
         id: nextId,
         name: values.name,
@@ -61,7 +55,6 @@ export default function AddDianChuanShiPage() {
 
       console.log("Payload dikirim:", payload);
 
-      // 5. KIRIM KE BACKEND
       await axiosInstance.post("/dianchuanshi", payload);
 
       toast({
@@ -103,7 +96,6 @@ export default function AddDianChuanShiPage() {
               <VStack spacing={6} align="stretch">
                 <Heading size="lg">Tambah Pandita</Heading>
 
-                {/* NAMA INDONESIA & MANDARIN */}
                 <Grid templateColumns="repeat(2, 1fr)" gap={4}>
                   <FormControl isRequired>
                     <FormLabel fontWeight="bold">Nama Indonesia</FormLabel>
@@ -130,7 +122,6 @@ export default function AddDianChuanShiPage() {
                   </FormControl>
                 </Grid>
 
-                {/* KORDA WILAYAH */}
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Wilayah</FormLabel>
                   <Select
@@ -150,7 +141,6 @@ export default function AddDianChuanShiPage() {
                   )}
                 </FormControl>
 
-                {/* STATUS FUWUYUAN — WAJIB */}
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Status Fuwuyuan</FormLabel>
                   <Select
@@ -167,7 +157,6 @@ export default function AddDianChuanShiPage() {
                   )}
                 </FormControl>
 
-                {/* LING MING TIME — OPTIONAL */}
                 <FormControl>
                   <FormLabel fontWeight="bold">Waktu Ling Ming</FormLabel>
                   <Grid templateColumns="repeat(2, 1fr)" gap={4}>
@@ -203,7 +192,6 @@ export default function AddDianChuanShiPage() {
                   </Grid>
                 </FormControl>
 
-                {/* TOMBOL SIMPAN */}
                 <Button
                   type="submit"
                   colorScheme="green"

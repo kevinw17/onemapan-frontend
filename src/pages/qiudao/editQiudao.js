@@ -39,7 +39,6 @@ export default function EditQiudao() {
   const [selectedProvince, setSelectedProvince] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Token & Role
   const [userScope, setUserScope] = useState("self");
   const [userFotangId, setUserFotangId] = useState(null);
   const [userArea, setUserArea] = useState(null);
@@ -48,7 +47,6 @@ export default function EditQiudao() {
   const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
   const deleteQiudaoMutation = useDeleteQiudao();
 
-  // Decode token
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -71,7 +69,6 @@ export default function EditQiudao() {
     }
   }, [toast, router]);
 
-  // Fetch data
   useEffect(() => {
     if (!qiuDaoId) return;
 
@@ -87,7 +84,6 @@ export default function EditQiudao() {
           dian_chuan_shi_id: data.dian_chuan_shi_id || data.dian_chuan_shi?.id || "",
         });
 
-        // Set selectedProvince dari data QiuDao yang sedang diedit
         const currentLocation = data.qiu_dao_location || data;
         const currentProvId = currentLocation?.locality?.district?.city?.province?.id;
         if (currentProvId) {
@@ -123,7 +119,6 @@ export default function EditQiudao() {
       .finally(() => setIsLoading(false));
   }, [qiuDaoId, userScope, userFotangId, userArea, toast]);
 
-  // Daftar provinsi yang tersedia dari displayTemples (untuk Admin Wilayah & Nasional)
   const availableProvinces = useMemo(() => {
     const provSet = new Set();
     displayTemples.forEach((t) => {
@@ -137,7 +132,6 @@ export default function EditQiudao() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [displayTemples]);
 
-  // Filter vihara berdasarkan provinsi dipilih
   const finalTemples = selectedProvince
     ? displayTemples.filter((t) => {
         return t.locality?.district?.city?.province?.id === Number(selectedProvince);
@@ -252,7 +246,6 @@ export default function EditQiudao() {
           <VStack spacing={4} align="stretch">
             <Heading size="sm" color="gray.600">Data Qiudao</Heading>
 
-            {/* Nama QiuDao & Mandarin */}
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
               <FormControl>
                 <FormLabel fontWeight="bold">Nama Qiudao</FormLabel>
@@ -264,9 +257,7 @@ export default function EditQiudao() {
               </FormControl>
             </Grid>
 
-            {/* PROVINSI + LOKASI VIHARA */}
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-              {/* PROVINSI — Hanya untuk Wilayah & Nasional */}
               {userScope !== "fotang" && (
                 <FormControl isRequired>
                   <FormLabel fontWeight="bold">Provinsi</FormLabel>
@@ -285,11 +276,9 @@ export default function EditQiudao() {
                 </FormControl>
               )}
 
-              {/* LOKASI VIHARA */}
               <FormControl isRequired gridColumn={userScope !== "fotang" ? "auto" : "1 / -1"}>
                 <FormLabel fontWeight="bold">Lokasi Vihara</FormLabel>
                 {userScope === "fotang" && displayTemples.length === 1 ? (
-                  // Admin Vihara: Tampilkan langsung
                   <Box
                     p={3}
                     bg="gray.50"
@@ -307,7 +296,6 @@ export default function EditQiudao() {
                     <input type="hidden" name="qiu_dao_location_id" value={displayTemples[0].fotang_id} />
                   </Box>
                 ) : (
-                  // Wilayah & Nasional: Dropdown
                   <Select
                     name="qiu_dao_location_id"
                     value={formData.qiu_dao_location_id || ""}
@@ -329,7 +317,6 @@ export default function EditQiudao() {
               </FormControl>
             </Grid>
 
-            {/* Pilih Pandita */}
             <FormControl>
               <FormLabel fontWeight="bold">Pilih Pandita</FormLabel>
               <Select
@@ -351,7 +338,6 @@ export default function EditQiudao() {
               </Select>
             </FormControl>
 
-            {/* Guru Pengajak & Penanggung */}
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
               <FormControl>
                 <FormLabel fontWeight="bold">Nama Guru Pengajak</FormLabel>
@@ -374,7 +360,6 @@ export default function EditQiudao() {
               </FormControl>
             </Grid>
 
-            {/* Tanggal Lunar */}
             <Heading size="sm" color="gray.600" pt={4} pb={2}>Tanggal Qiudao</Heading>
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
               <FormControl isRequired>
@@ -398,7 +383,6 @@ export default function EditQiudao() {
               </FormControl>
             </Grid>
 
-            {/* Tombol */}
             <Flex gap={4} mt={6}>
               {canDelete && (
                 <Button colorScheme="red" w="120px" onClick={handleDelete}>
@@ -414,7 +398,6 @@ export default function EditQiudao() {
             </Flex>
           </VStack>
 
-          {/* Modal Konfirmasi Hapus */}
           <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="sm" isCentered>
             <ModalOverlay />
             <ModalContent>

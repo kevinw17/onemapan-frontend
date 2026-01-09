@@ -1,10 +1,8 @@
-// src/features/event/useEventFilter.js
 import { useState, useCallback } from "react";
 
 export const useEventFilter = () => {
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Filter yang sudah diterapkan (dipakai di useFetchEvents)
   const [eventTypeFilter, setEventTypeFilter] = useState([]);
   const [areaFilter, setAreaFilter] = useState([]);
   const [provinceFilter, setProvinceFilter] = useState([]);
@@ -12,14 +10,12 @@ export const useEventFilter = () => {
   const [institutionFilter, setInstitutionFilter] = useState([]);
   const [isRecurringFilter, setIsRecurringFilter] = useState(null);
 
-  // Temporary filter (di dalam modal filter)
   const [tempEventTypeFilter, setTempEventTypeFilter] = useState([]);
-  const [tempAreaFilter, setTempAreaFilter] = useState([]);           // WAJIB ADA
-  const [tempProvinceFilter, setTempProvinceFilter] = useState([]);   // WAJIB ADA (array, bukan string)
-  const [tempCityFilter, setTempCityFilter] = useState([]);           // WAJIB ADA
+  const [tempAreaFilter, setTempAreaFilter] = useState([]);
+  const [tempProvinceFilter, setTempProvinceFilter] = useState([]); 
+  const [tempCityFilter, setTempCityFilter] = useState([]);
   const [tempInstitutionFilter, setTempInstitutionFilter] = useState([]);
 
-  // Collapse state
   const [isEventTypeOpen, setIsEventTypeOpen] = useState(false);
   const [isAreaOpen, setIsAreaOpen] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -43,7 +39,7 @@ export const useEventFilter = () => {
         ? prev.filter(v => v !== provinceId)
         : [...prev, provinceId]
     );
-    setTempCityFilter([]); // auto reset kota
+    setTempCityFilter([]);
   }, []);
 
   const handleCityFilterChange = useCallback((cityId) => {
@@ -70,7 +66,6 @@ export const useEventFilter = () => {
     setTempCityFilter([]);
     setTempInstitutionFilter([]);
 
-    // Reset juga filter aktif
     setEventTypeFilter([]);
     setAreaFilter([]);
     setProvinceFilter([]);
@@ -79,32 +74,25 @@ export const useEventFilter = () => {
   }, []);
 
   return {
-    // UI
     filterOpen,
     setFilterOpen,
-
-    // Active filters (untuk query)
     eventTypeFilter,
     areaFilter,
     provinceFilter,
     cityFilter,
     isRecurringFilter,
     institutionFilter,
-
-    // Temp filters (modal)
     tempEventTypeFilter,
     setTempEventTypeFilter,
     tempAreaFilter,
-    setTempAreaFilter,                 // INI YANG DIPAKAI DI event.js
+    setTempAreaFilter,
     tempProvinceFilter,
-    setTempProvinceFilter,             // INI JUGA
+    setTempProvinceFilter,
     tempCityFilter,
-    setTempCityFilter,                 // DAN INI
+    setTempCityFilter, 
     tempInstitutionFilter,
     setTempInstitutionFilter,
     setIsRecurringFilter,
-
-    // Collapse
     isEventTypeOpen,
     setIsEventTypeOpen,
     isAreaOpen,
@@ -113,8 +101,6 @@ export const useEventFilter = () => {
     setIsLocationOpen,
     isInstitutionOpen,
     setIsInstitutionOpen,
-
-    // Handlers
     handleEventTypeChange,
     handleAreaFilterChange,
     handleProvinceFilterChange,

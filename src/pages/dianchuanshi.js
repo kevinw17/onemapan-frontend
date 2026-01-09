@@ -1,4 +1,3 @@
-// pages/dianchuanshi.js
 import Layout from "@/components/layout";
 import {
   Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Spinner, Flex, Text, Button,
@@ -16,7 +15,6 @@ export default function DianChuanShiPage() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(null);
   const router = useRouter();
 
-  // === FILTER STATE ===
   const [filterOpen, setFilterOpen] = useState(false);
   const [tempAreaFilter, setTempAreaFilter] = useState([]);
   const [tempFuwuyuanFilter, setTempFuwuyuanFilter] = useState([]);
@@ -25,7 +23,6 @@ export default function DianChuanShiPage() {
   const [isAreaOpen, setIsAreaOpen] = useState(false);
   const [isFuwuyuanOpen, setIsFuwuyuanOpen] = useState(false);
 
-  // === AUTH ===
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -49,12 +46,10 @@ export default function DianChuanShiPage() {
     }
   }, [router]);
 
-  // === DATA ===
   const { data: panditas, isLoading: isDataLoading } = useFetchDianChuanShi({ limit: 1000 });
 
   const isLoading = isDataLoading || isSuperAdmin === null;
 
-  // === FORMATTER ===
   const formatArea = (area) => {
     if (!area) return "-";
     return area.startsWith("Korwil_")
@@ -70,7 +65,6 @@ export default function DianChuanShiPage() {
     return `${month} ${year}`;
   };
 
-  // === MAPPING DATA ===
   const rawList = (panditas?.data || []).map(p => ({
     dian_chuan_shi_id: p.id,
     name: p.name || "-",
@@ -82,7 +76,6 @@ export default function DianChuanShiPage() {
     ling_ming_time: formatLingMing(p.ling_ming_time),
   })).sort((a, b) => a.dian_chuan_shi_id - b.dian_chuan_shi_id);
 
-  // === FILTER LOGIC ===
   const filteredList = useMemo(() => {
     return rawList.filter(p => {
       const matchArea = areaFilter.length === 0 || areaFilter.includes(p.area_raw);
@@ -95,7 +88,6 @@ export default function DianChuanShiPage() {
 
   const totalPandita = filteredList.length;
 
-  // === MODAL DETAIL ===
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedPandita, setSelectedPandita] = useState(null);
 
@@ -104,7 +96,6 @@ export default function DianChuanShiPage() {
     onOpen();
   };
 
-  // === FILTER HANDLERS ===
   const handleAreaChange = (value) => {
     setTempAreaFilter(prev =>
       prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
@@ -131,7 +122,6 @@ export default function DianChuanShiPage() {
     setFilterOpen(false);
   };
 
-  // === RENDER ===
   if (isLoading) {
     return (
       <Layout title="List Pandita">
@@ -157,7 +147,6 @@ export default function DianChuanShiPage() {
   return (
     <Layout title="List Pandita">
       <Box p={4}>
-        {/* JUDUL + FILTER + TOMBOL TAMBAH */}
         <Flex align="center" justify="space-between" mb={6} flexWrap="wrap" gap={3}>
           <Heading size="md" fontFamily="inherit">
             Daftar Pandita (Dian Chuan Shi)
@@ -167,7 +156,6 @@ export default function DianChuanShiPage() {
           </Heading>
 
           <Flex gap={2} align="center" flexWrap="nowrap" flexShrink={0}>
-            {/* TOMBOL FILTER (ALA umat.js) */}
             <Box position="relative">
               <Button
                 colorScheme="white"
@@ -202,7 +190,6 @@ export default function DianChuanShiPage() {
                   fontFamily="inherit"
                   fontSize="sm"
                 >
-                  {/* FILTER WILAYAH */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Wilayah</FormLabel>
@@ -235,7 +222,6 @@ export default function DianChuanShiPage() {
                     </Collapse>
                   </FormControl>
 
-                  {/* FILTER STATUS FUWUYUAN */}
                   <FormControl>
                     <Flex align="center" justify="space-between">
                       <FormLabel mb={0} fontSize="sm" fontFamily="inherit">Status Fuwuyuan</FormLabel>
@@ -271,7 +257,6 @@ export default function DianChuanShiPage() {
                     </Collapse>
                   </FormControl>
 
-                  {/* TOMBOL AKSI FILTER */}
                   <HStack justify="flex-end" spacing={2} mt={2}>
                     <Button size="sm" variant="ghost" onClick={clearFilters}>Reset</Button>
                     <Button size="sm" onClick={() => setFilterOpen(false)}>Cancel</Button>
@@ -281,7 +266,6 @@ export default function DianChuanShiPage() {
               )}
             </Box>
 
-            {/* TOMBOL TAMBAH */}
             <Button
               colorScheme="blue"
               borderRadius="full"
@@ -297,7 +281,6 @@ export default function DianChuanShiPage() {
           </Flex>
         </Flex>
 
-        {/* TABEL */}
         <Box overflowX="auto">
           <Table variant="striped" colorScheme="gray" size="sm">
             <Thead>
@@ -338,7 +321,6 @@ export default function DianChuanShiPage() {
           </Table>
         </Box>
 
-        {/* MODAL DETAIL */}
         <Modal isOpen={isOpen} onClose={onClose} size="xl">
           <ModalOverlay />
           <ModalContent>

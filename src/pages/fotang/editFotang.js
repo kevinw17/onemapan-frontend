@@ -1,4 +1,3 @@
-// src/pages/fotang/editFotang.js
 import {
   Box, VStack, Text, FormControl, FormLabel, Input, Select, Flex, Grid, GridItem,
   Button, Heading, useToast, Spinner, Modal, ModalOverlay, ModalContent,
@@ -23,7 +22,7 @@ export default function EditFotang() {
     location_mandarin_name: "",
     street: "",
     postal_code: "",
-    area: "", // TAMBAH FIELD AREA
+    area: "",
     province: "",
     city: "",
     district: "",
@@ -42,7 +41,6 @@ export default function EditFotang() {
     localities: false,
   });
 
-  // === AUTH ===
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -56,7 +54,6 @@ export default function EditFotang() {
     }
   }, [router]);
 
-  // === FETCH DATA ===
   useEffect(() => {
     if (!fotangId) return;
 
@@ -71,7 +68,7 @@ export default function EditFotang() {
           location_mandarin_name: f.location_mandarin_name || "",
           street: f.street || "",
           postal_code: f.postal_code || "",
-          area: f.area || "", // AMBIL DARI DATA
+          area: f.area || "",
           province: f.locality?.district?.city?.province?.id?.toString() || "",
           city: f.locality?.district?.city?.id?.toString() || "",
           district: f.locality?.district?.id?.toString() || "",
@@ -93,7 +90,6 @@ export default function EditFotang() {
     fetchFotang();
   }, [fotangId, toast]);
 
-  // === FETCH LOCATION ===
   const fetchLocation = async (type, id) => {
     if (!id && type !== "provinces") return;
     const field = type;
@@ -136,7 +132,6 @@ export default function EditFotang() {
     if (field === "district") fetchLocation("localities", value);
   };
 
-  // === PATCH UPDATE ===
   const updateMutation = useMutation({
     mutationFn: async (payload) => {
       await axiosInstance.patch(`/fotang/${fotangId}`, payload);
@@ -166,7 +161,7 @@ export default function EditFotang() {
       location_mandarin_name: formData.location_mandarin_name || null,
       street: formData.street || null,
       postal_code: formData.postal_code || null,
-      area: formData.area || undefined, // TAMBAH KE PAYLOAD
+      area: formData.area || undefined,
       locality: formData.locality ? { connect: { id: parseInt(formData.locality) } } : undefined,
     };
 
@@ -224,7 +219,6 @@ export default function EditFotang() {
             <Input value={formData.street} onChange={e => handleChange("street", e.target.value)} />
           </FormControl>
 
-          {/* BARIS BARU: KODE POS & WILAYAH */}
           <Grid templateColumns="repeat(2, 1fr)" gap={4}>
             <FormControl>
               <FormLabel fontWeight="bold">Kode Pos</FormLabel>

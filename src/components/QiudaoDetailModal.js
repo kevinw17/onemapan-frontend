@@ -177,7 +177,6 @@ export default function QiudaoDetailModal({
                 </ModalFooter>
             </ModalContent>
 
-            {/* Modal Konfirmasi Hapus */}
             <Modal isOpen={isConfirmOpen} onClose={onConfirmClose} size="xs" isCentered>
                 <ModalOverlay />
                 <ModalContent>

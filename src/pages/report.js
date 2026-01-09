@@ -15,9 +15,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { FiFilter, FiDownload, FiX, FiPlus, FiMinus } from "react-icons/fi";
 
-// === FIELD GABUNGAN ===
 const ALL_FIELDS = [
-  // Umat
   { key: "full_name", label: "Nama Lengkap", source: "user" },
   { key: "mandarin_name", label: "Nama Mandarin", source: "user" },
   { key: "gender", label: "Jenis Kelamin", source: "user" },
@@ -33,21 +31,13 @@ const ALL_FIELDS = [
   { key: "job_name", label: "Pekerjaan", source: "user" },
   { key: "id_card_number", label: "No. KTP", source: "user" },
   { key: "spiritual_status", label: "Status Spiritual", source: "user" },
-
-  // Qiu Dao
   { key: "lunar_year", label: "Tahun Qiu Dao", source: "qiudao" },
   { key: "lunar_month", label: "Bulan Qiu Dao", source: "qiudao" },
   { key: "lunar_day", label: "Tanggal Qiu Dao", source: "qiudao" },
   { key: "shi_chen_time", label: "Waktu Qiu Dao", source: "qiudao" },
-
-  // Dian Chuan Shi
   { key: "dcs_full_name", label: "Nama Dian Chuan Shi Pendhiksa", source: "dcs" },
   { key: "dcs_mandarin_name", label: "Nama Mandarin Dian Chuan Shi Pendhiksa", source: "dcs" },
-
-  // Fotang
   { key: "fotang_name", label: "Lokasi Qiudao", source: "fotang" },
-
-  // Lokasi
   { key: "area", label: "Wilayah", source: "fotang" },
   { key: "province", label: "Provinsi", source: "fotang" },
   { key: "city", label: "Kota/Kabupaten", source: "fotang" },
@@ -55,12 +45,10 @@ const ALL_FIELDS = [
   { key: "locality", label: "Kelurahan", source: "fotang" },
 ];
 
-// === SPIRITUAL STATUS ===
 const SPIRITUAL_STATUS = [
   "QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"
 ];
 
-// === OPSI FILTER TAMBAHAN ===
 const GENDER_OPTIONS = ["Male", "Female"];
 const EDUCATION_LEVELS = ["SD", "SMP", "SMA", "D1", "D2", "D3", "S1", "S2", "S3"];
 const BLOOD_TYPES = ["A", "B", "AB", "O"];
@@ -68,50 +56,37 @@ const BLOOD_TYPES = ["A", "B", "AB", "O"];
 export default function ReportBuilder() {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-
-  // === STATE ===
   const [selectedFields, setSelectedFields] = useState([]);
   const [selectedSpiritualStatus, setSelectedSpiritualStatus] = useState([]);
-
-  // === CASCADING LOKASI ===
   const [tempAreaFilter, setTempAreaFilter] = useState([]);
   const [tempProvinceFilter, setTempProvinceFilter] = useState([]);
   const [tempCityFilter, setTempCityFilter] = useState([]);
   const [tempDistrictFilter, setTempDistrictFilter] = useState([]);
   const [tempLocalityFilter, setTempLocalityFilter] = useState([]);
-
   const [areaFilter, setAreaFilter] = useState([]);
   const [provinceFilter, setProvinceFilter] = useState([]);
   const [cityFilter, setCityFilter] = useState([]);
   const [districtFilter, setDistrictFilter] = useState([]);
   const [localityFilter, setLocalityFilter] = useState([]);
-
   const [isAreaOpen, setIsAreaOpen] = useState(false);
   const [isProvinceOpen, setIsProvinceOpen] = useState(false);
   const [isCityOpen, setIsCityOpen] = useState(false);
   const [isDistrictOpen, setIsDistrictOpen] = useState(false);
   const [isLocalityOpen, setIsLocalityOpen] = useState(false);
-
-  // === FILTER TAMBAHAN ===
   const [tempGenderFilter, setTempGenderFilter] = useState([]);
   const [tempQingkouFilter, setTempQingkouFilter] = useState([]);
   const [tempEducationFilter, setTempEducationFilter] = useState([]);
   const [tempBloodTypeFilter, setTempBloodTypeFilter] = useState([]);
   const [tempJobFilter, setTempJobFilter] = useState("");
-
   const [genderFilter, setGenderFilter] = useState([]);
   const [qingkouFilter, setQingkouFilter] = useState([]);
   const [educationFilter, setEducationFilter] = useState([]);
   const [bloodTypeFilter, setBloodTypeFilter] = useState([]);
   const [jobFilter, setJobFilter] = useState("");
-
   const [exportFormat, setExportFormat] = useState("pdf");
-
-  // === MANDARIN FONT STATE ===
   const [mandarinFontBase64, setMandarinFontBase64] = useState("");
   const [mandarinFontLoaded, setMandarinFontLoaded] = useState(false);
 
-  // === FETCH DATA ===
   const { data: rawData, isLoading } = useQuery({
     queryKey: ["report-builder-data"],
     queryFn: async () => {
@@ -166,7 +141,6 @@ export default function ReportBuilder() {
     refetchInterval: 60000,
   });
 
-  // === LOAD MANDARIN FONT ONCE ===
   useEffect(() => {
     if (mandarinFontLoaded || mandarinFontBase64) return;
 
@@ -182,7 +156,7 @@ export default function ReportBuilder() {
           const reader = new FileReader();
           reader.onload = () => {
             const dataUrl = reader.result;
-            const base64 = dataUrl.split(',')[1]; // Hapus "data:application/octet-stream;base64,"
+            const base64 = dataUrl.split(',')[1];
             setMandarinFontBase64(base64);
             setMandarinFontLoaded(true);
             window.mandarinFontBase64 = base64;
@@ -206,8 +180,7 @@ export default function ReportBuilder() {
 
     loadFont();
   }, [mandarinFontLoaded, mandarinFontBase64, toast]);
-
-  // === CASCADING OPTIONS ===
+  
   const availableProvinces = useMemo(() => {
     if (!rawData?.fotang || tempAreaFilter.length === 0) return [];
     return [...new Set(
@@ -253,7 +226,6 @@ export default function ReportBuilder() {
     return [...new Set(rawData.joined.map(u => u.job_name).filter(Boolean))].sort();
   }, [rawData]);
 
-  // === FILTER DATA ===
   const filteredData = useMemo(() => {
     if (!rawData?.joined) return [];
     let data = rawData.joined;
@@ -277,10 +249,8 @@ export default function ReportBuilder() {
     return data;
   }, [rawData, selectedSpiritualStatus, areaFilter, provinceFilter, cityFilter, districtFilter, localityFilter, genderFilter, qingkouFilter, educationFilter, bloodTypeFilter, jobFilter]);
 
-  // === TOTAL ROWS ===
   const totalRows = filteredData.length;
 
-  // === EXPORT ===
   const exportTable = (headers, rows, total, filename) => {
     const totalText = `Total: ${total}`;
     const mandarinColumns = selectedFields
@@ -300,10 +270,8 @@ export default function ReportBuilder() {
         }
       }
 
-      // Tambahkan baris total sebagai bagian dari body (paling akhir)
       const bodyWithTotal = [...rows, Array(headers.length).fill("")];
 
-      // Isi kolom pertama dengan totalText, sisanya kosong
       bodyWithTotal[bodyWithTotal.length - 1][0] = totalText;
 
       autoTable(doc, {
@@ -322,8 +290,7 @@ export default function ReportBuilder() {
             data.cell.styles.font = "NotoSansSC";
           }
 
-          // Style khusus untuk baris total (baris terakhir)
-          if (data.row.index === rows.length) { // index dimulai dari 0, jadi rows.length = baris total
+          if (data.row.index === rows.length) {
             data.cell.colSpan = headers.length;
             data.cell.styles.halign = "center";
             data.cell.styles.valign = "middle";
@@ -347,7 +314,6 @@ export default function ReportBuilder() {
 
       const ws = XLSX.utils.aoa_to_sheet([headers, ...rows, totalRow]);
 
-      // Style header
       const headerRange = XLSX.utils.decode_range(ws["!ref"]);
       for (let c = headerRange.s.c; c <= headerRange.e.c; c++) {
         const cell = ws[XLSX.utils.encode_cell({ r: 0, c })];
@@ -359,7 +325,6 @@ export default function ReportBuilder() {
         }
       }
 
-      // Style total
       const totalRowIndex = rows.length + 1;
       for (let c = 0; c < headers.length; c++) {
         const cell = ws[XLSX.utils.encode_cell({ r: totalRowIndex, c })];
@@ -372,7 +337,6 @@ export default function ReportBuilder() {
         }
       }
 
-      // Merge total
       if (!ws["!merges"]) ws["!merges"] = [];
       ws["!merges"].push({
         s: { r: totalRowIndex, c: 0 },
@@ -381,13 +345,11 @@ export default function ReportBuilder() {
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Data");
-
-      // Tambahkan UTF-8 BOM
       const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       const data = new Uint8Array(excelBuffer);
       const arr = new ArrayBuffer(data.length + 3);
       const view = new Uint8Array(arr);
-      view[0] = 0xEF; view[1] = 0xBB; view[2] = 0xBF; // UTF-8 BOM
+      view[0] = 0xEF; view[1] = 0xBB; view[2] = 0xBF;
       view.set(data, 3);
       saveAs(new Blob([arr]), `${filename}.xlsx`);
     } 
@@ -414,7 +376,6 @@ export default function ReportBuilder() {
     exportTable(headers, rows, totalRows, "report-data");
   };
 
-  // === APLIKASI FILTER ===
   const applyFilters = () => {
     setAreaFilter([...tempAreaFilter]);
     setProvinceFilter([...tempProvinceFilter]);
@@ -445,7 +406,6 @@ export default function ReportBuilder() {
   return (
     <Layout title="Laporan">
       <Box p={2}>
-        {/* HEADER */}
         <Flex justify="space-between" align="center" mb={6}>
           <Heading size="lg">Laporan</Heading>
           <HStack>
@@ -470,7 +430,6 @@ export default function ReportBuilder() {
           </HStack>
         </Flex>
 
-        {/* EMPTY STATE */}
         {!hasData && (
           <Box textAlign="center" py={16} color="gray.500" bg="gray.50" borderRadius="lg">
             <Text fontSize="lg" fontWeight="medium">
@@ -482,7 +441,6 @@ export default function ReportBuilder() {
           </Box>
         )}
 
-        {/* TABEL + TOTAL ROWS */}
         {hasData && (
           <Box>
             <Text fontWeight="bold" fontSize="lg" mb={6}>Hasil Laporan</Text>
@@ -545,7 +503,6 @@ export default function ReportBuilder() {
           </Box>
         )}
 
-        {/* DRAWER: LAYOUT SPLIT 2 KOLOM */}
         <Drawer isOpen={isOpen} onClose={onClose} size="xl">
           <DrawerOverlay />
           <DrawerContent>
@@ -557,7 +514,6 @@ export default function ReportBuilder() {
             </DrawerHeader>
             <DrawerBody overflowY="auto">
               <Grid templateColumns="1fr 1fr" gap={6}>
-                {/* KIRI: FIELD */}
                 <GridItem>
                   <Text fontWeight="bold" fontSize="md" mb={4} color="blue.600">
                     Field yang Ingin Ditampilkan
@@ -575,14 +531,12 @@ export default function ReportBuilder() {
                   </VStack>
                 </GridItem>
 
-                {/* KANAN: FILTER */}
                 <GridItem>
                   <Text fontWeight="bold" fontSize="md" mb={4} color="blue.600">
                     Filter
                   </Text>
                   <VStack align="stretch" spacing={5} maxH="70vh" overflowY="auto">
 
-                    {/* Status Spiritual */}
                     <Box>
                       <FormLabel fontSize="sm" fontWeight="medium">Status Spiritual</FormLabel>
                       <CheckboxGroup value={selectedSpiritualStatus} onChange={setSelectedSpiritualStatus}>
@@ -594,7 +548,6 @@ export default function ReportBuilder() {
                       </CheckboxGroup>
                     </Box>
 
-                    {/* Lokasi */}
                     <Box>
                       <FormControl mb={2}>
                         <Flex align="center" justify="space-between">
@@ -725,7 +678,6 @@ export default function ReportBuilder() {
                       )}
                     </Box>
 
-                    {/* Filter Tambahan */}
                     <Box>
                       <FormControl mb={2}>
                         <FormLabel fontSize="sm">Jenis Kelamin</FormLabel>
