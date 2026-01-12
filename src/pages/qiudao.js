@@ -159,13 +159,15 @@ export default function QiudaoPage() {
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
   const isNotSelfScope = userScope !== "self";
+  const decodedRef = useRef(null);
 
   useEffect(() => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-        const decoded = jwtDecode(token);
+        decodedRef.current = jwtDecode(token);
+        const decoded = decodedRef.current;
         const decodedUserId = decoded.user_info_id;
         const perms = decoded.permissions || {};
 
@@ -209,7 +211,7 @@ export default function QiudaoPage() {
 }, [toast, router]);
 
   const isQiudaoAdminMode = canCreateQiudao || canUpdateQiudao || canDeleteQiudao;
-  const fotangId = userScope === "fotang" ? decoded.fotang_id || null : undefined;
+  const fotangId = userScope === "fotang" ? decodedRef.current.fotang_id || null : undefined;
 
   useEffect(() => {
     if (userArea) {

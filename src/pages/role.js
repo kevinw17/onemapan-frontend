@@ -198,42 +198,87 @@ const RolePage = () => {
   };
 
   const handleSubmitAssign = async () => {
-    if (!selectedRole?.id || selectedUserIds.length === 0) return;
+  if (!selectedRole?.id || selectedUserIds.length === 0) return;
 
-    setIsSaving(true);
-    try {
-      for (const user_id of selectedUserIds) {
+  setIsSaving(true);
+  try {
+    await refetchRoles();
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const targetRoleId = String(selectedRole.id);
+
+    const promises = selectedUserIds.map(async (user_id_raw) => {
+      try {
+        const user_id = String(user_id_raw);
+
         const userCurrentRoles = roles
-          .flatMap((r) => r.userRoles?.filter((ur) => (ur.user?.user_info_id || ur.user_id) === user_id) || [])
-          .map((ur) => ur.role_id);
+          .flatMap((r) => r.userRoles?.filter((ur) => String(ur.user?.user_info_id || ur.user_id) === user_id) || [])
+          .map((ur) => String(ur.role_id));
+
+        console.log(`[ASSIGN] User ${user_id} punya role lama:`, userCurrentRoles);
 
         for (const oldRoleId of userCurrentRoles) {
-          if (oldRoleId !== selectedRole.id) {
-            await removeRole({ user_id, role_id: oldRoleId });
+          const oldRoleIdStr = String(oldRoleId);
+          if (oldRoleIdStr !== targetRoleId) {
+            console.log(`[REMOVE] Hapus role lama ${oldRoleIdStr} dari user ${user_id}`);
+            await removeRole({ user_id, role_id: oldRoleIdStr });
           }
         }
-        await assignRole({ user_id, role_id: selectedRole.id });
-      }
 
+        if (!userCurrentRoles.includes(targetRoleId)) {
+          console.log(`[ASSIGN] Tambah role baru ${targetRoleId} ke user ${user_id}`);
+          await assignRole({ user_id, role_id: targetRoleId });
+        } else {
+          console.log(`[SKIP] User ${user_id} sudah punya role ${targetRoleId}`);
+        }
+
+        return { user_id, success: true };
+      } catch (err) {
+        console.error(`[ERROR] Gagal proses user ${user_id_raw}:`, err);
+        return { user_id: String(user_id_raw), success: false, error: err.message || 'Unknown' };
+      }
+    });
+
+    const results = await Promise.all(promises);
+
+    const successCount = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success);
+
+    if (successCount > 0) {
       toast({
         title: "Berhasil",
-        description: `${selectedUserIds.length} pengguna diganti ke role "${selectedRole.name}"`,
+        description: `${successCount} pengguna berhasil diassign ke "${selectedRole.name}"`,
         status: "success",
         isClosable: true,
       });
-      await refetchUsers();
-      onAssignClose();
-    } catch (error) {
+    }
+
+    if (failed.length > 0) {
       toast({
-        title: "Gagal",
-        description: error.response?.data?.message || "Gagal assign role",
-        status: "error",
+        title: "Sebagian Gagal",
+        description: failed.map(f => `User ${f.user_id}: ${f.error}`).join("\n"),
+        status: "warning",
+        duration: 10000,
         isClosable: true,
       });
-    } finally {
-      setIsSaving(false);
     }
-  };
+
+    await refetchRoles();
+    await refetchUsers();
+    onAssignClose();
+  } catch (error) {
+    console.error("Error total assign:", error);
+    toast({
+      title: "Gagal",
+      description: error.response?.data?.message || "Gagal assign role",
+      status: "error",
+      isClosable: true,
+    });
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handleTogglePermission = (perm) => {
     setSelectedRole((prev) => ({
@@ -430,20 +475,59 @@ const RolePage = () => {
               {availableUsersForAssign.length === 0 ? (
                 <Text color="gray.500">Tidak ada pengguna yang tersedia</Text>
               ) : (
-                <Select
-                  multiple
-                  value={selectedUserIds.map(String)}
-                  onChange={(e) =>
-                    setSelectedUserIds(Array.from(e.target.selectedOptions, (option) => Number(option.value)))
-                  }
-                  height="200px"
-                >
-                  {availableUsersForAssign.map((user) => (
-                    <option key={user.user_info_id} value={user.user_info_id}>
-                      {user.username} - {user.full_name} (ID: {user.user_info_id})
-                    </option>
-                  ))}
-                </Select>
+                <>
+                  <HStack mb={3} spacing={4}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorScheme="red"
+                      onClick={() => setSelectedUserIds([])}
+                    >
+                      Kosongkan
+                    </Button>
+                  </HStack>
+
+                  <Box
+                    borderWidth="1px"
+                    borderRadius="md"
+                    overflowY="auto"
+                    maxH="240px"
+                    bg="white"
+                    p={2}
+                  >
+                    {availableUsersForAssign.map((user) => {
+                      const isSelected = selectedUserIds.includes(user.user_info_id);
+                      return (
+                        <Box
+                          key={user.user_info_id}
+                          p={3}
+                          mb={1}
+                          borderRadius="md"
+                          bg={isSelected ? "blue.50" : "gray.50"}
+                          borderLeftWidth={4}
+                          borderLeftColor={isSelected ? "blue.500" : "transparent"}
+                          cursor="pointer"
+                          _hover={{ bg: isSelected ? "blue.100" : "gray.100" }}
+                          onClick={() => {
+                            setSelectedUserIds(prev => {
+                              if (prev.includes(user.user_info_id)) {
+                                return prev.filter(id => id !== user.user_info_id);
+                              }
+                              return [...prev, user.user_info_id];
+                            });
+                          }}
+                        >
+                          <Text fontWeight={isSelected ? "bold" : "normal"}>
+                            {user.full_name} ({user.username})
+                          </Text>
+                          <Text fontSize="sm" color="gray.600">
+                            ID: {user.user_info_id}
+                          </Text>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </>
               )}
             </ModalBody>
             <ModalFooter>

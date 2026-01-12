@@ -47,6 +47,7 @@ const GENDER_OPTIONS = [
 ];
 
 const BLOOD_TYPE_OPTIONS = [
+  { value: "", label: "Pilih golongan darah" },
   { value: "A", label: "A" },
   { value: "B", label: "B" },
   { value: "O", label: "O" },
