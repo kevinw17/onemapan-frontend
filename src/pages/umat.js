@@ -90,7 +90,7 @@ export default function UmatPage() {
   const [canDeleteUmat, setCanDeleteUmat] = useState(false);
   const [umatScope, setUmatScope] = useState(null);
 
-  const isPersonalMode = userId !== null && !isAdminMode;
+  const isPersonalMode = userId !== null && umatScope === "self";
 
   const [columnFilters, setColumnFilters] = useState({
     job_name: [],
@@ -125,7 +125,17 @@ export default function UmatPage() {
   }), [page, limit, searchQuery, searchField, jobFilter, educationFilter, spiritualFilter, qingKouFilter, genderFilter, bloodTypeFilter, userId, isAdminMode, isPersonalMode, umatScope]);
 
   const { data: users, isLoading, refetch: refetchUsers } = useFetchUsers(queryParams);
-  const usersList = users?.data || [];
+  const usersList = useMemo(() => {
+    const rawUsers = users?.data || [];
+
+    if (umatScope === "self" && userId) {
+      const myData = rawUsers.filter(u => String(u.user_info_id) === String(userId));
+      return myData;
+    }
+
+    return rawUsers;
+  }, [users, umatScope, userId]);
+  const isSelfScope = umatScope === "self";
   const total = users?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -148,12 +158,12 @@ export default function UmatPage() {
       if (token) {
         try {
           const decoded = jwtDecode(token);
-          const decodedUserId = parseInt(decoded.user_info_id);
-          const perms = decoded.permissions || {};
+          const fullUserId = decoded.user_info_id
 
-          if (decodedUserId && !isNaN(decodedUserId)) {
-            setUserId(decodedUserId);
+          if (fullUserId) {
+            setUserId(fullUserId);
           }
+          const perms = decoded.permissions || {};
 
           const create = !!perms.umat?.create;
           const update = !!perms.umat?.update;
@@ -166,15 +176,6 @@ export default function UmatPage() {
           setUmatScope(scope);
           setIsAdminMode(create || update || del);
 
-          console.log("=== DEBUG UMAT PAGE ===");
-          console.log("Token ditemukan:", !!token);
-          console.log("Permissions umat:", perms.umat);
-          console.log("canCreate:", create);
-          console.log("canUpdate:", update);
-          console.log("canDelete:", del);
-          console.log("scope:", scope);
-          console.log("isAdminMode:", create || update || del);
-          console.log("========================");
         } catch (error) {
           console.error("Token invalid atau error decode:", error);
           router.push("/login");
@@ -186,7 +187,7 @@ export default function UmatPage() {
   }, [router]);
   
   useEffect(() => {
-    if (isAdminMode) {
+    if (!isSelfScope && isAdminMode) {
       setColumnVisibility((prev) => ({
         ...prev,
         mandarin_name: true,
@@ -194,7 +195,7 @@ export default function UmatPage() {
         date_of_birth: true,
       }));
     }
-  }, [isAdminMode]);
+  }, [isAdminMode, isSelfScope]);
 
   useEffect(() => {
     setTempJobFilter([...columnFilters.job_name]);
@@ -686,12 +687,12 @@ export default function UmatPage() {
       <Heading size="md" mb={4} ml={2} fontFamily="inherit">
         Data Umat
         <Box as="span" fontSize="lg" color="gray.500" ml={2}>
-          {isAdminMode ? total : usersList.length}
+          {!isSelfScope && isAdminMode ? total : usersList.length}
         </Box>
       </Heading>
 
       <Flex mb={4} justify="space-between" align="center" wrap="nowrap" gap={2}>
-        {isAdminMode && (
+        {!isSelfScope && isAdminMode && (
           <Box>
             <Pagination
               page={page}
@@ -712,13 +713,13 @@ export default function UmatPage() {
         )}
 
         <Flex gap={2} align="center" flexWrap="nowrap" flexShrink={0}>
-          {isAdminMode && selectedIds.length > 0 && canDeleteUmat && (
+          { !isSelfScope && isAdminMode && selectedIds.length > 0 && canDeleteUmat && (
             <Button colorScheme="red" borderRadius="full" size="xs" onClick={onConfirmOpen}>
               Hapus {selectedIds.length} Data
             </Button>
           )}
 
-          {isAdminMode && (
+          { !isSelfScope && isAdminMode && (
             <Box position="relative">
               <Button
                 leftIcon={<FiFilter />}
@@ -966,7 +967,7 @@ export default function UmatPage() {
             </Box>
           )}
 
-          {isAdminMode && (
+          { !isSelfScope && isAdminMode && (
             <Select size="xs" width="180px" value={searchField} onChange={(e) => setSearchField(e.target.value)}>
               <option value="full_name">Nama Lengkap</option>
               {columnVisibility.mandarin_name && <option value="mandarin_name">Nama Mandarin</option>}
@@ -977,7 +978,7 @@ export default function UmatPage() {
             </Select>
           )}
 
-          {isAdminMode && (
+          { !isSelfScope && isAdminMode && (
             <InputGroup size="xs" width="160px">
               <InputLeftElement pointerEvents="none">
                 <FiSearch color="black" />
@@ -1054,36 +1055,35 @@ export default function UmatPage() {
           <Table minWidth="max-content">
             <Thead>
               <Tr>
-                {columnVisibility.user_info_id && isAdminMode && canDeleteUmat && (
+                {columnVisibility.user_info_id && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
                     <Flex align="center" justify="center" gap={2}>
-                      <Checkbox
-                        size="sm"
-                        isChecked={isAllSelected}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setIsAllSelected(checked);
-                          setSelectedIds(checked ? usersList.map(u => u.user_info_id) : []);
-                        }}
-                        sx={{
-                          ".chakra-checkbox__control": {
-                            borderColor: "gray.500",
-                            borderWidth: "1px",
-                          }
-                        }}
-                      />
+                      {canDeleteUmat ? (
+                          <Checkbox
+                            size="sm"
+                            isChecked={isAllSelected}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setIsAllSelected(checked);
+                              setSelectedIds(checked ? usersList.map(u => u.user_info_id) : []);
+                            }}
+                            sx={{
+                              ".chakra-checkbox__control": {
+                                borderColor: "gray.500",
+                                borderWidth: "1px",
+                              }
+                            }}
+                          />
+                        ) : null}
                       <Box>ID Umat</Box>
                     </Flex>
                   </Th>
-                )}
-                {columnVisibility.user_info_id && isAdminMode && !canDeleteUmat && (
-                  <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">ID</Th>
                 )}
                 {columnVisibility.full_name && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Nama Lengkap</Th>}
                 {columnVisibility.mandarin_name && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">Nama Mandarin</Th>}
                 {columnVisibility.spiritual_status && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isAdminMode ? (
+                    {!isSelfScope && isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Status Rohani
                         <IconButton
@@ -1146,7 +1146,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.is_qing_kou && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isAdminMode ? (
+                    {!isSelfScope && isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Status Vegetarian
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, is_qing_kou: !prev.is_qing_kou }))} />
@@ -1168,7 +1168,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.gender && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isAdminMode ? (
+                    {!isSelfScope && isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Jenis Kelamin
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, gender: !prev.gender }))} />
@@ -1190,7 +1190,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.blood_type && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isAdminMode ? (
+                    {!isSelfScope && isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Golongan Darah
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, blood_type: !prev.blood_type }))} />
@@ -1218,7 +1218,7 @@ export default function UmatPage() {
                 {columnVisibility.phone_number && <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">No. HP</Th>}
                 {columnVisibility.job_name && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isAdminMode ? (
+                    {!isSelfScope && isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Pekerjaan
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, job_name: !prev.job_name }))} />
@@ -1243,7 +1243,7 @@ export default function UmatPage() {
                 )}
                 {columnVisibility.last_education_level && (
                   <Th textAlign="center" textTransform="none" fontWeight="medium" fontSize="sm">
-                    {isAdminMode ? (
+                    {!isSelfScope && isAdminMode ? (
                       <Flex align="center" justify="center" gap={1} position="relative">
                         Pendidikan Terakhir
                         <IconButton size="xs" variant="ghost" icon={<FiFilter />} onClick={() => setIsColumnFilterOpen((prev) => ({ ...prev, last_education_level: !prev.last_education_level }))} />
@@ -1292,34 +1292,33 @@ export default function UmatPage() {
                     _hover={{ bg: "gray.50" }}
                     onClick={() => handleRowClick(user)}
                   >
-                    {columnVisibility.user_info_id && isAdminMode && canDeleteUmat && (
+                    {columnVisibility.user_info_id && (
                       <Td textAlign="center" onClick={(e) => e.stopPropagation()}>
                         <Flex align="center" justify="center" gap={3}>
-                          <Checkbox
-                            size="sm"
-                            isChecked={selectedIds.includes(user.user_info_id)}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              if (checked) {
-                                setSelectedIds((prev) => [...prev, user.user_info_id]);
-                              } else {
-                                setSelectedIds((prev) => prev.filter(id => id !== user.user_info_id));
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            sx={{
-                              ".chakra-checkbox__control": {
-                                borderColor: "gray.500",
-                                borderWidth: "1px",
-                              }
-                            }}
-                          />
+                          {canDeleteUmat ? (
+                            <Checkbox
+                                size="sm"
+                                isChecked={selectedIds.includes(user.user_info_id)}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  if (checked) {
+                                    setSelectedIds((prev) => [...prev, user.user_info_id]);
+                                  } else {
+                                    setSelectedIds((prev) => prev.filter(id => id !== user.user_info_id));
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{
+                                  ".chakra-checkbox__control": {
+                                    borderColor: "gray.500",
+                                    borderWidth: "1px",
+                                  }
+                                }}
+                              />
+                          ) : null}
                           <Box>{user.user_info_id}</Box>
                         </Flex>
                       </Td>
-                    )}
-                    {columnVisibility.user_info_id && isAdminMode && !canDeleteUmat && (
-                      <Td textAlign="center">{user.user_info_id}</Td>
                     )}
                     {columnVisibility.full_name && <Td textAlign="center">{user.full_name}</Td>}
                     {columnVisibility.mandarin_name && <Td textAlign="center">{user.mandarin_name}</Td>}
