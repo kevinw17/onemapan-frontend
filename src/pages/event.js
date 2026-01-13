@@ -938,7 +938,7 @@ export default function Event() {
       } catch (error) {
         console.error("❌ Refetch failed:", error);
       }
-  }, [queryClient, toast]);
+  }, [queryClient]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1149,7 +1149,7 @@ export default function Event() {
       area: isExternalNonFotang ? prev.area || selectedArea : selectedArea,
       external_area: isExternalNonFotang ? selectedArea : prev.external_area || selectedArea,
     }));
-  }, [setFormData]);
+  }, [formData.category, formData.is_in_fotang, setFormData]);
 
   const handleFotangChange = useCallback((e) => {
     const fotangId = e.target.value;
