@@ -277,6 +277,7 @@ export default function Layout({ children, title, showCalendar = false, calendar
   const [events, setEvents] = useState([]);
   const [date, setDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isRegularUser, setIsRegularUser] = useState(false);
   const [viewMode, setViewMode] = useState("month");
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -294,15 +295,25 @@ export default function Layout({ children, title, showCalendar = false, calendar
     localStorage.setItem("sidebarCollapsed", String(newState));
   };
 
-  const baseNavItems = useMemo(() => [
-    { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
-    { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
-    { label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" },
-    { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
-    { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
-    { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
-    { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" },
-  ], []);
+  const baseNavItems = useMemo(() => {
+    const items = [
+      { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
+      { label: "Kegiatan", href: "/event", iconSrc: "/event_icon.svg" },
+    ];
+
+    if (!isRegularUser) {
+      items.push({ label: "Laporan", href: "/report", iconSrc: "/report_icon.svg" });
+    }
+
+    items.push(
+      { label: "Umat", href: "/umat", iconSrc: "/user_icon.svg" },
+      { label: "QiuDao", href: "/qiudao", iconSrc: "/qiudao_icon.svg" },
+      { label: "Pengaturan", href: "/settings", iconSrc: "/settings_icon.svg" },
+      { label: "Pusat Bantuan", href: "/help", iconSrc: "/help_icon.svg" }
+    );
+
+    return items;
+  }, [isRegularUser]);
 
   const superAdminNavItems = useMemo(() => [
     { label: "Dashboard", href: "/dashboard", iconSrc: "/dashboard_icon.svg" },
@@ -355,7 +366,11 @@ export default function Layout({ children, title, showCalendar = false, calendar
           const user = JSON.parse(userStr);
           setUsername(user.username);
           const role = (user.role || "").toLowerCase().replace(/\s+/g, "");
+
+          const isRegularUser = user.scope === "self"
+
           setIsSuperAdmin(["superadmin", "ketualembaga", "sekjenlembaga"].includes(role));
+          setIsRegularUser(isRegularUser);
         } catch (e) {
           console.error("Gagal parsing user:", e);
         }
@@ -417,35 +432,45 @@ export default function Layout({ children, title, showCalendar = false, calendar
               </Box>
 
               <Flex direction="column" gap={2}>
-                {navItems.slice(0, 3).map((item) => (
+                {navItems.slice(0, 2).map((item) => (
                   <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                 ))}
+
+                {!isRegularUser && navItems.some(item => item.label === "Laporan") && (
+                  <NavItem 
+                    key={navItems.find(item => item.label === "Laporan").href}
+                    item={navItems.find(item => item.label === "Laporan")}
+                    isActive={router.pathname === navItems.find(item => item.label === "Laporan").href}
+                    isCollapsed={isSidebarCollapsed}
+                  />
+                )}
 
                 {!isSidebarCollapsed && (
                   <>
                     <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Umat</Text>
-                    {navItems.slice(3, 5).map((item) => (
+                    {navItems.filter(item => ["Umat", "QiuDao"].includes(item.label)).map((item) => (
+                      <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
+                    ))}
+
+                    <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Akun</Text>
+                    
+                    {isSuperAdmin && navItems.some(item => item.label === "Peran") && (
+                      <NavItem 
+                        key={navItems.find(item => item.label === "Peran").href}
+                        item={navItems.find(item => item.label === "Peran")}
+                        isActive={router.pathname === navItems.find(item => item.label === "Peran").href}
+                        isCollapsed={isSidebarCollapsed}
+                      />
+                    )}
+
+                    {navItems.filter(item => ["Pengaturan", "Pusat Bantuan"].includes(item.label)).map((item) => (
                       <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                     ))}
 
                     {isSuperAdmin && (
                       <>
-                        <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Akun</Text>
-                        {navItems.slice(5, 8).map((item) => (
-                          <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
-                        ))}
-
                         <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Data</Text>
-                        {navItems.slice(8, 11).map((item) => (
-                          <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
-                        ))}
-                      </>
-                    )}
-
-                    {!isSuperAdmin && (
-                      <>
-                        <Text fontWeight="bold" color="gray.600" mt={4} mb={2} px={2}>Manajemen Akun</Text>
-                        {navItems.slice(5).map((item) => (
+                        {navItems.filter(item => ["List Vihara", "List Pandita", "List Lembaga"].includes(item.label)).map((item) => (
                           <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                         ))}
                       </>
@@ -453,7 +478,7 @@ export default function Layout({ children, title, showCalendar = false, calendar
                   </>
                 )}
 
-                {isSidebarCollapsed && navItems.slice(3).map((item) => (
+                {isSidebarCollapsed && navItems.map((item) => (
                   <NavItem key={item.href} item={item} isActive={router.pathname === item.href} isCollapsed={isSidebarCollapsed} />
                 ))}
               </Flex>

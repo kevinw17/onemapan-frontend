@@ -412,7 +412,7 @@ const RolePage = () => {
                                   ? "Wilayah" 
                                   : opt === "fotang" 
                                     ? "Vihara" 
-                                    : "Hanya Diri Sendiri (Self)"}
+                                    : "Hanya Diri Sendiri"}
                             </option>
                           ))}
                         </Select>
