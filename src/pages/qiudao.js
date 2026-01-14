@@ -130,6 +130,7 @@ export default function QiudaoPage() {
     "dian_chuan_shi_name",
     "dian_chuan_shi_mandarin_name",
   ];
+  const [qiudaoScope, setQiudaoScope] = useState(null);
 
   const tableHeaders = [
     { key: "qiu_dao_id", label: "ID Qiudao" },
@@ -158,7 +159,6 @@ export default function QiudaoPage() {
   const deleteQiudaoMutation = useDeleteQiudao();
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
-  const isNotSelfScope = userScope !== "self";
   const decodedRef = useRef(null);
 
   useEffect(() => {
@@ -182,6 +182,9 @@ export default function QiudaoPage() {
         setCanCreateQiudao(createQiudao);
         setCanUpdateQiudao(updateQiudao);
         setCanDeleteQiudao(deleteQiudao);
+
+        const scopeFromPerm = perms.qiudao?.scope || decoded.scope || "self";
+        setQiudaoScope(scopeFromPerm);
         setUserScope(decoded.scope);
         setUserArea(decoded.area || null);
 
@@ -210,7 +213,8 @@ export default function QiudaoPage() {
   }
 }, [toast, router]);
 
-  const isQiudaoAdminMode = canCreateQiudao || canUpdateQiudao || canDeleteQiudao;
+  const isAdminMode = canCreateQiudao || canUpdateQiudao || canDeleteQiudao;
+  const isSelfMode = qiudaoScope === "self";
   const fotangId = userScope === "fotang" ? decodedRef.current.fotang_id || null : undefined;
 
   useEffect(() => {
@@ -253,45 +257,48 @@ export default function QiudaoPage() {
 
   const fetchParams = useMemo(() => {
     const params = {
-      page: isNotSelfScope ? page : undefined,
-      limit: isNotSelfScope ? limit : undefined,
-      search: isNotSelfScope ? searchQuery : undefined,
-      searchField: isNotSelfScope ? searchField : undefined,
+      page: isAdminMode ? page : undefined,
+      limit: isAdminMode ? limit : undefined,
+      search: isAdminMode ? searchQuery : undefined,
+      searchField: isAdminMode ? searchField : undefined,
 
-      location_name: isNotSelfScope ? locationFilter : [],
-      location_mandarin_name: isNotSelfScope ? locationMandarinFilter : [],
-      dian_chuan_shi_name: isNotSelfScope ? dianChuanShiFilter : [],
-      dian_chuan_shi_mandarin_name: isNotSelfScope ? dianChuanShiMandarinFilter : [],
+      location_name: isAdminMode ? locationFilter : [],
+      location_mandarin_name: isAdminMode ? locationMandarinFilter : [],
+      dian_chuan_shi_name: isAdminMode ? dianChuanShiFilter : [],
+      dian_chuan_shi_mandarin_name: isAdminMode ? dianChuanShiMandarinFilter : [],
 
       ...Object.fromEntries(
         Object.entries(columnFilters).map(([key, values]) => [
           key,
-          isNotSelfScope ? values : [],
+          isAdminMode ? values : [],
         ])
       ),
 
-      userId: userScope === "self" ? userId : undefined,
-      userArea: userScope === "wilayah" ? userArea : undefined,
-      fotangId: userScope === "fotang" ? fotangId : undefined,
+      userId: isSelfMode ? userId : undefined,
+      userArea: qiudaoScope === "wilayah" ? userArea : undefined,
+    fotangId: qiudaoScope === "fotang" ? fotangId : undefined,
     };
     return params;
   }, [
-    page, limit, searchQuery, searchField, isNotSelfScope,
-    locationFilter, locationMandarinFilter,
+    page, limit, searchQuery, searchField, isAdminMode,
+    locationFilter, locationMandarinFilter, isSelfMode,
     dianChuanShiFilter, dianChuanShiMandarinFilter,
-    columnFilters, userId, userArea, fotangId, userScope
+    columnFilters, userId, userArea, fotangId, qiudaoScope
   ]);
 
   const { data: qiudaos, isLoading, error, refetch: refetchQiudaos } = useFetchQiudaos(fetchParams);
   const qiudaosList = useMemo(() => {
     const rawQiudaos = qiudaos?.data || [];
-    const filteredQiudaos = userScope === "self"
-      ? rawQiudaos.filter(q => q.qiu_dao_id === userId)
-      : rawQiudaos;
-    return filteredQiudaos;
-  }, [qiudaos, userScope, userId]);
-  const total = isNotSelfScope ? qiudaos?.total || 0 : qiudaosList.length;
-  const totalPages = isNotSelfScope ? Math.max(1, Math.ceil(total / limit)) : 1;
+
+    if (qiudaoScope === "self" && userId) {
+      const filtered = rawQiudaos.filter(q => String(q.qiu_dao_id) === String(userId));
+      return filtered;
+    }
+
+    return rawQiudaos;
+  }, [qiudaos, qiudaoScope, userId]);
+  const total = isAdminMode ? qiudaos?.total || 0 : qiudaosList.length;
+  const totalPages = isAdminMode ? Math.max(1, Math.ceil(total / limit)) : 1;
 
   useEffect(() => {
     if (error && error.message !== lastError) {
@@ -425,7 +432,7 @@ export default function QiudaoPage() {
     `${qd.lunar_sui_ci_year || ""}${qd.lunar_month || ""}${qd.lunar_day || ""}${qd.lunar_shi_chen_time || ""}`;
 
   const confirmBulkDelete = async () => {
-    if (!isNotSelfScope) {
+    if (!isAdminMode) {
       toast({
         id: "bulk-delete-error",
         title: "Tidak Diizinkan",
@@ -466,7 +473,7 @@ export default function QiudaoPage() {
   };
 
   const handleSave = async () => {
-    if (!isNotSelfScope) {
+    if (!isAdminMode) {
       toast({
         id: "save-error",
         title: "Tidak Diizinkan",
@@ -645,11 +652,11 @@ export default function QiudaoPage() {
       <Heading size="md" mb={4} ml={2}>
         Data Qiudao
         <Box as="span" fontSize="xl" color="gray.500" ml={2}>
-          {isNotSelfScope ? total : qiudaosList.length}
+          {isAdminMode ? total : qiudaosList.length}
         </Box>
       </Heading>
 
-      {isNotSelfScope && (
+      {isAdminMode && (
         <Flex justify="space-between" align="center" mb={4} wrap="nowrap" gap={2}>
           <Box>
             <Pagination
@@ -911,7 +918,7 @@ export default function QiudaoPage() {
                     fontSize="sm"
                   >
                     <Flex align="center" justify="center" gap={1}>
-                      {isNotSelfScope && canDeleteQiudao && header.key === "qiu_dao_id" ? (
+                      {isAdminMode && canDeleteQiudao && header.key === "qiu_dao_id" ? (
                         <Checkbox
                           size="sm"
                           isChecked={isAllSelected}
@@ -1006,7 +1013,7 @@ export default function QiudaoPage() {
                       fontSize="sm"
                       onClick={header.key === "qiu_dao_id" ? (e) => e.stopPropagation() : undefined}
                     >
-                      {header.key === "qiu_dao_id" && isNotSelfScope && canDeleteQiudao ? (
+                      {header.key === "qiu_dao_id" && isAdminMode && canDeleteQiudao ? (
                         <Flex align="center" justify="center" gap={2}>
                           <Checkbox
                             size="sm"
@@ -1070,10 +1077,10 @@ export default function QiudaoPage() {
         onClose={handleClose}
         selectedQiudao={selectedQiudao}
         handleDelete={(id) => deleteQiudaoMutation.mutateAsync(id)}
-        canEdit={isNotSelfScope && canUpdateQiudao}
+        canEdit={isAdminMode && canUpdateQiudao}
       />
 
-      {isNotSelfScope && canDeleteQiudao && (
+      {isAdminMode && canDeleteQiudao && (
         <DeleteConfirmModal
           isOpen={isConfirmOpen}
           onClose={onConfirmClose}
