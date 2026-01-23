@@ -53,8 +53,6 @@ export default function AddDianChuanShiPage() {
         ling_ming_time: lingMingDate ? lingMingDate.toISOString() : null,
       };
 
-      console.log("Payload dikirim:", payload);
-
       await axiosInstance.post("/dianchuanshi", payload);
 
       toast({

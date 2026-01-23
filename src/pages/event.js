@@ -375,8 +375,6 @@ const EventDetailModal = ({ isOpen, onClose, event, onEdit, onDelete, imageUrl, 
           (event.eventLocation && event.eventLocation.area) || 
           null;
 
-      console.log("DEBUG EDIT:", { userArea, eventArea, canEdit: eventArea === userArea });
-
       return eventArea === userArea;
     }
 
@@ -918,7 +916,6 @@ export default function Event() {
   }, [mandarinFontLoaded, mandarinFontBase64]);
 
   const handleFormSuccess = useCallback(async (data) => {
-    console.log("✅ Event created/updated:", data);
     
       try {
         await queryClient.invalidateQueries({
@@ -926,14 +923,12 @@ export default function Event() {
           predicate: (query) => query.queryKey[0] === 'events-final-v3'
         });
       
-        console.log("🔄 Starting refetch...");
         await queryClient.refetchQueries({
           queryKey: ['events-final-v3'],
           type: 'active'
         });
       
         const newEvents = queryClient.getQueryData(['events-final-v3']) || [];
-        console.log("✅ Refetch completed! New events count:", newEvents.length);
       
       } catch (error) {
         console.error("❌ Refetch failed:", error);
@@ -1380,11 +1375,7 @@ export default function Event() {
     setSelectedReportFields([]);
     onReportClose();
   };
-  useEffect(() => {
-    console.log("allFotangs di event.js:", allFotangs);
-    console.log("formData.category:", formData.category);
-    console.log("formData.is_in_fotang:", formData.is_in_fotang);
-  }, [allFotangs, formData.category, formData.is_in_fotang]);
+  
   return (
     <Layout title="Kegiatan" events={validEvents}>
       <Box p={2}>

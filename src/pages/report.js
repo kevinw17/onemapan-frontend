@@ -145,8 +145,6 @@ export default function ReportBuilder() {
     if (mandarinFontLoaded || mandarinFontBase64) return;
 
     const loadFont = () => {
-      console.log("Memuat font Mandarin dari: /fonts/NotoSansSC-Regular.ttf");
-
       fetch("/fonts/NotoSansSC-Regular.ttf")
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -160,7 +158,6 @@ export default function ReportBuilder() {
             setMandarinFontBase64(base64);
             setMandarinFontLoaded(true);
             window.mandarinFontBase64 = base64;
-            console.log("Font Mandarin berhasil dimuat! (Base64 length:", base64.length, ")");
           };
           reader.onerror = () => {
             throw new Error("FileReader gagal membaca font");

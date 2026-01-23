@@ -67,7 +67,6 @@ export const useFetchEvents = ({
 
     const currentStr = JSON.stringify(params);
     if (prevParamsRef.current !== currentStr) {
-      console.log("Event filter params →", params);
       prevParamsRef.current = currentStr;
     }
 

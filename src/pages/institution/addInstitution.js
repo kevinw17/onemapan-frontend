@@ -51,8 +51,6 @@ export default function AddInstitutionPage() {
         institution_secretary_general: values.institution_secretary_general || null,
       };
 
-      console.log("Payload dikirim:", payload);
-
       await axiosInstance.post("/institution", payload);
 
       toast({

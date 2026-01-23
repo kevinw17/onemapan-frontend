@@ -224,18 +224,9 @@ export default function EditEvent() {
     const fetchEvent = async () => {
       try {
         setLoading(true);
-        console.log("🚀 START LOADING EVENT:", eventId);
 
         const res = await axiosInstance.get(`/event/${eventId}`);
         const event = res.data;
-        
-        console.log("🔍 RAW EVENT DATA:", {
-          category: event.category,
-          is_in_fotang: event.is_in_fotang,
-          eventLocation: event.eventLocation,
-          institution_id: event.institution_id,
-          fotang: event.fotang
-        });
 
         const occ = event.occurrences?.[0];
         const gregOccurDateWIB = occ?.greg_occur_date ? toWIBLocalString(occ.greg_occur_date) : "";
@@ -267,8 +258,6 @@ export default function EditEvent() {
         }
 
         if (event.category === "External" && !isInFotang && event.eventLocation) {
-          console.log("🔍 EVENTLOCATION DATA:", event.eventLocation);
-          
           external_area = event.eventLocation.area || "Korwil_1";
           external_provinceId = String(
             event.eventLocation.city?.provinceId || 
@@ -284,25 +273,7 @@ export default function EditEvent() {
           );
           location_name = event.eventLocation.location_name || "";
           area = external_area;
-          
-          console.log("✅ EXTERNAL FIELDS FIXED:", {
-            external_area,
-            external_provinceId,
-            external_cityId,
-            location_name,
-            cityProvince: event.eventLocation.city?.provinceId
-          });
         }
-
-        console.log("🔍 FULL EVENT STRUCTURE FOR INSTITUTION:", {
-          eventLocation_institution_id: event.eventLocation?.institution_id,
-          eventLocation_institutionId: event.eventLocation?.institutionId,
-          eventLocation_institution: event.eventLocation?.institution,
-          event_institution_id: event.institution_id,
-          event_institutionId: event.institutionId,
-          event_institution: event.institution,
-          event_keys: Object.keys(event).filter(k => k.toLowerCase().includes('institution')),
-        });
 
         if (event.category === "External") {
           institutionId = String(event.institutionId || "");
@@ -365,11 +336,6 @@ export default function EditEvent() {
     if (!formLoaded || !institutions.length || !formData.institutionId) return;
     
     const institutionExists = institutions.some(i => String(i.id) === String(formData.institutionId));
-    if (institutionExists) {
-      console.log("Institution auto-selected:", formData.institutionId);
-    } else {
-      console.log("Institution not found in list:", formData.institutionId);
-    }
   }, [formLoaded, institutions, formData.institutionId]);
 
   if (loading) {

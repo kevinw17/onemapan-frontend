@@ -216,21 +216,15 @@ const RolePage = () => {
           .flatMap((r) => r.userRoles?.filter((ur) => String(ur.user?.user_info_id || ur.user_id) === user_id) || [])
           .map((ur) => String(ur.role_id));
 
-        console.log(`[ASSIGN] User ${user_id} punya role lama:`, userCurrentRoles);
-
         for (const oldRoleId of userCurrentRoles) {
           const oldRoleIdStr = String(oldRoleId);
           if (oldRoleIdStr !== targetRoleId) {
-            console.log(`[REMOVE] Hapus role lama ${oldRoleIdStr} dari user ${user_id}`);
             await removeRole({ user_id, role_id: oldRoleIdStr });
           }
         }
 
         if (!userCurrentRoles.includes(targetRoleId)) {
-          console.log(`[ASSIGN] Tambah role baru ${targetRoleId} ke user ${user_id}`);
           await assignRole({ user_id, role_id: targetRoleId });
-        } else {
-          console.log(`[SKIP] User ${user_id} sudah punya role ${targetRoleId}`);
         }
 
         return { user_id, success: true };

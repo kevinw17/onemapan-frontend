@@ -124,8 +124,6 @@ export default function AddFotangPage() {
             };
             }
 
-            console.log("Payload dikirim:", payload);
-
             await axiosInstance.post("/fotang", payload);
 
             toast({

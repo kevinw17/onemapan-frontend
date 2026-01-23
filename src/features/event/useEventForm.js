@@ -280,8 +280,6 @@ export const useEventForm = ({
       payload.lunar_day = formData.lunar_day || null;
     }
 
-    console.log("🚀 PAYLOAD DEBUG:", { category, event_type, is_in_fotang: formData.is_in_fotang, payload }); // ✅ DEBUG
-
     return payload;
   }, [formData]);
 

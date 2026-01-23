@@ -33,14 +33,6 @@ export const useFetchQiudaos = ({
       params.append("page", page.toString());
       params.append("limit", limit.toString());
 
-      console.log("[useFetchQiudaos] Input:", {
-        page, limit, search, searchField,
-        location_name, location_mandarin_name,
-        dian_chuan_shi_name, dian_chuan_shi_mandarin_name,
-        yin_shi_qd_name, yin_shi_qd_mandarin_name,
-        bao_shi_qd_name, bao_shi_qd_mandarin_name,
-      });
-
       if (search) {
         params.append("search", search);
         params.append("searchField", searchField);
@@ -82,10 +74,8 @@ export const useFetchQiudaos = ({
       }
 
       const url = `/profile/qiudao?${params.toString()}`;
-      console.log("[useFetchQiudaos] Request URL:", url);
 
       const response = await axiosInstance.get("/profile/qiudao", { params });
-      console.log("[useFetchQiudaos] Response:", response.data);
 
       return response.data;
     },
