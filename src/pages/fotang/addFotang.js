@@ -11,7 +11,7 @@ import * as Yup from "yup";
 
 const addFotangSchema = Yup.object().shape({
   location_name: Yup.string().required("Nama Vihara wajib diisi"),
-  area: Yup.string().required("Korda Wilayah wajib dipilih"),
+  area: Yup.string().required("Wilayah wajib dipilih"),
   province: Yup.string().required("Provinsi wajib diisi"),
   city: Yup.string().required("Kota/Kabupaten wajib diisi"),
 });
@@ -278,17 +278,17 @@ export default function AddFotangPage() {
                   </FormControl>
 
                   <FormControl isRequired flex={1}>
-                    <FormLabel>Korda Wilayah</FormLabel>
+                    <FormLabel>Wilayah</FormLabel>
                     <Select
                       name="area"
-                      placeholder="Pilih Korda"
+                      placeholder="Pilih Wilayah"
                       value={values.area}
                       onChange={handleChange}
                       w="100%"
                     >
                       {Array.from({ length: 6 }, (_, i) => (
                         <option key={i + 1} value={`Korwil_${i + 1}`}>
-                          Korwil {i + 1}
+                          Wilayah {i + 1}
                         </option>
                       ))}
                     </Select>
