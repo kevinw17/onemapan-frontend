@@ -67,11 +67,9 @@ const addUmatSchema = Yup.object().shape({
         then: (schema) => schema.required("Wilayah wajib dipilih"),
         otherwise: (schema) => schema.optional(),
     }),
-    domicile_location_name: Yup.string().required("Wajib diisi"),
     domicile_country_iso: Yup.string().required("Wajib diisi"),
     domicile_province: Yup.string().required("Wajib diisi"),
     domicile_city: Yup.string().required("Wajib diisi"),
-    ktp_location_name: Yup.string().required("Wajib diisi"),
     ktp_country_iso: Yup.string().required("Wajib diisi"),
     ktp_province: Yup.string().required("Wajib diisi"),
     ktp_city: Yup.string().required("Wajib diisi"),
@@ -92,7 +90,7 @@ const addUmatSchema = Yup.object().shape({
     education_major: Yup.string(),
     job_name: Yup.string(),
     spiritual_status: Yup.string()
-        .oneOf(["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"], "Status spiritual tidak valid")
+        .oneOf(["TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"], "Status spiritual tidak valid")
         .required("Status spiritual wajib diisi"),
 });
 
@@ -581,8 +579,6 @@ export default function AddUmatPage() {
                                 onChange={handleChange}
                                 w="100%"
                                 >
-                                <option value="QianRen">Qian Ren / Sesepuh</option>
-                                <option value="DianChuanShi">Dian Chuan Shi / Pandita</option>
                                 <option value="TanZhu">Tan Zhu / Pandita Madya</option>
                                 <option value="FoYuan">Fo Yuan / Buddha Siswa</option>
                                 <option value="BanShiYuan">Ban Shi Yuan / Pelaksana Vihara</option>
@@ -748,13 +744,13 @@ export default function AddUmatPage() {
 
                         {/* Alamat sesuai identitas */}
                         <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat sesuai identitas</Heading>
-                        <HStack spacing={4} w="100%">
+                        
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
-                            <FormLabel>Nama Lokasi</FormLabel>
+                            {/* <FormLabel>Nama Lokasi</FormLabel>
                             <Input name="ktp_location_name" value={values.ktp_location_name} onChange={handleChange} />
                             {touched.ktp_location_name && errors.ktp_location_name && (
                                 <Text color="red.500" fontSize="sm">{errors.ktp_location_name}</Text>
-                            )}
+                            )} */}
                             </FormControl>
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kode Negara</FormLabel>
@@ -765,7 +761,7 @@ export default function AddUmatPage() {
                                 onChange={handleChange}
                                 w="100%"
                             >
-                                {["IDN", "MYS", "SGP", "HKG", "JPN", "KOR", "AUS"].map((code) => (
+                                {["IDN"].map((code) => (
                                 <option key={code} value={code}>{code}</option>
                                 ))}
                             </Select>
@@ -773,7 +769,6 @@ export default function AddUmatPage() {
                                 <Text color="red.500" fontSize="sm">{errors.ktp_country_iso}</Text>
                             )}
                             </FormControl>
-                        </HStack>
 
                         <HStack spacing={4} w="100%">
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
@@ -905,32 +900,31 @@ export default function AddUmatPage() {
                         {values.is_same_address === "false" && (
                             <>
                             <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat domisili</Heading>
-                            <HStack spacing={4} w="100%">
-                                <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
-                                <FormLabel>Nama Lokasi</FormLabel>
-                                <Input name="domicile_location_name" value={values.domicile_location_name} onChange={handleChange} />
-                                {touched.domicile_location_name && errors.domicile_location_name && (
-                                    <Text color="red.500" fontSize="sm">{errors.domicile_location_name}</Text>
-                                )}
-                                </FormControl>
-                                <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
-                                <FormLabel>Kode Negara</FormLabel>
-                                <Select
-                                    name="domicile_country_iso"
-                                    placeholder="Pilih Kode Negara"
-                                    value={values.domicile_country_iso}
-                                    onChange={handleChange}
-                                    w="100%"
-                                >
-                                    {["IDN", "MYS", "SGP", "HKG", "JPN", "KOR", "AUS"].map((code) => (
-                                    <option key={code} value={code}>{code}</option>
-                                    ))}
-                                </Select>
-                                {touched.domicile_country_iso && errors.domicile_country_iso && (
-                                    <Text color="red.500" fontSize="sm">{errors.domicile_country_iso}</Text>
-                                )}
-                                </FormControl>
-                            </HStack>
+                            
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
+                            {/* <FormLabel>Nama Lokasi</FormLabel>
+                            <Input name="domicile_location_name" value={values.domicile_location_name} onChange={handleChange} />
+                            {touched.domicile_location_name && errors.domicile_location_name && (
+                                <Text color="red.500" fontSize="sm">{errors.domicile_location_name}</Text>
+                            )} */}
+                            </FormControl>
+                            <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
+                            <FormLabel>Kode Negara</FormLabel>
+                            <Select
+                                name="domicile_country_iso"
+                                placeholder="Pilih Kode Negara"
+                                value={values.domicile_country_iso}
+                                onChange={handleChange}
+                                w="100%"
+                            >
+                                {["IDN"].map((code) => (
+                                <option key={code} value={code}>{code}</option>
+                                ))}
+                            </Select>
+                            {touched.domicile_country_iso && errors.domicile_country_iso && (
+                                <Text color="red.500" fontSize="sm">{errors.domicile_country_iso}</Text>
+                            )}
+                            </FormControl>
 
                             <HStack spacing={4} w="100%">
                                 <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
