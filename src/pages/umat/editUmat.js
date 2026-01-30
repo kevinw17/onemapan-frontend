@@ -380,7 +380,6 @@ export default function EditUmat() {
     };
 
     try {
-      // Ambil nilai terbaru dari ref (uncontrolled input)
       const idCardStreet = idCardStreetRef.current?.value?.trim() || id_card_location.street || "";
       const idCardPostal = idCardPostalRef.current?.value?.trim() || id_card_location.postal_code || "";
 
@@ -391,8 +390,8 @@ export default function EditUmat() {
         const locationPayload = {
           localityId: idCardLocalityId,
           location_name: id_card_location.location_name || undefined,
-          street: idCardStreet,           // dari ref
-          postal_code: idCardPostal,      // dari ref
+          street: idCardStreet,
+          postal_code: idCardPostal,
         };
 
         if (Object.values(locationPayload).some((val) => val !== undefined && val !== "")) {
@@ -407,8 +406,8 @@ export default function EditUmat() {
         const locationPayload = {
           localityId: domicileLocalityId,
           location_name: domicile_location.location_name || undefined,
-          street: domicileStreet,         // dari ref
-          postal_code: domicilePostal,    // dari ref
+          street: domicileStreet,
+          postal_code: domicilePostal,
         };
 
         if (Object.values(locationPayload).some((val) => val !== undefined && val !== "")) {
@@ -419,12 +418,6 @@ export default function EditUmat() {
         }
       }
 
-      console.log("ID Card Street from ref:", idCardStreetRef.current?.value);
-      console.log("ID Card Postal from ref:", idCardPostalRef.current?.value);
-      console.log("Domicile Street from ref:", domicileStreetRef.current?.value);
-      console.log("Domicile Postal from ref:", domicilePostalRef.current?.value);
-
-      // Update user payload tetap sama
       await updateUserMutation.mutateAsync({
         userId: userId,
         payload,

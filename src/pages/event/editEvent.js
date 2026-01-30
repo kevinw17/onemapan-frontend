@@ -20,7 +20,7 @@ import { useRouter } from "next/router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { axiosInstance } from "@/lib/axios";
 import { useEventForm } from "@/features/event/useEventForm";
-import { useDeleteEvent } from "@/features/event/useDeleteEvent"; // ✅ IMPORT INI
+import { useDeleteEvent } from "@/features/event/useDeleteEvent";
 import { useFetchProvinces, useFetchCities } from "@/features/location/useFetchLocations";
 import { useFetchFotang } from "@/features/location/useFetchFotang";
 import { useFetchInstitution } from "@/features/institution/useFetchInstitution";
