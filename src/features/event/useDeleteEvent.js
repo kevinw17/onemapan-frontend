@@ -12,10 +12,13 @@ export const useDeleteEvent = () => {
     return useMutation({
         mutationFn: deleteEvent,
         onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["fetch.events"] });
+            queryClient.invalidateQueries({
+                queryKey: ["events-final-v3"],
+                exact: false,
+            });
         },
         onError: (error) => {
-        throw new Error(error.response?.data?.message || error.message || "Gagal menghapus kegiatan.");
+            throw new Error(error.response?.data?.message || error.message || "Gagal menghapus kegiatan.");
         },
     });
 };

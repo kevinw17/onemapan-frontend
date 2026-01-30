@@ -1198,7 +1198,6 @@ export default function Event() {
     deleteMutation.mutate(selectedEvent.id, {
       onSuccess: () => {
         onConfirmClose();
-        refetch();
         toast({
           title: "Berhasil",
           description: "Kegiatan berhasil dihapus",
@@ -1217,7 +1216,7 @@ export default function Event() {
         });
       },
     });
-  }, [selectedEvent?.id, deleteMutation, onConfirmClose, refetch, toast, onDetailClose]);
+  }, [selectedEvent?.id, deleteMutation, onConfirmClose, toast, onDetailClose]);
 
   const openEventDetail = useCallback(async (event) => {
     if (!event?.id) {
