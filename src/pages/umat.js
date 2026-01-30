@@ -830,7 +830,7 @@ export default function UmatPage() {
                     </Flex>
                     <Collapse in={isSpiritualFilterOpen} animateOpacity>
                       <VStack align="start" spacing={1}>
-                        {["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
+                        {["TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
                           <Checkbox
                             key={status}
                             size="sm"
@@ -840,9 +840,7 @@ export default function UmatPage() {
                             fontFamily="inherit"
                             sx={{ "& .chakra-checkbox__label": { textAlign: "left" } }}
                           >
-                            {status === "QianRen" ? "Qian Ren / Sesepuh" :
-                              status === "DianChuanShi" ? "Dian Chuan Shi / Pandita" :
-                              status === "TanZhu" ? "Tan Zhu / Pandita Madya" :
+                            {status === "TanZhu" ? "Tan Zhu / Pandita Madya" :
                               status === "FoYuan" ? "Fo Yuan / Buddha Siswa" :
                               status === "BanShiYuan" ? "Ban Shi Yuan / Pelaksana Vihara" :
                               status === "QianXian" ? "Qian Xian / Aktivis" :
@@ -1112,7 +1110,7 @@ export default function UmatPage() {
                             fontFamily="inherit"
                             fontSize="sm"
                           >
-                            {["QianRen", "DianChuanShi", "TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
+                            {["TanZhu", "FoYuan", "BanShiYuan", "QianXian", "DaoQin"].map((status) => (
                               <Checkbox
                                 key={status}
                                 size="sm"
@@ -1123,9 +1121,7 @@ export default function UmatPage() {
                                 textAlign="left"
                                 sx={{ "& .chakra-checkbox__label": { textAlign: "left", width: "100%" } }}
                               >
-                                {status === "QianRen" ? "Qian Ren / Sesepuh" :
-                                  status === "DianChuanShi" ? "Dian Chuan Shi / Pandita" :
-                                  status === "TanZhu" ? "Tan Zhu / Pandita Madya" :
+                                {status === "TanZhu" ? "Tan Zhu / Pandita Madya" :
                                   status === "FoYuan" ? "Fo Yuan / Buddha Siswa" :
                                   status === "BanShiYuan" ? "Ban Shi Yuan / Pelaksana Vihara" :
                                   status === "QianXian" ? "Qian Xian / Aktivis" :
