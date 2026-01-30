@@ -3,7 +3,7 @@ import {
   Checkbox, RadioGroup, Radio
 } from "@chakra-ui/react";
 
-const lunarYears = ["乙巳年"];
+const lunarYears = ["乙巳年","丙午年"];
 const lunarMonths = ["一月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
 const lunarDays = Array.from({length: 30}, (_, i) =>
   i < 9 ? `初${i + 1}日` : i === 29 ? "三十日" : `${i + 1}日`

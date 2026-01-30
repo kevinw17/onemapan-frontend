@@ -40,7 +40,6 @@ import { useFetchFotang } from "@/features/location/useFetchFotang";
 import { isNationalRole } from "@/lib/roleUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-const lunarYears = ["乙巳年"];
 const lunarMonths = [
   "一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月",
 ];
@@ -760,6 +759,7 @@ const EventForm = ({
                       <Select name="lunar_sui_ci_year" value={formData.lunar_sui_ci_year || ""} onChange={handleChange}>
                         <option value="">Tidak diisi</option>
                         <option value="乙巳年">乙巳年</option>
+                        <option value="丙午年">丙午年</option>
                       </Select>
                     </FormControl>
                     <FormControl flex={1}>

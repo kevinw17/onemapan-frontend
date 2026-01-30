@@ -186,7 +186,7 @@ export const useEventForm = ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-  }, [formData.category, formData.area]);
+  }, [formData]);
 
   const handleIsRecurringChange = useCallback((value) => {
     setFormData(prev => ({ ...prev, is_recurring: value }));
@@ -283,7 +283,7 @@ export const useEventForm = ({
     return payload;
   }, [formData]);
 
-  const uploadAndSubmit = async (e, cropperRef, isUpdate = false) => {
+  const uploadAndSubmit = useCallback(async (e, cropperRef, isUpdate = false) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -362,7 +362,7 @@ export const useEventForm = ({
         }
       },
       onError: (err) => {
-        console.error("Mutation error:", err);
+        console.error("Mutation ERROR:", err);
         toast({
           title: "Gagal",
           description: err.response?.data?.message || err.message || "Terjadi kesalahan.",
@@ -374,16 +374,33 @@ export const useEventForm = ({
         setIsSubmitting(false);
       },
     });
-  };
+  }, [
+    formData, 
+    previewImage, 
+    validateForm, 
+    toast, 
+    getCroppedImage, 
+    buildPayload, 
+    eventId, 
+    createMutation, 
+    updateMutation, 
+    onSuccessCallback, 
+    resetFormData, 
+    setImage, 
+    setPreviewImage, 
+    onAddClose, 
+    onEditClose, 
+    onDetailClose
+  ]);
 
   const handleSubmit = useCallback(
     (e, cropperRef) => uploadAndSubmit(e, cropperRef, false),
-    [formData, previewImage, validateForm, toast, createMutation, onAddClose, resetFormData, setImage, setPreviewImage]
+    [uploadAndSubmit]
   );
 
   const handleUpdate = useCallback(
     (e, cropperRef) => uploadAndSubmit(e, cropperRef, true),
-    [formData, previewImage, eventId, validateForm, toast, updateMutation, onEditClose, onDetailClose, resetFormData, setImage, setPreviewImage]
+    [uploadAndSubmit]
   );
 
   const handleImageChange = useCallback((e) => {
