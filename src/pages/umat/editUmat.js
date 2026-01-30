@@ -21,7 +21,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import Layout from "@/components/layout";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { axiosInstance } from "@/lib/axios";
 import { useToast } from "@chakra-ui/react";
@@ -32,8 +32,6 @@ import { jwtDecode } from "jwt-decode";
 
 const SPIRITUAL_STATUS_OPTIONS = [
   { value: "", label: "Pilih status rohani" },
-  { value: "QianRen", label: "Qian Ren / Sesepuh" },
-  { value: "DianChuanShi", label: "Dian Chuan Shi / Pandita" },
   { value: "TanZhu", label: "Tan Zhu / Pandita Madya" },
   { value: "FoYuan", label: "Fo Yuan / Buddha Siswa" },
   { value: "BanShiYuan", label: "Ban Shi Yuan / Pelaksana Vihara" },
@@ -107,6 +105,10 @@ export default function EditUmat() {
     localities: false,
     initialData: true,
   });
+  const idCardStreetRef = useRef(null);
+  const idCardPostalRef = useRef(null);
+  const domicileStreetRef = useRef(null);
+  const domicilePostalRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -378,14 +380,22 @@ export default function EditUmat() {
     };
 
     try {
+      // Ambil nilai terbaru dari ref (uncontrolled input)
+      const idCardStreet = idCardStreetRef.current?.value?.trim() || id_card_location.street || "";
+      const idCardPostal = idCardPostalRef.current?.value?.trim() || id_card_location.postal_code || "";
+
+      const domicileStreet = domicileStreetRef.current?.value?.trim() || domicile_location.street || "";
+      const domicilePostal = domicilePostalRef.current?.value?.trim() || domicile_location.postal_code || "";
+
       if (id_card_location?.location_id) {
         const locationPayload = {
           localityId: idCardLocalityId,
           location_name: id_card_location.location_name || undefined,
-          street: id_card_location.street || undefined,
-          postal_code: id_card_location.postal_code || undefined,
+          street: idCardStreet,           // dari ref
+          postal_code: idCardPostal,      // dari ref
         };
-        if (Object.values(locationPayload).some((val) => val !== undefined)) {
+
+        if (Object.values(locationPayload).some((val) => val !== undefined && val !== "")) {
           await updateLocationMutation.mutateAsync({
             locationId: id_card_location.location_id,
             payload: locationPayload,
@@ -397,10 +407,11 @@ export default function EditUmat() {
         const locationPayload = {
           localityId: domicileLocalityId,
           location_name: domicile_location.location_name || undefined,
-          street: domicile_location.street || undefined,
-          postal_code: domicile_location.postal_code || undefined,
+          street: domicileStreet,         // dari ref
+          postal_code: domicilePostal,    // dari ref
         };
-        if (Object.values(locationPayload).some((val) => val !== undefined)) {
+
+        if (Object.values(locationPayload).some((val) => val !== undefined && val !== "")) {
           await updateLocationMutation.mutateAsync({
             locationId: domicile_location.location_id,
             payload: locationPayload,
@@ -408,6 +419,12 @@ export default function EditUmat() {
         }
       }
 
+      console.log("ID Card Street from ref:", idCardStreetRef.current?.value);
+      console.log("ID Card Postal from ref:", idCardPostalRef.current?.value);
+      console.log("Domicile Street from ref:", domicileStreetRef.current?.value);
+      console.log("Domicile Postal from ref:", domicilePostalRef.current?.value);
+
+      // Update user payload tetap sama
       await updateUserMutation.mutateAsync({
         userId: userId,
         payload,
@@ -436,18 +453,21 @@ export default function EditUmat() {
     router.push("/umat");
   };
 
-  const LocationFields = ({ section, title }) => (
+  const handleSimpleChange = (section, field) => (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: e.target.value,
+      },
+    }));
+  };
+
+  const LocationFields = ({ section, title, streetRef, postalRef }) => (
     <>
       <Heading size="md" color="gray" pt={4} pb={2}>
         {title}
       </Heading>
-      <FormControl>
-        <FormLabel fontWeight="bold">Nama Lokasi</FormLabel>
-        <Input
-          value={formData[section].location_name || ""}
-          onChange={(e) => handleLocationChange(section, "location_name", e.target.value)}
-        />
-      </FormControl>
       <Grid templateColumns="repeat(2, 1fr)" gap={4}>
         <GridItem>
           <FormControl>
@@ -535,10 +555,11 @@ export default function EditUmat() {
       <Grid templateColumns="repeat(2, 1fr)" gap={4}>
         <GridItem>
           <FormControl>
-            <FormLabel fontWeight="bold">Jalan</FormLabel>
+            <FormLabel fontWeight="bold">Alamat</FormLabel>
             <Input
-              value={formData[section].street || ""}
-              onChange={(e) => handleLocationChange(section, "street", e.target.value)}
+              ref={streetRef}
+              defaultValue={formData[section].street || ""}
+              placeholder="Masukkan alamat lengkap"
             />
           </FormControl>
         </GridItem>
@@ -546,8 +567,9 @@ export default function EditUmat() {
           <FormControl>
             <FormLabel fontWeight="bold">Kode Pos</FormLabel>
             <Input
-              value={formData[section].postal_code || ""}
-              onChange={(e) => handleLocationChange(section, "postal_code", e.target.value)}
+              ref={postalRef}
+              defaultValue={formData[section].postal_code || ""}
+              placeholder="Masukkan kode pos"
             />
           </FormControl>
         </GridItem>
@@ -672,8 +694,19 @@ export default function EditUmat() {
                 </GridItem>
               </Grid>
 
-              <LocationFields section="id_card_location" title="Lokasi Sesuai Identitas" />
-              <LocationFields section="domicile_location" title="Lokasi Domisili" />
+              <LocationFields 
+                section="id_card_location" 
+                title="Lokasi Sesuai Identitas" 
+                streetRef={idCardStreetRef}
+                postalRef={idCardPostalRef}
+              />
+
+              <LocationFields 
+                section="domicile_location" 
+                title="Lokasi Domisili" 
+                streetRef={domicileStreetRef}
+                postalRef={domicilePostalRef}
+              />
 
               <Flex gap={4} mt={4}>
                 {canDelete && (
