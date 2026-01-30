@@ -744,13 +744,7 @@ export default function AddUmatPage() {
 
                         {/* Alamat sesuai identitas */}
                         <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat sesuai identitas</Heading>
-                        
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
-                            {/* <FormLabel>Nama Lokasi</FormLabel>
-                            <Input name="ktp_location_name" value={values.ktp_location_name} onChange={handleChange} />
-                            {touched.ktp_location_name && errors.ktp_location_name && (
-                                <Text color="red.500" fontSize="sm">{errors.ktp_location_name}</Text>
-                            )} */}
                             </FormControl>
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kode Negara</FormLabel>
@@ -902,11 +896,6 @@ export default function AddUmatPage() {
                             <Heading size="md" color={"gray"} mt={4} mb={2}>Alamat domisili</Heading>
                             
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
-                            {/* <FormLabel>Nama Lokasi</FormLabel>
-                            <Input name="domicile_location_name" value={values.domicile_location_name} onChange={handleChange} />
-                            {touched.domicile_location_name && errors.domicile_location_name && (
-                                <Text color="red.500" fontSize="sm">{errors.domicile_location_name}</Text>
-                            )} */}
                             </FormControl>
                             <FormControl isRequired flex={1} isDisabled={!isQiuDaoConfirmed}>
                             <FormLabel>Kode Negara</FormLabel>
